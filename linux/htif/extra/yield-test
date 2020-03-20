@@ -1,0 +1,18 @@
+#!/bin/sh
+
+cd $(dirname $0)
+
+mkfifo ./progress
+
+./htif --progress-server ./progress &
+pid=$!
+
+for i in `seq 1 100`; do
+    for j in `seq 1 100`; do
+        echo $j > /dev/null
+    done
+    echo $i
+done >> progress
+
+kill $pid
+rm progress
