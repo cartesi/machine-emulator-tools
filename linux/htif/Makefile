@@ -1,4 +1,5 @@
 # Copyright 2019 Cartesi Pte. Ltd.
+
 #
 # This file is part of the machine-emulator. The machine-emulator is free
 # software: you can redistribute it and/or modify it under the terms of the GNU
@@ -16,7 +17,8 @@
 
 UNAME:=$(shell uname)
 
-TOOLCHAIN_TAG ?= 0.2.0
+LINUX_KERNEL_IMAGE ?= cartesi/linux-kernel
+LINUX_KERNEL_TAG ?= devel
 
 RVCC  = riscv64-unknown-linux-gnu-gcc
 RVCXX = riscv64-unknown-linux-gnu-g++
@@ -26,15 +28,16 @@ RISCV_CFLAGS :=-march=rv64ima -mabi=lp64
 
 CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
+KERNEL_HEADERS_PATH := /opt/riscv/usr/include
 
-extra/htif: htif.c
+extra/htif: yield.c
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
-extra.ext2: extra/htif extra/yield-test
+extra.ext2: extra/yield
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
 extra/htif.toolchain:
-	$(RVCC) -O2 -o extra/htif htif.c
+	$(RVCC) -O2 -I$(KERNEL_HEADERS_PATH) -o extra/yield yield.c
 
 extra.ext2.toolchain:
 	genext2fs -i 512 -b 8192 -d extra $(basename $@)
@@ -47,7 +50,7 @@ toolchain-exec:
 		-e GID=$$(id -g) \
 		-v `pwd`:$(CONTAINER_BASE) \
 		-w $(CONTAINER_BASE) \
-		cartesi/toolchain:$(TOOLCHAIN_TAG) $(CONTAINER_COMMAND)
+		$(LINUX_KERNEL_IMAGE):$(LINUX_KERNEL_TAG) $(CONTAINER_COMMAND)
 
 toolchain-env:
 	@docker run --hostname toolchain-env -it --rm \
@@ -57,9 +60,9 @@ toolchain-env:
 		-e GID=$$(id -g) \
 		-v `pwd`:$(CONTAINER_BASE) \
 		-w $(CONTAINER_BASE) \
-		cartesi/toolchain:$(TOOLCHAIN_TAG)
+		$(LINUX_KERNEL_IMAGE):$(LINUX_KERNEL_TAG)
 
 clean:
-	\rm -rf extra/htif extra.ext2
+	\rm -rf extra/yield extra.ext2
 
 .PHONY: toolchain-exec toolchain-env
