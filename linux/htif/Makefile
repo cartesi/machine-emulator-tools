@@ -14,7 +14,7 @@
 UNAME:=$(shell uname)
 
 TOOLCHAIN_IMAGE ?= cartesi/toolchain
-TOOLCHAIN_TAG ?= 0.2.0
+TOOLCHAIN_TAG ?= 0.3.0
 
 RVCC  = riscv64-unknown-linux-gnu-gcc
 RVCXX = riscv64-unknown-linux-gnu-g++
@@ -26,19 +26,22 @@ CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
 KERNEL_HEADERS_PATH := /opt/riscv/usr/include
 
-all: extra/yield
+all: yield
 
-extra/yield: yield.c
+yield: yield.c
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
-extra.ext2: extra/yield
+extra.ext2: yield
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
-extra/yield.toolchain:
-	$(RVCC) -O2 -o extra/yield yield.c
+yield.toolchain:
+	$(RVCC) -O2 -o yield yield.c
 
 extra.ext2.toolchain:
+	mkdir -m 0755 ./extra
+	cp ./yield ./extra/yield
 	genext2fs -i 512 -b 8192 -d extra $(basename $@)
+	rm -rf ./extra
 
 toolchain-exec:
 	@docker run --hostname $@ --rm \
@@ -61,6 +64,6 @@ toolchain-env:
 		$(TOOLCHAIN_IMAGE):$(TOOLCHAIN_TAG)
 
 clean:
-	\rm -rf extra/yield extra.ext2
+	\rm -rf yield extra.ext2 extra
 
 .PHONY: toolchain-exec toolchain-env

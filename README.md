@@ -22,8 +22,8 @@ $ make
 
 The following options are available as `make` targets:
 
-- **all**: builds the RISC-V yield executable and put it on the `extra` directory
-- **extra.ext2**: builds the extra.ext2 image based on `extra` directory
+- **all**: builds the RISC-V yield executable
+- **extra.ext2**: builds the extra.ext2 filesystem image with the yield tool inside
 - **toolchain-env**: runs the toolchain image with current user UID and GID
 - **clean**: clean generated artifacts 
 
