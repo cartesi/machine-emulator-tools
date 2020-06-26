@@ -17,8 +17,8 @@
 
 UNAME:=$(shell uname)
 
-LINUX_KERNEL_IMAGE ?= cartesi/linux-kernel
-LINUX_KERNEL_TAG ?= devel
+TOOLCHAIN_IMAGE ?= cartesi/toolchain
+TOOLCHAIN_TAG ?= 0.2.0
 
 RVCC  = riscv64-unknown-linux-gnu-gcc
 RVCXX = riscv64-unknown-linux-gnu-g++
@@ -37,7 +37,7 @@ extra.ext2: extra/yield
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
 extra/htif.toolchain:
-	$(RVCC) -O2 -I$(KERNEL_HEADERS_PATH) -o extra/yield yield.c
+	$(RVCC) -O2 -o extra/yield yield.c
 
 extra.ext2.toolchain:
 	genext2fs -i 512 -b 8192 -d extra $(basename $@)
@@ -50,7 +50,7 @@ toolchain-exec:
 		-e GID=$$(id -g) \
 		-v `pwd`:$(CONTAINER_BASE) \
 		-w $(CONTAINER_BASE) \
-		$(LINUX_KERNEL_IMAGE):$(LINUX_KERNEL_TAG) $(CONTAINER_COMMAND)
+		$(TOOLCHAIN_IMAGE):$(TOOLCHAIN_TAG) $(CONTAINER_COMMAND)
 
 toolchain-env:
 	@docker run --hostname toolchain-env -it --rm \
@@ -60,7 +60,7 @@ toolchain-env:
 		-e GID=$$(id -g) \
 		-v `pwd`:$(CONTAINER_BASE) \
 		-w $(CONTAINER_BASE) \
-		$(LINUX_KERNEL_IMAGE):$(LINUX_KERNEL_TAG)
+		$(TOOLCHAIN_IMAGE):$(TOOLCHAIN_TAG)
 
 clean:
 	\rm -rf extra/yield extra.ext2
