@@ -1,18 +1,14 @@
-# Copyright 2019 Cartesi Pte. Ltd.
-
+# Copyright 2019-2020 Cartesi Pte. Ltd.
 #
-# This file is part of the machine-emulator. The machine-emulator is free
-# software: you can redistribute it and/or modify it under the terms of the GNU
-# Lesser General Public License as published by the Free Software Foundation,
-# either version 3 of the License, or (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at http://www.apache.org/licenses/LICENSE-2.0
 #
-# The machine-emulator is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
-# for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with the machine-emulator. If not, see http://www.gnu.org/licenses/.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
 #
 
 UNAME:=$(shell uname)
@@ -30,13 +26,15 @@ CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
 KERNEL_HEADERS_PATH := /opt/riscv/usr/include
 
-extra/htif: yield.c
+all: extra/yield
+
+extra/yield: yield.c
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
 extra.ext2: extra/yield
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
-extra/htif.toolchain:
+extra/yield.toolchain:
 	$(RVCC) -O2 -o extra/yield yield.c
 
 extra.ext2.toolchain:
