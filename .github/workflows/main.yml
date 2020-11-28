@@ -1,0 +1,17 @@
+name: Build
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    container: cartesi/toolchain:0.5.0
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          token: ${{ secrets.CI_TOKEN }}
+
+      - name: Build dehash tool
+        run: cd linux/dehash && make dehash.toolchain
+
+      - name: Build yield tool
+        run: cd linux/htif && make yield.toolchain
