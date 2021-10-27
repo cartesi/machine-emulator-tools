@@ -30,7 +30,7 @@ static void help(const char *progname) {
         "Where: \n"
         "  <mode>       \"manual\" or \"automatic\"\n"
         "  <reason>     \"progress\", \"rx-accepted\", \"rx-rejected\",\n"
-        "               \"tx-output\", \"tx-message\", or \"tx-result\"\n"
+        "               \"tx-voucher\", \"tx-notice\", or \"tx-report\"\n"
         "  <data>       32-bit unsigned integer (decimal, default 0)\n"
         "  --ack        writes the acknowledge code to stdout\n",
         progname);
@@ -72,14 +72,14 @@ int get_reason(const char *s, uint64_t *reason) {
     if (strcmp(s, "progress") == 0) {
         *reason = HTIF_YIELD_REASON_PROGRESS;
         return 1;
-    } else if (strcmp(s, "tx-result") == 0) {
-        *reason = HTIF_YIELD_REASON_TX_RESULT;
+    } else if (strcmp(s, "tx-report") == 0) {
+        *reason = HTIF_YIELD_REASON_TX_REPORT;
         return 1;
-    } else if (strcmp(s, "tx-message") == 0) {
-        *reason = HTIF_YIELD_REASON_TX_MESSAGE;
+    } else if (strcmp(s, "tx-notice") == 0) {
+        *reason = HTIF_YIELD_REASON_TX_NOTICE;
         return 1;
-    } else if (strcmp(s, "tx-output") == 0) {
-        *reason = HTIF_YIELD_REASON_TX_OUTPUT;
+    } else if (strcmp(s, "tx-voucher") == 0) {
+        *reason = HTIF_YIELD_REASON_TX_VOUCHER;
         return 1;
     } else if (strcmp(s, "rx-accepted") == 0) {
         *reason = HTIF_YIELD_REASON_RX_ACCEPTED;
