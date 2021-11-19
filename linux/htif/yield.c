@@ -145,12 +145,15 @@ void parse_args(int argc, char *argv[], struct parsed_args *p) {
     }
 
     i++;
-    if (i < argc && !get_data(argv[i], &p->data)) {
-        fprintf(stderr, "Invalid <data> argument.\n\n");
-        help(progname);
+    if (i < argc) {
+        if (get_data(argv[i], &p->data)) {
+            i++;
+        } else {
+            fprintf(stderr, "Invalid <data> argument.\n\n");
+            help(progname);
+        }
     }
 
-    i++;
     if (i != argc) {
         fprintf(stderr, "Too many arguments.\n\n");
         help(progname);
