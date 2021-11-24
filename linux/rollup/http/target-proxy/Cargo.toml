@@ -1,0 +1,32 @@
+[package]
+name = "target-proxy"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "target_proxy"
+path = "src/lib.rs"
+
+
+[[bin]]
+name = "target-proxy-echo"
+path = "src/echo.rs"
+
+[[bin]]
+name = "target-proxy"
+path = "src/main.rs"
+
+[dependencies]
+getopts = "0.2.21"
+libc = "0.2.108"
+actix-web = "4.0.0-beta.11"
+serde = { vesion = "1.0.130", features = ["derive"]}
+log = "0.4.14"
+tokio = { version = "1.14", features = ["macros", "time", "rt-multi-thread"] }
+env_logger = "0.9"
+async-mutex = "1.4.0"
+
+[build-dependencies]
+bindgen = "0.59.1"
+cc = "1.0.72"
+tonic-build = "0.5"
