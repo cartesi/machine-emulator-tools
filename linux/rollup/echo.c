@@ -121,7 +121,7 @@ static int write_vouchers(int fd, unsigned count, struct rollup_bytes *bytes) {
 
 static int write_reports(int fd, unsigned count, struct rollup_bytes *bytes) {
     unsigned i;
-    struct rollup_voucher r;
+    struct rollup_report r;
     memset(&r, 0, sizeof(r));
     r.payload = *bytes;
     for (i = 0; i < count; i++) {
@@ -155,7 +155,7 @@ static int handle_advance_state_request(int fd, struct parsed_args *args, struct
     if (write_notices(fd, args->notice_count, bytes) != 0) {
         return -1;
     }
-    if (!write_reports(fd, args->report_count, bytes)) {
+    if (!write_reports(fd, args->report_count, bytes) != 0) {
         return -1;
     }
     return 0;
@@ -176,8 +176,23 @@ static int handle_inspect_state_request(int fd, struct parsed_args *args, struct
         fprintf(stderr, "IOCTL_ROLLUP_READ_INSPECT_STATE returned error (%d)\n", res);
         return res;
     }
-    if (!write_reports(fd, args->report_count, bytes)) {
+    if (!write_reports(fd, args->report_count, bytes) != 0) {
         return -1;
+    }
+    return 0;
+}
+
+static int handle_request(int fd, struct parsed_args *args, struct rollup_finish *finish,
+    struct rollup_bytes *bytes) {
+    switch (finish->next_request_type) {
+        case CARTESI_ROLLUP_ADVANCE_STATE:
+            return handle_advance_state_request(fd, args, finish, bytes);
+        case CARTESI_ROLLUP_INSPECT_STATE:
+            return handle_inspect_state_request(fd, args, finish, bytes);
+        default:
+            /* unknown request type */
+            fprintf(stderr, "Unknown request type %d\n", finish->next_request_type);
+            return -1;
     }
     return 0;
 }
@@ -206,17 +221,7 @@ int main(int argc, char *argv[]) {
         if (finish_request(fd, &finish) != 0) {
             break;
         }
-        if (finish.next_request_type == CARTESI_ROLLUP_ADVANCE_STATE &&
-            handle_advance_state_request(fd, &args, &finish, &bytes) != 0) {
-            /* error handling advance state */
-            break;
-        } else if (finish.next_request_type == CARTESI_ROLLUP_INSPECT_STATE &&
-            handle_inspect_state_request(fd, &args, &finish, &bytes) != 0) {
-            /* error handling inspect state */
-            break;
-        } else {
-            /* unknown request type */
-            fprintf(stderr, "Unknown request type %d\n", finish.next_request_type);
+        if (handle_request(fd, &args, &finish, &bytes) != 0) {
             break;
         }
     }
