@@ -43,7 +43,9 @@ pub struct InspectRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct InspectReport {}
+pub struct InspectReport {
+    pub reports: Vec<Report>,
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct AdvanceError {
@@ -58,17 +60,24 @@ pub struct InspectError {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Notice {
     pub payload: String,
+    pub index: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Voucher {
     pub address: String,
     pub payload: String,
+    pub index: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Report {
     pub payload: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct IndexResponse {
+    index: u64,
 }
 
 pub type AdvanceResult = Result<(), AdvanceError>;
@@ -104,96 +113,152 @@ pub struct TestEchoData {
     pub vouchers: u32,
     pub reports: u32,
     pub notices: u32,
+    pub reject: i32,
 }
 
 pub struct Model {
     pub test_echo_data: TestEchoData,
-    pub proxy_addr: String
+    pub proxy_addr: String,
 }
 
 impl Model {
     // DApp logic
-    pub fn new(proxy_address: &String, proxy_port: u16, test_echo_data: TestEchoData) -> Self {
+    pub fn new(proxy_address: &str, proxy_port: u16, test_echo_data: TestEchoData) -> Self {
         Self {
-            proxy_addr : format!("http://{}:{}", proxy_address.clone(), proxy_port),
-            test_echo_data }
+            proxy_addr: format!("http://{}:{}", proxy_address, proxy_port),
+            test_echo_data,
+        }
     }
 
     pub async fn advance(
-        &self,
+        &mut self,
         request: AdvanceRequest,
-        finish_channel: mpsc::Sender<AdvanceResult>,
+        finish_tx: mpsc::Sender<AdvanceResult>,
     ) {
-        println!("Dapp Received advance request {:?}", &request);
-        let client = reqwest::Client::new();
-
+        log::debug!("dapp Received advance request {:?}", &request);
+        let client = hyper::Client::new();
+        // Generate test echo vouchers
         if self.test_echo_data.vouchers > 0 {
-            log::info!("Generating {} echo vouchers", self.test_echo_data.vouchers);
-            //Generate test vouchers
+            log::debug!("generating {} echo vouchers", self.test_echo_data.vouchers);
+            // Generate test vouchers
             for _ in 0..self.test_echo_data.vouchers {
-                let mut voucher_payload = request.payload.clone();
-                voucher_payload.push_str("-voucher");
+                let voucher_payload = request.payload.clone();
                 let voucher = Voucher {
                     address: request.metadata.address.clone(),
                     payload: voucher_payload,
+                    index: 0,
                 };
-                if let Err(e) = client
-                    .post(self.proxy_addr.clone() + "/voucher")
-                    .json(&voucher)
-                    .send()
-                    .await
-                {
-                    log::error!("Failed to send voucher request to the proxy: {}", e);
+                let req = hyper::Request::builder()
+                    .method(hyper::Method::POST)
+                    .header(hyper::header::CONTENT_TYPE, "application/json")
+                    .uri(self.proxy_addr.clone() + "/voucher")
+                    .body(hyper::Body::from(serde_json::to_string(&voucher).unwrap()))
+                    .expect("voucher request");
+                match client.request(req).await {
+                    Ok(res) => {
+                        let id_response = serde_json::from_slice::<IndexResponse>(
+                            &hyper::body::to_bytes(res)
+                                .await
+                                .expect("error in voucher ind response handling")
+                                .to_vec(),
+                        );
+                        log::debug!("voucher generated: {:?}", &id_response);
+                    }
+                    Err(e) => {
+                        log::error!("failed to send voucher request to the proxy: {}", e);
+                    }
                 }
             }
         }
-
+        // Generate test echo notices
         if self.test_echo_data.notices > 0 {
             // Generate test notice
-            log::info!("Generating {} echo notices", self.test_echo_data.notices);
+            log::debug!("Generating {} echo notices", self.test_echo_data.notices);
             for _ in 0..self.test_echo_data.notices {
-                let mut notice_payload = request.payload.clone();
-                notice_payload.push_str("-notice");
+                let notice_payload = request.payload.clone();
                 let notice = Notice {
                     payload: notice_payload,
+                    index: 0,
                 };
-                if let Err(e) = client
-                    .post(self.proxy_addr.clone() + "/notice")
-                    .json(&notice)
-                    .send()
-                    .await
-                {
-                    log::error!("Failed to send notice request to the proxy: {}", e);
+                let req = hyper::Request::builder()
+                    .method(hyper::Method::POST)
+                    .header(hyper::header::CONTENT_TYPE, "application/json")
+                    .uri(self.proxy_addr.clone() + "/notice")
+                    .body(hyper::Body::from(serde_json::to_string(&notice).unwrap()))
+                    .expect("notice request");
+                match client.request(req).await {
+                    Ok(res) => {
+                        let id_response = serde_json::from_slice::<IndexResponse>(
+                            &hyper::body::to_bytes(res)
+                                .await
+                                .expect("error in notice id response handling")
+                                .to_vec(),
+                        );
+                        log::debug!("notice generated: {:?}", &id_response);
+                    }
+                    Err(e) => {
+                        log::error!("failed to send notice request to the proxy: {}", e);
+                    }
                 }
             }
         }
-
+        // Generate test echo reports
         if self.test_echo_data.reports > 0 {
             // Generate test reports
-            log::info!("Generating {} echo reports", self.test_echo_data.reports);
+            log::debug!("generating {} echo reports", self.test_echo_data.reports);
             for _ in 0..self.test_echo_data.reports {
-                let mut notice_payload = request.payload.clone();
-                notice_payload.push_str("-report");
+                let report_payload = request.payload.clone();
                 let report = Report {
-                    payload: notice_payload,
+                    payload: report_payload,
                 };
-                if let Err(e) = client
-                    .post(self.proxy_addr.clone() + "/report")
-                    .json(&report)
-                    .send()
-                    .await
-                {
-                    log::error!("Failed to send report request to the proxy: {}", e);
+                let req = hyper::Request::builder()
+                    .method(hyper::Method::POST)
+                    .header(hyper::header::CONTENT_TYPE, "application/json")
+                    .uri(self.proxy_addr.clone() + "/report")
+                    .body(hyper::Body::from(serde_json::to_string(&report).unwrap()))
+                    .expect("report request");
+                if let Err(e) = client.request(req).await {
+                    log::error!("failed to send report request to the proxy: {}", e);
                 }
             }
         }
 
         //Finish request
-        log::info!("Sending finish request");
-        finish_channel.send(Ok(())).await.expect("failed to send finish request");
+        finish_tx
+            .send(if self.test_echo_data.reject == 0 {
+                Err(AdvanceError {
+                    cause: "rejected due to reject parameter".to_string(),
+                })
+            } else {
+                Ok(())
+            })
+            .await
+            .expect("failed to send finish request");
+
+        // Decrease test reject counter
+        if self.test_echo_data.reject >= 0 {
+            self.test_echo_data.reject -= 1;
+        }
     }
-    pub async fn inspect(&self, request: InspectRequest) -> InspectResult {
-        println!("Dapp Received inspect request {:?}", &request);
-        Ok(InspectReport {})
+    pub async fn inspect(&mut self, request: InspectRequest) -> InspectResult {
+        let mut inspect_report = InspectReport {
+            reports: Vec::new(),
+        };
+        log::debug!("Dapp received inspect request {:?}", &request);
+        if self.test_echo_data.reports > 0 {
+            // Generate test reports for inspect
+            log::debug!(
+                "generating {} echo inspect state reports",
+                self.test_echo_data.reports
+            );
+            for _ in 0..self.test_echo_data.reports {
+                let report_payload = request.payload.clone();
+                inspect_report.reports.push(Report {
+                    payload: report_payload,
+                });
+            }
+        }
+        log::info!("inspect state result {:?}", &inspect_report);
+        Ok(inspect_report)
     }
 }

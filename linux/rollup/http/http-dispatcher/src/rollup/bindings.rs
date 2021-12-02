@@ -367,28 +367,27 @@ extern "C" {
     pub fn rollup_read_inspect_state_request(
         fd: ::std::os::raw::c_int,
         finish: *mut rollup_finish,
-        bytes: *mut rollup_bytes,
+        query: *mut rollup_bytes,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
     pub fn rollup_write_vouchers(
         fd: ::std::os::raw::c_int,
-        count: ::std::os::raw::c_uint,
         address: *mut u8,
         bytes: *mut rollup_bytes,
+        voucher_index: *mut ::std::os::raw::c_ulong,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
     pub fn rollup_write_notices(
         fd: ::std::os::raw::c_int,
-        count: ::std::os::raw::c_uint,
         bytes: *mut rollup_bytes,
+        notice_index: *mut ::std::os::raw::c_ulong,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
     pub fn rollup_write_reports(
         fd: ::std::os::raw::c_int,
-        count: ::std::os::raw::c_uint,
         bytes: *mut rollup_bytes,
     ) -> ::std::os::raw::c_int;
 }

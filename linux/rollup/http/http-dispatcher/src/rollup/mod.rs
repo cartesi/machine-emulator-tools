@@ -11,12 +11,16 @@
  * the License.
  */
 
+/// Implements Rust api to use Linux rollup device
+
+/// Rollup device driver path
+pub const ROLLUP_DEVICE_NAME: &str = "/dev/rollup";
+
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use std::os::unix::prelude::RawFd;
 
 mod bindings;
-
 pub use bindings::CARTESI_ROLLUP_ADDRESS_SIZE;
 pub use bindings::CARTESI_ROLLUP_ADVANCE_STATE;
 pub use bindings::CARTESI_ROLLUP_INSPECT_STATE;
@@ -25,16 +29,14 @@ fn convert_address_to_string(
     address: &[u8; bindings::CARTESI_ROLLUP_ADDRESS_SIZE as usize],
 ) -> String {
     let mut result = String::new();
-    for i in 0..address.len() {
-        result
-            .write_fmt(format_args!("{:02x}", address[i]))
-            .unwrap_or(());
+    for addr in address {
+        result.write_fmt(format_args!("{:02x}", addr)).unwrap_or(());
     }
     result
 }
 
 fn convert_string_to_address(
-    address: &String,
+    address: &str,
 ) -> [u8; bindings::CARTESI_ROLLUP_ADDRESS_SIZE as usize] {
     let mut result: [u8; bindings::CARTESI_ROLLUP_ADDRESS_SIZE as usize] =
         [0; bindings::CARTESI_ROLLUP_ADDRESS_SIZE as usize];
@@ -60,26 +62,17 @@ impl RollupError {
 
 impl std::fmt::Display for RollupError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Rollup error: {}", &self.message)
+        write!(f, "rollup error: {}", &self.message)
     }
 }
 
 impl std::error::Error for RollupError {}
 
+#[derive(Debug, Default, Clone, PartialEq, Eq, Copy)]
 pub struct RollupFinish {
     pub accept_previous_request: bool,
     pub next_request_type: i32,
     pub next_request_payload_length: i32,
-}
-
-impl Default for RollupFinish {
-    fn default() -> Self {
-        RollupFinish {
-            next_request_payload_length: 0,
-            next_request_type: 0,
-            accept_previous_request: false,
-        }
-    }
 }
 
 impl From<RollupFinish> for bindings::rollup_finish {
@@ -114,21 +107,21 @@ impl From<bindings::rollup_finish> for RollupFinish {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdvanceMetadata {
-    pub msg_sender: String,
+    pub address: String,
+    pub epoch_number: u64,
+    pub input_number: u64,
     pub block_number: u64,
-    pub time_stamp: u64,
-    pub epoch_index: u64,
-    pub input_index: u64,
+    pub timestamp: u64,
 }
 
 impl From<bindings::rollup_input_metadata> for AdvanceMetadata {
     fn from(other: bindings::rollup_input_metadata) -> Self {
         AdvanceMetadata {
-            input_index: other.input_index,
-            epoch_index: other.epoch_index,
-            time_stamp: other.time_stamp,
+            input_number: other.input_index,
+            epoch_number: other.epoch_index,
+            timestamp: other.time_stamp,
             block_number: other.block_number,
-            msg_sender: convert_address_to_string(&other.msg_sender),
+            address: convert_address_to_string(&other.msg_sender),
         }
     }
 }
@@ -145,14 +138,21 @@ pub struct InspectRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InspectReport {
+    pub reports: Vec<Report>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Notice {
     pub payload: String,
+    pub index: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Voucher {
     pub address: String,
     pub payload: String,
+    pub index: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -165,14 +165,18 @@ pub fn rollup_finish_request(
     finish: &mut RollupFinish,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut finish_c = Box::new(bindings::rollup_finish::from(&mut *finish));
+
+    log::debug!("writing rollup finish request, yielding");
     let res = unsafe { bindings::rollup_finish_request(fd as i32, finish_c.as_mut()) };
     if res != 0 {
+        log::error!("failed to write finish request, IOCTL error {}", res);
         return Err(Box::new(RollupError::new(&format!(
             "IOCTL_ROLLUP_FINISH returned error {}",
             res
         ))));
     }
     *finish = RollupFinish::from(*finish_c);
+    log::debug!("finish request written to rollup device: {:#?}", &finish);
     Ok(())
 }
 
@@ -207,12 +211,11 @@ pub fn rollup_read_advance_state_request(
             res
         ))));
     }
-    println!("Advanced state bytes length: {}", bytes_c.length);
 
     if bytes_c.length == 0 {
-        return Err(Box::new(RollupError::new(&format!(
-            "Read zero size from advance state request "
-        ))));
+        return Err(Box::new(RollupError::new(
+            "read zero size from advance state request ",
+        )));
     }
 
     let mut payload: Vec<u8> = Vec::with_capacity(bytes_c.length as usize);
@@ -228,44 +231,78 @@ pub fn rollup_read_advance_state_request(
     Ok(result)
 }
 
+pub fn rollup_read_inspect_state_request(
+    fd: RawFd,
+    finish: &mut RollupFinish,
+) -> Result<InspectRequest, Box<dyn std::error::Error>> {
+    let mut finish_c = Box::new(bindings::rollup_finish::from(&mut *finish));
+    let mut bytes_c = Box::new(bindings::rollup_bytes {
+        data: std::ptr::null::<::std::os::raw::c_uchar>() as *mut ::std::os::raw::c_uchar,
+        length: 0,
+    });
+    let res = unsafe {
+        bindings::rollup_read_inspect_state_request(fd as i32, finish_c.as_mut(), bytes_c.as_mut())
+    };
+    if res != 0 {
+        return Err(Box::new(RollupError::new(&format!(
+            "IOCTL_ROLLUP_READ_INSPECT_STATE returned error {}",
+            res
+        ))));
+    }
+    if bytes_c.length == 0 {
+        return Err(Box::new(RollupError::new(
+            "read zero size from inspect state request ",
+        )));
+    }
+
+    let mut query: Vec<u8> = Vec::with_capacity(bytes_c.length as usize);
+    unsafe {
+        std::ptr::copy(bytes_c.data, query.as_mut_ptr(), bytes_c.length as usize);
+        query.set_len(bytes_c.length as usize);
+    }
+    let result = InspectRequest {
+        payload: std::str::from_utf8(&query)?.to_string(),
+    };
+    *finish = RollupFinish::from(*finish_c);
+    Ok(result)
+}
+
 pub fn rollup_write_notices(
     fd: RawFd,
-    count: u32,
-    notice: &Notice,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if count == 0 {
-        return Ok(());
-    }
+    notice: &mut Notice,
+) -> Result<u64, Box<dyn std::error::Error>> {
+    print_notice(notice);
     let mut buffer: Vec<u8> = Vec::with_capacity(notice.payload.len());
     let mut bytes_c = Box::new(bindings::rollup_bytes {
         data: buffer.as_mut_ptr() as *mut ::std::os::raw::c_uchar,
         length: notice.payload.len() as u64,
     });
+    let mut notice_index: std::os::raw::c_ulong = 0;
     let res = unsafe {
         std::ptr::copy(
             notice.payload.as_ptr(),
             buffer.as_mut_ptr(),
             notice.payload.len(),
         );
-        bindings::rollup_write_notices(fd as i32, count, bytes_c.as_mut())
+        bindings::rollup_write_notices(fd as i32, bytes_c.as_mut(), &mut notice_index)
     };
     if res != 0 {
         return Err(Box::new(RollupError::new(&format!(
             "IOCTL_ROLLUP_WRITE_NOTICE returned error {}",
             res
         ))));
+    } else {
+        notice.index = notice_index;
+        log::debug!("notice with id {} successfully written!", notice_index);
     }
-    Ok(())
+    Ok(notice_index as u64)
 }
 
 pub fn rollup_write_voucher(
     fd: RawFd,
-    count: u32,
-    voucher: &Voucher,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if count == 0 {
-        return Ok(());
-    }
+    voucher: &mut Voucher,
+) -> Result<u64, Box<dyn std::error::Error>> {
+    print_voucher(voucher);
     let mut buffer: Vec<u8> = Vec::with_capacity(voucher.payload.len());
     let mut bytes_c = Box::new(bindings::rollup_bytes {
         data: buffer.as_mut_ptr() as *mut ::std::os::raw::c_uchar,
@@ -273,32 +310,35 @@ pub fn rollup_write_voucher(
     });
 
     let mut address_c = convert_string_to_address(&voucher.address);
-
+    let mut voucher_index: std::os::raw::c_ulong = 0;
     let res = unsafe {
         std::ptr::copy(
             voucher.payload.as_ptr(),
             buffer.as_mut_ptr(),
             voucher.payload.len(),
         );
-        bindings::rollup_write_vouchers(fd as i32, count, address_c.as_mut_ptr(), bytes_c.as_mut())
+        bindings::rollup_write_vouchers(
+            fd as i32,
+            address_c.as_mut_ptr(),
+            bytes_c.as_mut(),
+            &mut voucher_index,
+        )
     };
     if res != 0 {
         return Err(Box::new(RollupError::new(&format!(
             "IOCTL_ROLLUP_WRITE_VOUCHER returned error {}",
             res
         ))));
+    } else {
+        voucher.index = voucher_index;
+        log::debug!("voucher with id {} successfully written!", voucher_index);
     }
-    Ok(())
+
+    Ok(voucher_index as u64)
 }
 
-pub fn rollup_write_report(
-    fd: RawFd,
-    count: u32,
-    report: &Report,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if count == 0 {
-        return Ok(());
-    }
+pub fn rollup_write_report(fd: RawFd, report: &Report) -> Result<(), Box<dyn std::error::Error>> {
+    print_report(report);
     let mut buffer: Vec<u8> = Vec::with_capacity(report.payload.len());
     let mut bytes_c = Box::new(bindings::rollup_bytes {
         data: buffer.as_mut_ptr() as *mut ::std::os::raw::c_uchar,
@@ -310,39 +350,49 @@ pub fn rollup_write_report(
             buffer.as_mut_ptr(),
             report.payload.len(),
         );
-        bindings::rollup_write_reports(fd as i32, count, bytes_c.as_mut())
+        bindings::rollup_write_reports(fd as i32, bytes_c.as_mut())
     };
     if res != 0 {
         return Err(Box::new(RollupError::new(&format!(
             "IOCTL_ROLLUP_WRITE_REPORT returned error {}",
             res
         ))));
+    } else {
+        log::debug!("report successfully written!");
     }
     Ok(())
 }
 
-pub fn print_address(address: &String) {
+pub fn print_address(address: &str) {
     if address.starts_with("0x") {
-        println!("{}", address);
+        log::debug!("{}", address);
     } else {
-        println!("0x{}", address);
+        log::debug!("0x{}", address);
     }
 }
 
 pub fn print_advance(advance: &AdvanceRequest) {
-    print!("Advance: {{\n\tmsg_sender: ");
-    print_address(&advance.metadata.msg_sender);
-    println!(
+    log::debug!("advance: {{\n\tmsg_sender: ");
+    print_address(&advance.metadata.address);
+    log::debug!(
         "\tblock_number: {}\n\ttime_stamp: {}\n\tepoch_index: {}\n\tinput_index: {}\n}}",
         advance.metadata.block_number,
-        advance.metadata.time_stamp,
-        advance.metadata.epoch_index,
-        advance.metadata.input_index
+        advance.metadata.timestamp,
+        advance.metadata.epoch_number,
+        advance.metadata.input_number
+    );
+}
+
+pub fn print_inspect(inspect: &InspectRequest) {
+    log::debug!(
+        "Inspect: {{\n\tlength: {} payload: {}\n}}",
+        inspect.payload.len(),
+        inspect.payload
     );
 }
 
 pub fn print_notice(notice: &Notice) {
-    println!(
+    log::debug!(
         "Notice: {{\n\tlength: {} payload: {}\n}}",
         notice.payload.len(),
         notice.payload
@@ -350,9 +400,9 @@ pub fn print_notice(notice: &Notice) {
 }
 
 pub fn print_voucher(voucher: &Voucher) {
-    print!("Voucher: {{\n\taddress:");
+    log::debug!("voucher: {{\n\taddress:");
     print_address(&voucher.address);
-    println!(
+    log::debug!(
         "\tlength: {} payload: {}\n}}",
         voucher.payload.len(),
         voucher.payload
@@ -360,8 +410,8 @@ pub fn print_voucher(voucher: &Voucher) {
 }
 
 pub fn print_report(report: &Report) {
-    println!(
-        "Report: {{\n\tlength: {} payload: {}\n}}",
+    log::debug!(
+        "report: {{\n\tlength: {} payload: {}\n}}",
         report.payload.len(),
         report.payload
     );

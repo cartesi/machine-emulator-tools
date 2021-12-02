@@ -1,8 +1,10 @@
+cargo-features = ["strip"]
+
 [package]
 name = "echo-dapp"
 version = "0.1.0"
 edition = "2021"
-authors = ["Alex Mikhalevich <alex.mikhalevich@cartesi.io>"]
+authors = ["Alex Mikhalevich <alex.mikhalevich@cartesi.io>", "Marko Atnasievski <marko.atanasievski@cartesi.io>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -14,5 +16,13 @@ env_logger = "0.9"
 log = "0.4"
 async-trait = "0.1"
 tokio = { version = "1.14", features = ["macros", "sync", "rt-multi-thread"] }
-reqwest = { version = "0.11.7", features = ["json"]  }
+hyper = { version = "0.14.15", features = ["http1", "runtime", "client"] }
 getopts = "0.2.21"
+
+
+[profile.release]
+strip = true
+lto = true          # Enable Link Time Optimization
+opt-level = "z"     # Optimize for size.
+codegen-units = 1   # Reduce number of codegen units to increase optimizations, but slower build
+# panic = "abort"     # Abort on panic

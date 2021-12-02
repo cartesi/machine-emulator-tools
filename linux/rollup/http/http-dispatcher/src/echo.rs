@@ -11,8 +11,10 @@
  * the License.
  */
 
-use target_proxy::rollup;
-use target_proxy::rollup::{AdvanceRequest, Notice, Report, RollupFinish, Voucher};
+/// Simple rollup cmd line application that echoes requests directly
+/// talking to the linux rollup device
+use http_dispatcher::rollup;
+use http_dispatcher::rollup::{AdvanceRequest, Notice, Report, RollupFinish, Voucher};
 
 use getopts::Options;
 use std::fs::File;
@@ -46,10 +48,13 @@ fn generate_test_output(
         let mut test_payload = advance_state.payload.clone();
         test_payload.push_str("-test-voucher");
         let mut voucher = Voucher {
-            address: advance_state.metadata.msg_sender.clone(),
+            address: advance_state.metadata.address.clone(),
             payload: test_payload,
+            index: 0,
         };
-        rollup::rollup_write_voucher(rollup_fd, test_data.notices, &mut voucher)?;
+        for _ in 0..test_data.notices {
+            rollup::rollup_write_voucher(rollup_fd, &mut voucher)?;
+        }
         if verbose {
             rollup::print_voucher(&voucher);
         }
@@ -59,10 +64,13 @@ fn generate_test_output(
         // Generate test notice
         let mut test_payload = advance_state.payload.clone();
         test_payload.push_str("-test-notice");
-        let notice = Notice {
+        let mut notice = Notice {
             payload: test_payload,
+            index: 0,
         };
-        rollup::rollup_write_notices(rollup_fd, test_data.notices, &notice)?;
+        for _ in 0..test_data.notices {
+            rollup::rollup_write_notices(rollup_fd, &mut notice)?;
+        }
         if verbose {
             rollup::print_notice(&notice);
         }
@@ -75,7 +83,9 @@ fn generate_test_output(
         let report = Report {
             payload: test_payload,
         };
-        rollup::rollup_write_report(rollup_fd, test_data.notices, &report)?;
+        for _ in 0..test_data.reports {
+            rollup::rollup_write_report(rollup_fd, &report)?;
+        }
         if verbose {
             rollup::print_report(&report);
         }
@@ -103,9 +113,7 @@ fn handle_rollup_requests(
         }
         rollup::CARTESI_ROLLUP_INSPECT_STATE => {}
         _ => {
-            return Err(Box::new(rollup::RollupError::new(&format!(
-                "Unknown request type"
-            ))));
+            return Err(Box::new(rollup::RollupError::new("Unknown request type")));
         }
     }
     Ok(())
@@ -157,13 +165,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let notices = matches.opt_get_default("notices", 0)?;
     let reports = matches.opt_get_default("reports", 1)?;
     let verbose = matches.opt_get_default("verbose", 0)?;
-    let verbose: bool = if verbose > 0 { true } else { false };
+    let verbose: bool = verbose > 0;
 
     // Open rollup device
     let rollup_file = match File::open(ROLLUP_DEVICE_NAME) {
         Ok(file) => file,
         Err(e) => {
-            println!("Error opening rollup device {}", e.to_string());
+            println!("Error opening rollup device {}", e);
             return Err(Box::new(e));
         }
     };

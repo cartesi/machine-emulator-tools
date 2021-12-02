@@ -10,12 +10,15 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
+/// Application configuration
 #[derive(Clone, Debug, PartialEq)]
 pub struct Config {
     pub http_address: String,
     pub http_port: u16,
-    pub proxy_address: String,
-    pub proxy_port: u16,
+    pub dispatcher_address: String,
+    pub dispatcher_port: u16,
+    pub wihtout_dispatcher: bool,
+    pub reject: i32,
 }
 
 impl Config {
@@ -23,8 +26,10 @@ impl Config {
         Self {
             http_address: String::from("127.0.0.1"),
             http_port: 5002,
-            proxy_address: String::from("127.0.0.1"),
-            proxy_port: 5001,
+            dispatcher_address: String::from("127.0.0.1"),
+            dispatcher_port: 5001,
+            wihtout_dispatcher: false,
+            reject: -1,
         }
     }
 }
