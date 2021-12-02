@@ -26,20 +26,20 @@ CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
 KERNEL_HEADERS_PATH := /opt/riscv/usr/include
 
-all: echo
+all: ioctl-echo-loop
 
-echo: echo.c
+ioctl-echo-loop: ioctl-echo-loop.c
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
-extra.ext2: echo
+extra.ext2: ioctl-echo-loop
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
-echo.toolchain:
-	$(RVCC) -O2 -o echo echo.c
+ioctl-echo-loop.toolchain:
+	$(RVCC) -O2 -o ioctl-echo-loop ioctl-echo-loop.c
 
 extra.ext2.toolchain:
 	mkdir -m 0755 ./extra
-	cp ./echo ./extra/echo
+	cp ./ioctl-echo-loop ./extra/ioctl-echo-loop
 	genext2fs -i 512 -b 8192 -d extra $(basename $@)
 	rm -rf ./extra
 
@@ -64,6 +64,6 @@ toolchain-env:
 		$(TOOLCHAIN_IMAGE):$(TOOLCHAIN_TAG)
 
 clean:
-	\rm -rf echo extra.ext2 extra
+	\rm -rf ioctl-echo-loop extra.ext2 extra
 
 .PHONY: toolchain-exec toolchain-env
