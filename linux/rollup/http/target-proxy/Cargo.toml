@@ -2,6 +2,7 @@
 name = "target-proxy"
 version = "0.1.0"
 edition = "2021"
+authors = ["Marko Atanasievski <marko.atanasievski@cartesi.io>"]
 
 [lib]
 name = "target_proxy"

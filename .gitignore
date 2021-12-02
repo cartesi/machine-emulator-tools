@@ -33,7 +33,7 @@
 
 #Rust 
 *Cargo.lock
-*/target
+*target
 
 #VS Code
 *.idea
