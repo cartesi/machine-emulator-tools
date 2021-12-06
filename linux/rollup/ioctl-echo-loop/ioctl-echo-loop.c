@@ -11,15 +11,14 @@
  * the License.
  */
 
+#include "sys/ioctl.h"
+#include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <inttypes.h>
-#include <fcntl.h>
-#include "sys/ioctl.h"
 
-#include <linux/types.h>
 #include <linux/cartesi/rollup.h>
 
 #define ROLLUP_DEVICE_NAME "/dev/rollup"
@@ -84,7 +83,7 @@ static int finish_request(int fd, struct rollup_finish *finish, bool accept) {
     int res = 0;
     memset(finish, 0, sizeof(*finish));
     finish->accept_previous_request = accept;
-    res = ioctl(fd, IOCTL_ROLLUP_FINISH, (unsigned long)finish);
+    res = ioctl(fd, IOCTL_ROLLUP_FINISH, (unsigned long) finish);
     if (res != 0) {
         fprintf(stderr, "IOCTL_ROLLUP_FINISH returned error %d\n", res);
     }
@@ -204,8 +203,7 @@ static int handle_inspect_state_request(int fd, struct parsed_args *args, struct
     return 0;
 }
 
-static int handle_request(int fd, struct parsed_args *args, struct rollup_finish *finish,
-    struct rollup_bytes *bytes) {
+static int handle_request(int fd, struct parsed_args *args, struct rollup_finish *finish, struct rollup_bytes *bytes) {
     switch (finish->next_request_type) {
         case CARTESI_ROLLUP_ADVANCE_STATE:
             return handle_advance_state_request(fd, args, finish, bytes);
@@ -232,13 +230,13 @@ int main(int argc, char *argv[]) {
         return fd;
     }
 
-    fprintf(stderr, "Echoing as %d voucher copies, %d notice copies, and %d report copies\n",
-        args.voucher_count, args.notice_count, args.report_count);
+    fprintf(stderr, "Echoing as %d voucher copies, %d notice copies, and %d report copies\n", args.voucher_count,
+        args.notice_count, args.report_count);
 
     memset(&bytes, 0, sizeof(bytes));
 
     /* Loop accepting previous request, waiting for next, and handling it */
-    for (int i=0 ;; ++i) {
+    for (int i = 0;; ++i) {
         struct rollup_finish finish;
         if (finish_request(fd, &finish, !(i == args.reject)) != 0) {
             break;
@@ -257,52 +255,42 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-static void print_address(uint8_t *address)
-{
-    for (int i=0; i<CARTESI_ROLLUP_ADDRESS_SIZE; i += 4) {
-        for (int j=0; j<4; ++j) {
-            printf("%02x", address[i+j]);
+static void print_address(uint8_t *address) {
+    for (int i = 0; i < CARTESI_ROLLUP_ADDRESS_SIZE; i += 4) {
+        for (int j = 0; j < 4; ++j) {
+            printf("%02x", address[i + j]);
         }
-        printf("%s", i == CARTESI_ROLLUP_ADDRESS_SIZE-4? "\n" : " ");
+        printf("%s", i == CARTESI_ROLLUP_ADDRESS_SIZE - 4 ? "\n" : " ");
     }
 }
 
-static void show_finish(struct rollup_finish *finish)
-{
+static void show_finish(struct rollup_finish *finish) {
     const char *type = "unknown";
     switch (finish->next_request_type) {
-    case CARTESI_ROLLUP_ADVANCE_STATE:
-        type = "advance";
-        break;
-    case CARTESI_ROLLUP_INSPECT_STATE:
-        type = "inspect";
-        break;
+        case CARTESI_ROLLUP_ADVANCE_STATE:
+            type = "advance";
+            break;
+        case CARTESI_ROLLUP_INSPECT_STATE:
+            type = "inspect";
+            break;
     }
-    printf(
-       "finish:\n"
-       "\taccept: %s\n"
-       "\ttype:   %s\n"
-       "\tlength: %d\n"
-       , finish->accept_previous_request? "yes" : "no"
-       , type
-       , finish->next_request_payload_length);
+    printf("finish:\n"
+           "\taccept: %s\n"
+           "\ttype:   %s\n"
+           "\tlength: %d\n",
+        finish->accept_previous_request ? "yes" : "no", type, finish->next_request_payload_length);
 }
 
-static void show_advance(struct rollup_advance_state *advance)
-{
-    printf(
-        "advance:\n"
-        "\tmsg_sender: ");
+static void show_advance(struct rollup_advance_state *advance) {
+    printf("advance:\n"
+           "\tmsg_sender: ");
     print_address(advance->metadata.msg_sender);
-    printf(
-        "\tblock_number: %lu\n"
-        "\ttime_stamp: %lu\n"
-        "\tepoch_index: %lu\n"
-        "\tinput_index: %lu\n"
-        , advance->metadata.block_number
-        , advance->metadata.time_stamp
-        , advance->metadata.epoch_index
-        , advance->metadata.input_index);
+    printf("\tblock_number: %lu\n"
+           "\ttime_stamp: %lu\n"
+           "\tepoch_index: %lu\n"
+           "\tinput_index: %lu\n",
+        advance->metadata.block_number, advance->metadata.time_stamp, advance->metadata.epoch_index,
+        advance->metadata.input_index);
 }
 
 static void show_inspect(struct rollup_inspect_state *inspect) {
@@ -326,10 +314,9 @@ static void show_notice(struct rollup_notice *notice) {
            "\tlength: %lu\n",
         notice->index, notice->payload.length);
 }
-static void show_report(struct rollup_report *report)
-{
-    printf(
-        "report:\n"
-        "\tlength: %lu\n"
-        , report->payload.length);
+
+static void show_report(struct rollup_report *report) {
+    printf("report:\n"
+           "\tlength: %lu\n",
+        report->payload.length);
 }
