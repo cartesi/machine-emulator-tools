@@ -24,13 +24,22 @@
 
 #define ROLLUP_DEVICE_NAME "/dev/rollup"
 
+static void show_finish(struct rollup_finish *finish);
+static void show_advance(struct rollup_advance_state *advance);
+static void show_inspect(struct rollup_inspect_state *inspect);
+static void show_voucher(struct rollup_voucher *voucher);
+static void show_notice(struct rollup_notice *notice);
+static void show_report(struct rollup_report *report);
+
 static void help(const char *progname) {
     fprintf(stderr,
         "Usage: %s [options]\n"
         "Where options are: \n"
         "  --vouchers=<n>   replicate input in n vouchers (default: 0)\n"
         "  --notices=<n>    replicate input in n notices (default: 0)\n"
-        "  --reports=<n>    replicate input in n reports (default: 1)\n",
+        "  --reports=<n>    replicate input in n reports (default: 1)\n"
+        "  --reject=<n>     reject the nth input (default: -1)\n"
+        "  --verbose=<n>    display information of structures (default: 0)\n",
         progname);
 
     exit(1);
@@ -40,6 +49,8 @@ struct parsed_args {
     unsigned voucher_count;
     unsigned notice_count;
     unsigned report_count;
+    unsigned verbose;
+    unsigned reject;
 };
 
 static int parse_number(const char *s, const char *fmt, unsigned *number) {
@@ -56,20 +67,23 @@ static void parse_args(int argc, char *argv[], struct parsed_args *args) {
 
     memset(args, 0, sizeof(*args));
     args->report_count = 1;
+    args->reject = -1;
 
     for (i = 1; i < argc; i++) {
         if (!parse_number(argv[i], "--vouchers=%u%n", &args->voucher_count) &&
             !parse_number(argv[i], "--notices=%u%n", &args->notice_count) &&
-            !parse_number(argv[i], "--reports=%u%n", &args->report_count)) {
+            !parse_number(argv[i], "--reports=%u%n", &args->report_count) &&
+            !parse_number(argv[i], "--verbose=%u%n", &args->verbose) &&
+            !parse_number(argv[i], "--reject=%u%n", &args->reject)) {
             help(progname);
         }
     }
 }
 
-static int finish_request(int fd, struct rollup_finish *finish) {
+static int finish_request(int fd, struct rollup_finish *finish, bool accept) {
     int res = 0;
     memset(finish, 0, sizeof(*finish));
-    finish->accept_previous_request = true;
+    finish->accept_previous_request = accept;
     res = ioctl(fd, IOCTL_ROLLUP_FINISH, (unsigned long)finish);
     if (res != 0) {
         fprintf(stderr, "IOCTL_ROLLUP_FINISH returned error %d\n", res);
@@ -89,42 +103,46 @@ static int resize_bytes(struct rollup_bytes *bytes, uint64_t size) {
     return 0;
 }
 
-static int write_notices(int fd, unsigned count, struct rollup_bytes *bytes) {
-    unsigned i;
+static int write_notices(int fd, unsigned count, struct rollup_bytes *bytes, unsigned verbose) {
     struct rollup_notice n;
     memset(&n, 0, sizeof(n));
     n.payload = *bytes;
-    for (i = 0; i < count; i++) {
+    for (unsigned i = 0; i < count; i++) {
         int res = ioctl(fd, IOCTL_ROLLUP_WRITE_NOTICE, (unsigned long) &n);
         if (res != 0) {
             fprintf(stderr, "IOCTL_ROLLUP_WRITE_NOTICE returned error %d\n", res);
             return res;
         }
+        if (verbose)
+            show_notice(&n);
     }
     return 0;
 }
 
-static int write_vouchers(int fd, unsigned count, struct rollup_bytes *bytes) {
-    unsigned i;
+static int write_vouchers(int fd, unsigned count, struct rollup_bytes *bytes, uint8_t *address, unsigned verbose) {
     struct rollup_voucher v;
     memset(&v, 0, sizeof(v));
     v.payload = *bytes;
-    for (i = 0; i < count; i++) {
+    memcpy(v.address, address, sizeof(v.address));
+    for (unsigned i = 0; i < count; i++) {
         int res = ioctl(fd, IOCTL_ROLLUP_WRITE_VOUCHER, (unsigned long) &v);
         if (res != 0) {
             fprintf(stderr, "IOCTL_ROLLUP_WRITE_VOUCHER returned error %d\n", res);
             return res;
         }
+        if (verbose)
+            show_voucher(&v);
     }
     return 0;
 }
 
-static int write_reports(int fd, unsigned count, struct rollup_bytes *bytes) {
-    unsigned i;
+static int write_reports(int fd, unsigned count, struct rollup_bytes *bytes, unsigned verbose) {
     struct rollup_report r;
     memset(&r, 0, sizeof(r));
     r.payload = *bytes;
-    for (i = 0; i < count; i++) {
+    if (verbose)
+        show_report(&r);
+    for (unsigned i = 0; i < count; i++) {
         int res = ioctl(fd, IOCTL_ROLLUP_WRITE_REPORT, (unsigned long) &r);
         if (res != 0) {
             fprintf(stderr, "IOCTL_ROLLUP_WRITE_REPORT returned error %d\n", res);
@@ -149,13 +167,15 @@ static int handle_advance_state_request(int fd, struct parsed_args *args, struct
         fprintf(stderr, "IOCTL_ROLLUP_READ_ADVANCE_STATE returned error (%d)\n", res);
         return res;
     }
-    if (write_vouchers(fd, args->voucher_count, bytes) != 0) {
+    if (args->verbose)
+        show_advance(&req);
+    if (write_vouchers(fd, args->voucher_count, bytes, req.metadata.msg_sender, args->verbose) != 0) {
         return -1;
     }
-    if (write_notices(fd, args->notice_count, bytes) != 0) {
+    if (write_notices(fd, args->notice_count, bytes, args->verbose) != 0) {
         return -1;
     }
-    if (!write_reports(fd, args->report_count, bytes) != 0) {
+    if (write_reports(fd, args->report_count, bytes, args->verbose) != 0) {
         return -1;
     }
     return 0;
@@ -171,12 +191,14 @@ static int handle_inspect_state_request(int fd, struct parsed_args *args, struct
     }
     memset(&req, 0, sizeof(req));
     req.payload = *bytes;
+    if (args->verbose)
+        show_inspect(&req);
     res = ioctl(fd, IOCTL_ROLLUP_READ_INSPECT_STATE, (unsigned long) &req);
     if (res != 0) {
         fprintf(stderr, "IOCTL_ROLLUP_READ_INSPECT_STATE returned error (%d)\n", res);
         return res;
     }
-    if (!write_reports(fd, args->report_count, bytes) != 0) {
+    if (write_reports(fd, args->report_count, bytes, args->verbose) != 0) {
         return -1;
     }
     return 0;
@@ -216,10 +238,12 @@ int main(int argc, char *argv[]) {
     memset(&bytes, 0, sizeof(bytes));
 
     /* Loop accepting previous request, waiting for next, and handling it */
-    for ( ;; ) {
+    for (int i=0 ;; ++i) {
         struct rollup_finish finish;
-        if (finish_request(fd, &finish) != 0) {
+        if (finish_request(fd, &finish, !(i == args.reject)) != 0) {
             break;
+        } else if (args.verbose) {
+            show_finish(&finish);
         }
         if (handle_request(fd, &args, &finish, &bytes) != 0) {
             break;
@@ -231,4 +255,81 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Exiting...\n");
 
     return 0;
+}
+
+static void print_address(uint8_t *address)
+{
+    for (int i=0; i<CARTESI_ROLLUP_ADDRESS_SIZE; i += 4) {
+        for (int j=0; j<4; ++j) {
+            printf("%02x", address[i+j]);
+        }
+        printf("%s", i == CARTESI_ROLLUP_ADDRESS_SIZE-4? "\n" : " ");
+    }
+}
+
+static void show_finish(struct rollup_finish *finish)
+{
+    const char *type = "unknown";
+    switch (finish->next_request_type) {
+    case CARTESI_ROLLUP_ADVANCE_STATE:
+        type = "advance";
+        break;
+    case CARTESI_ROLLUP_INSPECT_STATE:
+        type = "inspect";
+        break;
+    }
+    printf(
+       "finish:\n"
+       "\taccept: %s\n"
+       "\ttype:   %s\n"
+       "\tlength: %d\n"
+       , finish->accept_previous_request? "yes" : "no"
+       , type
+       , finish->next_request_payload_length);
+}
+
+static void show_advance(struct rollup_advance_state *advance)
+{
+    printf(
+        "advance:\n"
+        "\tmsg_sender: ");
+    print_address(advance->metadata.msg_sender);
+    printf(
+        "\tblock_number: %lu\n"
+        "\ttime_stamp: %lu\n"
+        "\tepoch_index: %lu\n"
+        "\tinput_index: %lu\n"
+        , advance->metadata.block_number
+        , advance->metadata.time_stamp
+        , advance->metadata.epoch_index
+        , advance->metadata.input_index);
+}
+
+static void show_inspect(struct rollup_inspect_state *inspect) {
+    printf("inspect:\n"
+           "\tlength: %lu\n",
+        inspect->payload.length);
+}
+
+static void show_voucher(struct rollup_voucher *voucher) {
+    printf("voucher:\n"
+           "\tindex: %lu\n"
+           "\tlength: %lu\n"
+           "\taddress: ",
+        voucher->index, voucher->payload.length);
+    print_address(voucher->address);
+}
+
+static void show_notice(struct rollup_notice *notice) {
+    printf("notice:\n"
+           "\tindex: %lu\n"
+           "\tlength: %lu\n",
+        notice->index, notice->payload.length);
+}
+static void show_report(struct rollup_report *report)
+{
+    printf(
+        "report:\n"
+        "\tlength: %lu\n"
+        , report->payload.length);
 }
