@@ -160,7 +160,8 @@ static int handle_advance_state_request(int fd, struct parsed_args *args, struct
         return -1;
     }
     memset(&req, 0, sizeof(req));
-    req.payload = *bytes;
+    req.payload.data = bytes->data;
+    req.payload.length = finish->next_request_payload_length;
     res = ioctl(fd, IOCTL_ROLLUP_READ_ADVANCE_STATE, (unsigned long) &req);
     if (res != 0) {
         fprintf(stderr, "IOCTL_ROLLUP_READ_ADVANCE_STATE returned error (%d)\n", res);
@@ -168,13 +169,13 @@ static int handle_advance_state_request(int fd, struct parsed_args *args, struct
     }
     if (args->verbose)
         show_advance(&req);
-    if (write_vouchers(fd, args->voucher_count, bytes, req.metadata.msg_sender, args->verbose) != 0) {
+    if (write_vouchers(fd, args->voucher_count, &req.payload, req.metadata.msg_sender, args->verbose) != 0) {
         return -1;
     }
-    if (write_notices(fd, args->notice_count, bytes, args->verbose) != 0) {
+    if (write_notices(fd, args->notice_count, &req.payload, args->verbose) != 0) {
         return -1;
     }
-    if (write_reports(fd, args->report_count, bytes, args->verbose) != 0) {
+    if (write_reports(fd, args->report_count, &req.payload, args->verbose) != 0) {
         return -1;
     }
     return 0;
@@ -189,7 +190,8 @@ static int handle_inspect_state_request(int fd, struct parsed_args *args, struct
         return -1;
     }
     memset(&req, 0, sizeof(req));
-    req.payload = *bytes;
+    req.payload.data = bytes->data;
+    req.payload.length = finish->next_request_payload_length;
     if (args->verbose)
         show_inspect(&req);
     res = ioctl(fd, IOCTL_ROLLUP_READ_INSPECT_STATE, (unsigned long) &req);
@@ -197,7 +199,7 @@ static int handle_inspect_state_request(int fd, struct parsed_args *args, struct
         fprintf(stderr, "IOCTL_ROLLUP_READ_INSPECT_STATE returned error (%d)\n", res);
         return res;
     }
-    if (write_reports(fd, args->report_count, bytes, args->verbose) != 0) {
+    if (write_reports(fd, args->report_count, &req.payload, args->verbose) != 0) {
         return -1;
     }
     return 0;
