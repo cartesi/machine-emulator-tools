@@ -17,23 +17,12 @@
 pub const ROLLUP_DEVICE_NAME: &str = "/dev/rollup";
 
 use serde::{Deserialize, Serialize};
-use std::fmt::Write;
 use std::os::unix::prelude::RawFd;
 
 mod bindings;
 pub use bindings::CARTESI_ROLLUP_ADDRESS_SIZE;
 pub use bindings::CARTESI_ROLLUP_ADVANCE_STATE;
 pub use bindings::CARTESI_ROLLUP_INSPECT_STATE;
-
-fn convert_address_to_string(
-    address: &[u8; bindings::CARTESI_ROLLUP_ADDRESS_SIZE as usize],
-) -> String {
-    let mut result = String::new();
-    for addr in address {
-        result.write_fmt(format_args!("{:02x}", addr)).unwrap_or(());
-    }
-    result
-}
 
 #[derive(Debug, Default)]
 pub struct RollupError {
@@ -104,12 +93,14 @@ pub struct AdvanceMetadata {
 
 impl From<bindings::rollup_input_metadata> for AdvanceMetadata {
     fn from(other: bindings::rollup_input_metadata) -> Self {
+        let mut address = "0x".to_string();
+        address.push_str(&hex::encode(&other.msg_sender));
         AdvanceMetadata {
             input_number: other.input_index,
             epoch_number: other.epoch_index,
             timestamp: other.time_stamp,
             block_number: other.block_number,
-            address: convert_address_to_string(&other.msg_sender),
+            address,
         }
     }
 }
@@ -297,11 +288,12 @@ pub fn rollup_write_voucher(
         length: voucher.payload.len() as u64,
     });
 
-    let mut address_c = match hex::decode(&voucher.address) {
+    let mut address_c = match hex::decode(&voucher.address[2..]) {
         Ok(res) => res,
         Err(e) => {
             return Err(Box::new(RollupError::new(&format!(
-                "address not valid: {}", e
+                "address not valid: {}",
+                e
             ))));
         }
     };

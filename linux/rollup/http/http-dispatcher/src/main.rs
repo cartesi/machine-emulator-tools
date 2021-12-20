@@ -31,13 +31,13 @@ fn print_usage(program: &str, opts: Options) {
     print!("{}", opts.usage(&brief));
 }
 
-async fn perform_rollup_finish_request(rollup_fd: &Arc<Mutex<RawFd>>) -> std::io::Result<rollup::RollupFinish> {
+async fn perform_rollup_finish_request(
+    rollup_fd: &Arc<Mutex<RawFd>>,
+) -> std::io::Result<rollup::RollupFinish> {
     let mut finish_request = rollup::RollupFinish::default();
     let fd = rollup_fd.lock().await;
     match rollup::rollup_finish_request(*fd, &mut finish_request) {
-        Ok(_) => {
-            Ok(finish_request)
-        },
+        Ok(_) => Ok(finish_request),
         Err(e) => {
             log::error!("error inserting finish request, details: {}", e.to_string());
             Err(std::io::Error::new(ErrorKind::Other, e.to_string()))
