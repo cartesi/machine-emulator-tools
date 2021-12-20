@@ -12,6 +12,7 @@
 
 mod config;
 mod controller;
+mod http_dispatcher;
 mod http_service;
 mod model;
 
@@ -28,33 +29,6 @@ const HTTP_DISPATCHER_PATH_DEFAULT: &str = "/opt/cartesi/bin/http-dispatcher";
 const HTTP_INSPECT_ENDPOINT_RETRIES: usize = 10;
 const HTTP_INSPECT_ENDPOINT_RETRIES_TIMEOUT: u64 = 1000; //ms
 
-// Perform get request to this app inspect endpoint, return true
-// if it is up and running
-async fn probe_inspect_endpoint(config: &Config) -> bool {
-    let client = hyper::Client::new();
-    let uri = format!(
-        "http://{}:{}/health",
-        &config.http_address, &config.http_port
-    );
-    let req = hyper::Request::builder()
-        .method(hyper::Method::GET)
-        .uri(uri)
-        .body(hyper::Body::from(""))
-        .expect("inspect request");
-    // Send GET request to DApp
-    match client.request(req).await {
-        Ok(res) => {
-            if res.status().is_success() {
-                true
-            } else {
-                log::debug!("Unable to probe inspect endpoint, responose {:?}", res);
-                false
-            }
-        }
-        Err(_e) => false,
-    }
-}
-
 /// Instantiate http dispatcher in subprocess
 async fn start_http_dispatcher(config: &Config, verbose: bool) {
     let http_dispatcher_bin_path = std::env::var(HTTP_DISPATCHER_PATH_ENV).unwrap_or_else(|e| {
@@ -70,8 +44,9 @@ async fn start_http_dispatcher(config: &Config, verbose: bool) {
     // Dapp are mutually dependant
     log::debug!("Waiting for ping endpoint to start...");
     let mut i = 0;
+    let service_addr = format!("{}:{}", &config.http_address, &config.http_port);
     loop {
-        if probe_inspect_endpoint(config).await == true {
+        if http_dispatcher::probe_inspect_endpoint(&service_addr).await {
             log::debug!("Inspect ping up and running");
             break;
         }

@@ -301,7 +301,7 @@ pub fn rollup_write_voucher(
         Ok(res) => res,
         Err(e) => {
             return Err(Box::new(RollupError::new(&format!(
-                "address not valid: {}", e.to_string()
+                "address not valid: {}", e
             ))));
         }
     };

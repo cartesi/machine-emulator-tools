@@ -14,6 +14,7 @@
 use tokio::sync::{mpsc, oneshot};
 
 use crate::config::Config;
+use crate::http_dispatcher::send_finish_request;
 use crate::model::{
     AdvanceError, AdvanceRequest, AdvanceResult, InspectError, InspectRequest, InspectResult,
     Model, SyncInspectRequest,
@@ -75,40 +76,15 @@ impl AdvancingState {
     /// Handle finish request to target-proxy, prepare `accept`/`reject` result
     async fn finish(self, result: AdvanceResult, config: &Config) -> State {
         log::debug!("processing finish request; setting state to idle");
-        // Application advance request resulting status
-        let status = match result {
-            Ok(()) => "accept",
-            Err(e) => {
-                log::error!("failed to advance state: {}", e);
-                "reject"
-            }
-        };
-        // Reconstruct http dispatcher http address
+
+        // Send finish request with status to http dispatcher
         let proxy_addr = format!(
-            "http://{}:{}/finish",
+            "{}:{}",
             config.dispatcher_address.clone(),
             config.dispatcher_port
         );
-        log::debug!("sending finish request to {}", proxy_addr);
-        // Send finish request to target-proxy
-        {
-            let mut json_status = std::collections::HashMap::new();
-            json_status.insert("status", status);
-            let client = hyper::Client::new();
-            // Prepare http request
-            let req = hyper::Request::builder()
-                .method(hyper::Method::POST)
-                .header(hyper::header::CONTENT_TYPE, "application/json")
-                .uri(proxy_addr)
-                .body(hyper::Body::from(
-                    serde_json::to_string(&json_status).expect("status json"),
-                ))
-                .expect("finish request");
-            // Send http request targeting target-proxy /finish endpoint
-            if let Err(e) = client.request(req).await {
-                log::error!("Failed to send `{}` response to the server: {}", status, e);
-            }
-        }
+        send_finish_request(&proxy_addr, result).await;
+
         // Next application state
         State::Idle(IdleState {
             model: self.model,

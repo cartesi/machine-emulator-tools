@@ -59,10 +59,8 @@ pub async fn run(
 async fn voucher(mut voucher: Json<Voucher>, data: Data<Mutex<Context>>) -> HttpResponse {
     log::debug!("received voucher request");
     // Check if address is valid
-    if (voucher.address.len() != (rollup::CARTESI_ROLLUP_ADDRESS_SIZE * 2 + 2) as usize
-        && voucher.address.starts_with("0x"))
-        || (voucher.address.len() != (rollup::CARTESI_ROLLUP_ADDRESS_SIZE * 2) as usize
-            && !voucher.address.starts_with("0x"))
+    if voucher.address.len() != (rollup::CARTESI_ROLLUP_ADDRESS_SIZE * 2 + 2) as usize
+        || (!voucher.address.starts_with("0x"))
     {
         log::error!(
             "address not valid: '{}' len: {}",

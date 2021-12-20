@@ -10,6 +10,8 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
+use crate::http_dispatcher;
+use crate::http_dispatcher::{send_notice, send_report};
 use actix_web::ResponseError;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -76,7 +78,7 @@ pub struct Report {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct IndexResponse {
+pub struct IndexResponse {
     index: u64,
 }
 
@@ -136,7 +138,6 @@ impl Model {
         finish_tx: mpsc::Sender<AdvanceResult>,
     ) {
         log::debug!("dapp Received advance request {:?}", &request);
-        let client = hyper::Client::new();
         // Generate test echo vouchers
         if self.test_echo_data.vouchers > 0 {
             log::debug!("generating {} echo vouchers", self.test_echo_data.vouchers);
@@ -148,26 +149,9 @@ impl Model {
                     payload: voucher_payload,
                     index: 0,
                 };
-                let req = hyper::Request::builder()
-                    .method(hyper::Method::POST)
-                    .header(hyper::header::CONTENT_TYPE, "application/json")
-                    .uri(self.proxy_addr.clone() + "/voucher")
-                    .body(hyper::Body::from(serde_json::to_string(&voucher).unwrap()))
-                    .expect("voucher request");
-                match client.request(req).await {
-                    Ok(res) => {
-                        let id_response = serde_json::from_slice::<IndexResponse>(
-                            &hyper::body::to_bytes(res)
-                                .await
-                                .expect("error in voucher in response handling")
-                                .to_vec(),
-                        );
-                        log::debug!("voucher generated: {:?}", &id_response);
-                    }
-                    Err(e) => {
-                        log::error!("failed to send voucher request to the proxy: {}", e);
-                    }
-                }
+
+                // Send voucher to http dispatcher
+                http_dispatcher::send_voucher(&self.proxy_addr, voucher).await;
             }
         }
         // Generate test echo notices
@@ -180,26 +164,7 @@ impl Model {
                     payload: notice_payload,
                     index: 0,
                 };
-                let req = hyper::Request::builder()
-                    .method(hyper::Method::POST)
-                    .header(hyper::header::CONTENT_TYPE, "application/json")
-                    .uri(self.proxy_addr.clone() + "/notice")
-                    .body(hyper::Body::from(serde_json::to_string(&notice).unwrap()))
-                    .expect("notice request");
-                match client.request(req).await {
-                    Ok(res) => {
-                        let id_response = serde_json::from_slice::<IndexResponse>(
-                            &hyper::body::to_bytes(res)
-                                .await
-                                .expect("error in notice id response handling")
-                                .to_vec(),
-                        );
-                        log::debug!("notice generated: {:?}", &id_response);
-                    }
-                    Err(e) => {
-                        log::error!("failed to send notice request to the proxy: {}", e);
-                    }
-                }
+                send_notice(&self.proxy_addr, notice).await;
             }
         }
         // Generate test echo reports
@@ -211,15 +176,7 @@ impl Model {
                 let report = Report {
                     payload: report_payload,
                 };
-                let req = hyper::Request::builder()
-                    .method(hyper::Method::POST)
-                    .header(hyper::header::CONTENT_TYPE, "application/json")
-                    .uri(self.proxy_addr.clone() + "/report")
-                    .body(hyper::Body::from(serde_json::to_string(&report).unwrap()))
-                    .expect("report request");
-                if let Err(e) = client.request(req).await {
-                    log::error!("failed to send report request to the proxy: {}", e);
-                }
+                send_report(&self.proxy_addr, report).await;
             }
         }
 

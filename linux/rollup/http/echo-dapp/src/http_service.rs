@@ -98,5 +98,5 @@ async fn inspect(req: HttpRequest, ctx: Data<ControllerChannel>) -> impl Respond
 #[actix_web::get("/health")]
 async fn ping(_req: HttpRequest, _ctx: Data<ControllerChannel>) -> impl Responder {
     // Return ok
-    return HttpResponse::Ok().body("");
+    HttpResponse::Ok().body("")
 }
