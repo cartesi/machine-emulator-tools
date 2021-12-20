@@ -35,18 +35,6 @@ fn convert_address_to_string(
     result
 }
 
-fn convert_string_to_address(
-    address: &str,
-) -> [u8; bindings::CARTESI_ROLLUP_ADDRESS_SIZE as usize] {
-    let mut result: [u8; bindings::CARTESI_ROLLUP_ADDRESS_SIZE as usize] =
-        [0; bindings::CARTESI_ROLLUP_ADDRESS_SIZE as usize];
-    let start = if address.starts_with("0x") { 2 } else { 0 };
-    for i in 0..&address[start..].len() / 2 {
-        result[i] = u8::from_str_radix(&address[i * 2..i * 2 + 2], 16).unwrap_or_default();
-    }
-    result
-}
-
 #[derive(Debug, Default)]
 pub struct RollupError {
     message: String,
@@ -309,7 +297,15 @@ pub fn rollup_write_voucher(
         length: voucher.payload.len() as u64,
     });
 
-    let mut address_c = convert_string_to_address(&voucher.address);
+    let mut address_c = match hex::decode(&voucher.address) {
+        Ok(res) => res,
+        Err(e) => {
+            return Err(Box::new(RollupError::new(&format!(
+                "address not valid: {}", e.to_string()
+            ))));
+        }
+    };
+
     let mut voucher_index: std::os::raw::c_ulong = 0;
     let res = unsafe {
         std::ptr::copy(

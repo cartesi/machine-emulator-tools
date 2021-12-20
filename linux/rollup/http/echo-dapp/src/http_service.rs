@@ -19,7 +19,7 @@ use actix_web::{
 
 use crate::config::Config;
 use crate::controller::ControllerChannel;
-use crate::model::{AdvanceError, AdvanceRequest, InspectRequest};
+use crate::model::{AdvanceError, AdvanceRequest, InspectReport, InspectRequest};
 
 /// Start http service
 pub async fn run(config: &Config, ctx: ControllerChannel) -> std::io::Result<()> {
@@ -59,7 +59,9 @@ async fn inspect(req: HttpRequest, ctx: Data<ControllerChannel>) -> impl Respond
         Some(payload) => {
             if payload.is_empty() {
                 // Empty query string, return OK
-                return HttpResponse::Ok().body("");
+                return HttpResponse::Ok().json(InspectReport {
+                    reports: Vec::new(),
+                });
             }
             match ctx
                 .process_inspect(InspectRequest {
@@ -93,7 +95,7 @@ async fn inspect(req: HttpRequest, ctx: Data<ControllerChannel>) -> impl Respond
 /// Implementation of http dummy ping endpoint
 /// Used to check if service is alive when starting up
 /// internal emulator http dispatcher service
-#[actix_web::get("/ping")]
+#[actix_web::get("/health")]
 async fn ping(_req: HttpRequest, _ctx: Data<ControllerChannel>) -> impl Responder {
     // Return ok
     return HttpResponse::Ok().body("");

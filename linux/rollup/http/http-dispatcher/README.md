@@ -18,5 +18,5 @@ Prerequisites: `riscv64-cartesi-linux-gnu` toolchain must be in the $PATH
 ###Build
 ```shell
 $ source ./environment.sh
-$ cargo build +nightly -Z build-std=std,core,alloc,panic_abort,proc_macro --target riscv64ima-unknown-linux-gnu.json --release
+$ cargo +nightly build -Z build-std=std,core,alloc,panic_abort,proc_macro --target riscv64ima-unknown-linux-gnu.json --release
 ```

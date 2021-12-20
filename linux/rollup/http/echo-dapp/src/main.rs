@@ -24,7 +24,7 @@ use std::io::ErrorKind;
 
 /// Environment path for specifying http-dispatcher application binary
 const HTTP_DISPATCHER_PATH_ENV: &str = "HTTP_DISPATCHER_PATH";
-const HTTP_DISPATCHER_PATH_DEFAULT: &str = "/opt/echo/http-dispatcher";
+const HTTP_DISPATCHER_PATH_DEFAULT: &str = "/opt/cartesi/bin/http-dispatcher";
 const HTTP_INSPECT_ENDPOINT_RETRIES: usize = 10;
 const HTTP_INSPECT_ENDPOINT_RETRIES_TIMEOUT: u64 = 1000; //ms
 
@@ -32,7 +32,10 @@ const HTTP_INSPECT_ENDPOINT_RETRIES_TIMEOUT: u64 = 1000; //ms
 // if it is up and running
 async fn probe_inspect_endpoint(config: &Config) -> bool {
     let client = hyper::Client::new();
-    let uri = format!("http://{}:{}/ping", &config.http_address, &config.http_port);
+    let uri = format!(
+        "http://{}:{}/health",
+        &config.http_address, &config.http_port
+    );
     let req = hyper::Request::builder()
         .method(hyper::Method::GET)
         .uri(uri)
@@ -171,7 +174,7 @@ async fn main() -> std::io::Result<()> {
 
     // Setup configuration
     let mut config = Config::new();
-    config.wihtout_dispatcher = matches.opt_present("without-dispatcher");
+    config.with_dispatcher = !matches.opt_present("without-dispatcher");
     {
         // Parse addresses and ports
         let address_match = matches
@@ -224,16 +227,14 @@ async fn main() -> std::io::Result<()> {
         },
     ));
 
-    if config.wihtout_dispatcher {
-        log::info!("starting dapp without http dispatcher")
-    }
-
     // Start http dispatcher in the background
-    if !config.wihtout_dispatcher {
+    if config.with_dispatcher {
         let config = config.clone();
         tokio::spawn(async move {
             crate::start_http_dispatcher(&config, verbose).await;
         });
+    } else {
+        log::info!("starting dapp without http dispatcher")
     }
 
     // Controller handles application flow

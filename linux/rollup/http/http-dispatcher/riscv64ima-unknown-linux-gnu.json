@@ -33,5 +33,5 @@
     },
     "target-pointer-width": "64",
     "panic-strategy": "abort"
-  }
+}
   

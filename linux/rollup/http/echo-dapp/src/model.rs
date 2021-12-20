@@ -159,7 +159,7 @@ impl Model {
                         let id_response = serde_json::from_slice::<IndexResponse>(
                             &hyper::body::to_bytes(res)
                                 .await
-                                .expect("error in voucher ind response handling")
+                                .expect("error in voucher in response handling")
                                 .to_vec(),
                         );
                         log::debug!("voucher generated: {:?}", &id_response);

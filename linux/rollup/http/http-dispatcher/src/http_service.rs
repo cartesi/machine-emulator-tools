@@ -32,11 +32,9 @@ pub async fn run(
     finish_tx: tokio::sync::mpsc::Sender<bool>,
 ) -> std::io::Result<()> {
     log::info!("starting http dispatcher http service!");
-    let id_generator = Arc::new(Mutex::new(IdGenerator::new()));
     HttpServer::new(move || {
         let data = Data::new(Mutex::new(Context {
             rollup_fd: rollup_fd.clone(),
-            id_generator: id_generator.clone(),
             finish_tx: finish_tx.clone(),
         }));
         App::new()
@@ -59,7 +57,7 @@ pub async fn run(
 /// Process voucher request from DApp, write voucher to rollup device
 #[actix_web::post("/voucher")]
 async fn voucher(mut voucher: Json<Voucher>, data: Data<Mutex<Context>>) -> HttpResponse {
-    //log::debug!("received voucher request {:#?}", voucher);
+    log::debug!("received voucher request");
     // Check if address is valid
     if (voucher.address.len() != (rollup::CARTESI_ROLLUP_ADDRESS_SIZE * 2 + 2) as usize
         && voucher.address.starts_with("0x"))
@@ -74,12 +72,10 @@ async fn voucher(mut voucher: Json<Voucher>, data: Data<Mutex<Context>>) -> Http
         return HttpResponse::BadRequest().body("Address not valid");
     }
     let context = data.lock().await;
-    let fd = context.rollup_fd.lock().await;
     // Write voucher to linux rollup device
-    return match rollup::rollup_write_voucher(*fd, &mut voucher.0) {
+    return match rollup::rollup_write_voucher(*context.rollup_fd.lock().await, &mut voucher.0) {
         Ok(voucher_index) => {
             log::debug!("voucher successfully inserted {:#?}", voucher);
-            drop(fd);
             HttpResponse::Created().json(IndexResponse {
                 index: voucher_index,
             })
@@ -98,14 +94,12 @@ async fn voucher(mut voucher: Json<Voucher>, data: Data<Mutex<Context>>) -> Http
 /// Process notice request from DApp, write notice to rollup device
 #[actix_web::post("/notice")]
 async fn notice(mut notice: Json<Notice>, data: Data<Mutex<Context>>) -> HttpResponse {
-    // log::debug!("received notice request {:#?}", notice);
+    log::debug!("received notice request");
     let context = data.lock().await;
-    let fd = context.rollup_fd.lock().await;
     // Write notice to linux rollup device
-    return match rollup::rollup_write_notices(*fd, &mut notice.0) {
+    return match rollup::rollup_write_notices(*context.rollup_fd.lock().await, &mut notice.0) {
         Ok(notice_index) => {
             log::debug!("notice successfully inserted {:#?}", notice);
-            drop(fd);
             HttpResponse::Created().json(IndexResponse {
                 index: notice_index,
             })
@@ -121,16 +115,13 @@ async fn notice(mut notice: Json<Notice>, data: Data<Mutex<Context>>) -> HttpRes
 /// Process report request from DApp, write report to rollup device
 #[actix_web::post("/report")]
 async fn report(report: Json<Report>, data: Data<Mutex<Context>>) -> HttpResponse {
-    //log::debug!("received report request {:#?}", report);
+    log::debug!("received report request");
     let context = data.lock().await;
-    let fd = context.rollup_fd.lock().await;
     // Write report to linux rollup device
-    return match rollup::rollup_write_report(*fd, &report.0) {
+    return match rollup::rollup_write_report(*context.rollup_fd.lock().await, &report.0) {
         Ok(_) => {
             log::debug!("report successfully inserted {:#?}", report);
-            drop(fd);
-            let id = context.id_generator.lock().await.get_new_report_id();
-            HttpResponse::Created().json(IndexResponse { index: id })
+            HttpResponse::Accepted().body("")
         }
         Err(e) => {
             log::error!("unable to insert report, error details: '{}'", e);
@@ -154,9 +145,8 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
         }
     }
     let context = data.lock().await;
-    let finish_tx = context.finish_tx.clone();
     // Indicate to loop thread that request is finished
-    if let Err(e) = finish_tx.send(true).await {
+    if let Err(e) = context.finish_tx.send(true).await {
         log::error!("error opening rollup device {}", e.to_string());
     }
     HttpResponse::Accepted().finish()
@@ -184,25 +174,7 @@ struct Error {
     error: ErrorDescription,
 }
 
-/// Helper class to generate ids for vouchers/notices/reports
-#[derive(Debug, Clone, Serialize)]
-struct IdGenerator {
-    report_count: u64,
-}
-
-impl IdGenerator {
-    pub fn new() -> Self {
-        IdGenerator { report_count: 0 }
-    }
-
-    pub fn get_new_report_id(&mut self) -> u64 {
-        self.report_count += 1;
-        self.report_count
-    }
-}
-
 struct Context {
     pub rollup_fd: Arc<Mutex<RawFd>>,
-    pub id_generator: Arc<Mutex<IdGenerator>>,
     pub finish_tx: tokio::sync::mpsc::Sender<bool>,
 }
