@@ -59,9 +59,7 @@ impl IdleState {
         // Calls model inspect state implementation to gather DApp current status info
         let response = self.model.inspect(request.value).await.map_err(|e| {
             log::error!("failed to inspect with error: {}", e);
-            InspectError {
-                cause: e.to_string(),
-            }
+            e
         });
         // Pass result to controller channel
         request

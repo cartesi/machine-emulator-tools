@@ -182,7 +182,7 @@ impl Model {
 
         //Finish request
         finish_tx
-            .send(if self.test_echo_data.reject == 0 {
+            .send(if self.test_echo_data.reject == 1 {
                 Err(AdvanceError {
                     cause: "rejected due to reject parameter".to_string(),
                 })
@@ -193,7 +193,7 @@ impl Model {
             .expect("failed to send finish request");
 
         // Decrease test reject counter
-        if self.test_echo_data.reject >= 0 {
+        if self.test_echo_data.reject >= 1 {
             self.test_echo_data.reject -= 1;
         }
     }
@@ -215,6 +215,19 @@ impl Model {
                 });
             }
         }
+
+        // Reject if reject paramter in the app was used
+        if self.test_echo_data.reject == 1 {
+            return Err(InspectError {
+                cause: "rejected due to reject parameter".to_string(),
+            });
+        };
+
+        // Decrease test reject counter
+        if self.test_echo_data.reject >= 1 {
+            self.test_echo_data.reject -= 1;
+        }
+
         log::info!("inspect state result {:?}", &inspect_report);
         Ok(inspect_report)
     }

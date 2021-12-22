@@ -33,7 +33,7 @@ fn print_usage(program: &str, opts: Options) {
 
 async fn perform_rollup_finish_request(
     rollup_fd: &Arc<Mutex<RawFd>>,
-    accept: bool
+    accept: bool,
 ) -> std::io::Result<rollup::RollupFinish> {
     let mut finish_request = rollup::RollupFinish::default();
     let fd = rollup_fd.lock().await;
@@ -102,7 +102,7 @@ async fn handle_rollup_requests(
             }
             let mut inspect_endpoint_query = inspect_base_endpoint;
             inspect_endpoint_query.push_str(urlencoding::encode(&inspect_state.payload).as_ref()); // payload is endpoint query
-                                                                     // Prepare GET request
+            // Prepare GET request
             let client = hyper::Client::new();
             let req = hyper::Request::builder()
                 .method(hyper::Method::GET)
@@ -112,41 +112,71 @@ async fn handle_rollup_requests(
             // Send GET request to DApp
             match client.request(req).await {
                 Ok(res) => {
-                    // Handle InspectReport received in json body
-                    let buf = hyper::body::to_bytes(res)
-                        .await
-                        .expect("error in inspect response handling")
-                        .to_vec();
-                    let inspect_report = serde_json::from_slice::<InspectReport>(&buf)
-                        .expect("inspect report deserialization failed");
-                    log::info!("dapp inspect response: {:?}", &inspect_report);
+                    if res.status().is_success() {
+                        // Handle InspectReport received in json body
+                        let buf = hyper::body::to_bytes(res)
+                            .await
+                            .expect("error in inspect response handling")
+                            .to_vec();
+                        let inspect_report = serde_json::from_slice::<InspectReport>(&buf)
+                            .expect("inspect report deserialization failed");
+                        log::info!("dapp inspect response: {:?}", &inspect_report);
 
-                    // Write reports one by one to rollup device
-                    log::debug!("writing reports to rollup device...");
-                    for report in inspect_report.reports {
-                        match rollup::rollup_write_report(*fd, &report) {
-                            Ok(_) => {}
-                            Err(e) => {
-                                log::error!(
-                                    "failed to write rollup report to rollup device: {}",
-                                    e.to_string()
-                                );
-                                return Err(std::io::Error::new(ErrorKind::Other, e.to_string()));
-                            }
-                        };
-                    }
+                        // Write reports one by one to rollup device
+                        log::debug!("writing reports to rollup device...");
+                        for report in inspect_report.reports {
+                            match rollup::rollup_write_report(*fd, &report) {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    log::error!(
+                                        "failed to write rollup report to rollup device: {}",
+                                        e.to_string()
+                                    );
+                                    return Err(std::io::Error::new(
+                                        ErrorKind::Other,
+                                        e.to_string(),
+                                    ));
+                                }
+                            };
+                        }
 
-                    // Send rollup finish request to indicate inspect request is finished
-                    if let Err(e) = finish_tx.send(true).await {
-                        log::error!("error opening rollup device {}", e.to_string());
+                        // Send rollup finish request to indicate inspect request is finished with accept
+                        if let Err(e) = finish_tx.send(true).await {
+                            log::error!("error opening rollup device {}", e.to_string());
+                        }
+                        return Ok(());
+                    } else {
+                        // Dapp returned error on inspect request
+                        // Handle InspectError received in plain http response
+                        let inspect_error = String::from_utf8(
+                            hyper::body::to_bytes(res)
+                                .await
+                                .expect("error in inspect response handling")
+                                .into_iter()
+                                .collect(),
+                        )
+                        .expect("failed to decode message");
+
+                        // Send rollup finish request to indicate inspect request is finished with reject
+                        if let Err(e) = finish_tx.send(false).await {
+                            log::error!("error opening rollup device {}", e.to_string());
+                        }
+                        return Err(std::io::Error::new(
+                            ErrorKind::Other,
+                            format!("{}", inspect_error),
+                        ));
                     }
-                    return Ok(());
                 }
                 Err(e) => {
                     log::error!(
-                        "failed to send inspect request to the server: {}",
+                        "error with inspect request to the server: {}",
                         e.to_string()
                     );
+                    // Send rollup finish request to indicate inspect request is finished with reject
+                    // as there was error in communication with the dapp
+                    if let Err(e) = finish_tx.send(false).await {
+                        log::error!("error opening rollup device {}", e.to_string());
+                    }
                     return Err(std::io::Error::new(ErrorKind::Other, e.to_string()));
                 }
             }
@@ -195,12 +225,12 @@ async fn linux_rollup_loop(
                             match handle_rollup_requests(rollup_fd.clone(), finish_request, &dapp_address, &finish_tx).await {
                                 Ok(_) => {}
                                 Err(e) => {
-                                    log::error!("error performing handle_rollup_requests {}", e.to_string());
+                                    log::error!("error performing handle_rollup_requests: `{}`", e.to_string());
                                 }
                             }
                     }
                         Err(e) => {
-                            log::error!("error performing initial finish request {}", e.to_string());
+                            log::error!("error performing initial finish request: `{}`", e.to_string());
                         }
                     }
                 }
