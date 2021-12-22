@@ -142,11 +142,12 @@ pub struct Report {
 pub fn rollup_finish_request(
     fd: RawFd,
     finish: &mut RollupFinish,
+    accept: bool
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut finish_c = Box::new(bindings::rollup_finish::from(&mut *finish));
 
     log::debug!("writing rollup finish request, yielding");
-    let res = unsafe { bindings::rollup_finish_request(fd as i32, finish_c.as_mut()) };
+    let res = unsafe { bindings::rollup_finish_request(fd as i32, finish_c.as_mut(), accept) };
     if res != 0 {
         log::error!("failed to write finish request, IOCTL error {}", res);
         return Err(Box::new(RollupError::new(&format!(

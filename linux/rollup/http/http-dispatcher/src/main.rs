@@ -33,10 +33,11 @@ fn print_usage(program: &str, opts: Options) {
 
 async fn perform_rollup_finish_request(
     rollup_fd: &Arc<Mutex<RawFd>>,
+    accept: bool
 ) -> std::io::Result<rollup::RollupFinish> {
     let mut finish_request = rollup::RollupFinish::default();
     let fd = rollup_fd.lock().await;
-    match rollup::rollup_finish_request(*fd, &mut finish_request) {
+    match rollup::rollup_finish_request(*fd, &mut finish_request, accept) {
         Ok(_) => Ok(finish_request),
         Err(e) => {
             log::error!("error inserting finish request, details: {}", e.to_string());
@@ -179,11 +180,11 @@ async fn linux_rollup_loop(
     loop {
         log::debug!("waiting for finish request...");
         tokio::select! {
-            Some(_) = finish_rx.recv() => {
+            Some(accept) = finish_rx.recv() => {
                 {
-                    log::debug!("request finished, writing to driver...");
+                    log::debug!("request finished, writing to driver result `{}` ...", accept);
                     // Write finish request, read indicator for next request
-                    match perform_rollup_finish_request(&rollup_fd).await {
+                    match perform_rollup_finish_request(&rollup_fd, accept).await {
                         Ok(finish_request) => {
                             // Received new request, process it
                             log::info!("Received new request of type {}", match finish_request.next_request_type {

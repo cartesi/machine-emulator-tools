@@ -135,16 +135,16 @@ async fn report(report: Json<Report>, data: Data<Mutex<Context>>) -> HttpRespons
 async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> HttpResponse {
     log::debug!("received finish request {:#?}", finish);
     // Prepare finish status for the rollup manager
-    match finish.status.as_str() {
-        "accept" => {}
-        "reject" => {}
+    let accept = match finish.status.as_str() {
+        "accept" => {true}
+        "reject" => {false}
         _ => {
             return HttpResponse::UnprocessableEntity().body("status must be 'accept' or 'reject'");
         }
-    }
+    };
     let context = data.lock().await;
     // Indicate to loop thread that request is finished
-    if let Err(e) = context.finish_tx.send(true).await {
+    if let Err(e) = context.finish_tx.send(accept).await {
         log::error!("error opening rollup device {}", e.to_string());
     }
     HttpResponse::Accepted().finish()

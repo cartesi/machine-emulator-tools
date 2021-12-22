@@ -27,10 +27,10 @@ static int resize_bytes(struct rollup_bytes *bytes, uint64_t size) {
 
 /* Finishes processing of current advance or inspect.
  * Returns 0 on success, -1 on error */
-int rollup_finish_request(int fd, struct rollup_finish *finish) {
+int rollup_finish_request(int fd, struct rollup_finish *finish, bool accept) {
     int res = 0;
     memset(finish, 0, sizeof(*finish));
-    finish->accept_previous_request = true;
+    finish->accept_previous_request = accept;
     res = ioctl(fd, IOCTL_ROLLUP_FINISH, (unsigned long)finish);
     return res;
 }

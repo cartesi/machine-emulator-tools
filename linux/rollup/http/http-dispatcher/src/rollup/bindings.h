@@ -12,10 +12,14 @@
  */
 
 
-// C interfaces that are converted to rust using bindgen https://github.com/rust-lang/rust-bindgen
-// bindgen command to generate Rust file from rollup C interface:
-// bindgen ./bindings.h -o ./bindings.rs --whitelist-var '^IOCTL.*' --whitelist-var '^CARTESI.*' --whitelist-type "^rollup_.*"\
-// --whitelist-function '^rollup.*' -- -I/opt/riscv/riscv64-cartesi-linux-gnu/riscv64-cartesi-linux-gnu/sysroot/usr/include/linux/cartesi
+/* C interfaces that are converted to rust using bindgen (https://github.com/rust-lang/rust-bindgen)
+ * command to generate Rust file from rollup C interface. In case that C rollup bindings are updated,
+ * `bindings.rs` file needs to be regenerated using following procedure:
+ * Add toolchain `riscv64-cartesi-linux-gnu` to the shell execution path
+ * $ cd linux/rollup/http/http-dispatcher/src/rollup
+ * $ bindgen ./bindings.h -o ./bindings.rs --whitelist-var '^IOCTL.*' --whitelist-var '^CARTESI.*' --whitelist-type "^rollup_.*" --whitelist-function '^rollup.*'\
+     -- --sysroot=/opt/riscv/riscv64-cartesi-linux-gnu/riscv64-cartesi-linux-gnu/sysroot --target=riscv64-cartesi-linux-gnu -march=rv64ima -mabi=lp64
+*/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -26,7 +30,7 @@
 #include <linux/cartesi/rollup.h>
 
 
-int rollup_finish_request(int fd, struct rollup_finish *finish);
+int rollup_finish_request(int fd, struct rollup_finish *finish, bool accept);
 int rollup_read_advance_state_request(int fd, struct rollup_finish *finish, struct rollup_bytes *bytes, struct rollup_input_metadata *metadata);
 int rollup_read_inspect_state_request(int fd, struct rollup_finish *finish, struct rollup_bytes *query);
 int rollup_write_vouchers(int fd, uint8_t address[CARTESI_ROLLUP_ADDRESS_SIZE], struct rollup_bytes *bytes, uint64_t* voucher_index);
