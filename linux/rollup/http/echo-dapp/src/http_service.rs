@@ -63,9 +63,17 @@ async fn inspect(req: HttpRequest, ctx: Data<ControllerChannel>) -> impl Respond
                     reports: Vec::new(),
                 });
             }
+            let decoded_payload = match urlencoding::decode(payload) {
+                Ok(payload) => {payload}
+                Err(e) => {
+                    let error_message = format!("failed to decode payload: {}", e.to_string());
+                    log::error!("{}", &error_message);
+                    return HttpResponse::InternalServerError().body(error_message);
+                }
+            };
             match ctx
                 .process_inspect(InspectRequest {
-                    payload: payload.to_string(),
+                    payload: decoded_payload.to_string(),
                 })
                 .await
             {

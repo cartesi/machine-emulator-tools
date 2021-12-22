@@ -18,6 +18,7 @@ async-trait = "0.1"
 tokio = { version = "1.14", features = ["macros", "sync", "rt-multi-thread"] }
 hyper = { version = "0.14.15", features = ["http1", "runtime", "client"] }
 getopts = "0.2.21"
+urlencoding = "2.1.0"
 
 
 [profile.release]

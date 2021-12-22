@@ -26,6 +26,7 @@ env_logger = "0.9"
 async-mutex = "1.4.0"
 hyper = { version = "0.14.15", features = ["http1", "runtime", "client"] }
 hex = "0.4.3"
+urlencoding = "2.1.0"
 
 [build-dependencies]
 bindgen = "0.59.1"
