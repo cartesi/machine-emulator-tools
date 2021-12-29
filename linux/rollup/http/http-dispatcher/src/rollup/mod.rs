@@ -123,15 +123,13 @@ pub struct InspectReport {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Notice {
-    pub payload: String,
-    pub index: u64,
+    pub payload: String
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Voucher {
     pub address: String,
-    pub payload: String,
-    pub index: u64,
+    pub payload: String
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -205,7 +203,7 @@ pub fn rollup_read_advance_state_request(
     }
     let result = AdvanceRequest {
         metadata: AdvanceMetadata::from(*input_metadata_c),
-        payload: std::str::from_utf8(&payload)?.to_string(),
+        payload: "0x".to_string() + &hex::encode(&payload),
     };
     *finish = RollupFinish::from(*finish_c);
     Ok(result)
@@ -252,17 +250,25 @@ pub fn rollup_write_notices(
     notice: &mut Notice,
 ) -> Result<u64, Box<dyn std::error::Error>> {
     print_notice(notice);
-    let mut buffer: Vec<u8> = Vec::with_capacity(notice.payload.len());
+    let binary_payload = match hex::decode(&notice.payload[2..]) {
+        Ok(payload) => payload,
+        Err(_err) => {
+            return Err(Box::new(RollupError::new(&format!(
+                "Error decoding notice payload, payload must be in Ethereum hex binary format"
+            ))));
+        }
+     };
+    let mut buffer: Vec<u8> = Vec::with_capacity(binary_payload.len());
     let mut bytes_c = Box::new(bindings::rollup_bytes {
         data: buffer.as_mut_ptr() as *mut ::std::os::raw::c_uchar,
-        length: notice.payload.len() as u64,
+        length: binary_payload.len() as u64,
     });
     let mut notice_index: std::os::raw::c_ulong = 0;
     let res = unsafe {
         std::ptr::copy(
-            notice.payload.as_ptr(),
+            binary_payload.as_ptr(),
             buffer.as_mut_ptr(),
-            notice.payload.len(),
+            binary_payload.len(),
         );
         bindings::rollup_write_notices(fd as i32, bytes_c.as_mut(), &mut notice_index)
     };
@@ -272,7 +278,6 @@ pub fn rollup_write_notices(
             res
         ))));
     } else {
-        notice.index = notice_index;
         log::debug!("notice with id {} successfully written!", notice_index);
     }
     Ok(notice_index as u64)
@@ -283,10 +288,18 @@ pub fn rollup_write_voucher(
     voucher: &mut Voucher,
 ) -> Result<u64, Box<dyn std::error::Error>> {
     print_voucher(voucher);
-    let mut buffer: Vec<u8> = Vec::with_capacity(voucher.payload.len());
+    let binary_payload = match hex::decode(&voucher.payload[2..]) {
+        Ok(payload) => payload,
+        Err(_err) => {
+            return Err(Box::new(RollupError::new(&format!(
+                "Error decoding voucher payload, payload must be in Ethereum hex binary format"
+            ))));
+        }
+    };
+    let mut buffer: Vec<u8> = Vec::with_capacity(binary_payload.len());
     let mut bytes_c = Box::new(bindings::rollup_bytes {
         data: buffer.as_mut_ptr() as *mut ::std::os::raw::c_uchar,
-        length: voucher.payload.len() as u64,
+        length: binary_payload.len() as u64,
     });
 
     let mut address_c = match hex::decode(&voucher.address[2..]) {
@@ -302,9 +315,9 @@ pub fn rollup_write_voucher(
     let mut voucher_index: std::os::raw::c_ulong = 0;
     let res = unsafe {
         std::ptr::copy(
-            voucher.payload.as_ptr(),
+            binary_payload.as_ptr(),
             buffer.as_mut_ptr(),
-            voucher.payload.len(),
+            binary_payload.len(),
         );
         bindings::rollup_write_vouchers(
             fd as i32,
@@ -319,7 +332,6 @@ pub fn rollup_write_voucher(
             res
         ))));
     } else {
-        voucher.index = voucher_index;
         log::debug!("voucher with id {} successfully written!", voucher_index);
     }
 
@@ -328,16 +340,24 @@ pub fn rollup_write_voucher(
 
 pub fn rollup_write_report(fd: RawFd, report: &Report) -> Result<(), Box<dyn std::error::Error>> {
     print_report(report);
-    let mut buffer: Vec<u8> = Vec::with_capacity(report.payload.len());
+    let binary_payload = match hex::decode(&report.payload[2..]) {
+        Ok(payload) => payload,
+        Err(_err) => {
+            return Err(Box::new(RollupError::new(&format!(
+                "Error decoding report payload, payload must be in Ethereum hex binary format"
+            ))));
+        }
+    };
+    let mut buffer: Vec<u8> = Vec::with_capacity(binary_payload.len());
     let mut bytes_c = Box::new(bindings::rollup_bytes {
         data: buffer.as_mut_ptr() as *mut ::std::os::raw::c_uchar,
-        length: report.payload.len() as u64,
+        length: binary_payload.len() as u64,
     });
     let res = unsafe {
         std::ptr::copy(
-            report.payload.as_ptr(),
+            binary_payload.as_ptr(),
             buffer.as_mut_ptr(),
-            report.payload.len(),
+            binary_payload.len(),
         );
         bindings::rollup_write_reports(fd as i32, bytes_c.as_mut())
     };

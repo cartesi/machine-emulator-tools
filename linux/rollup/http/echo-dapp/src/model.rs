@@ -61,15 +61,13 @@ pub struct InspectError {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Notice {
-    pub payload: String,
-    pub index: u64,
+    pub payload: String
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Voucher {
     pub address: String,
-    pub payload: String,
-    pub index: u64,
+    pub payload: String
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -146,8 +144,7 @@ impl Model {
                 let voucher_payload = request.payload.clone();
                 let voucher = Voucher {
                     address: request.metadata.address.clone(),
-                    payload: voucher_payload,
-                    index: 0,
+                    payload: voucher_payload
                 };
 
                 // Send voucher to http dispatcher
@@ -161,8 +158,7 @@ impl Model {
             for _ in 0..self.test_echo_data.notices {
                 let notice_payload = request.payload.clone();
                 let notice = Notice {
-                    payload: notice_payload,
-                    index: 0,
+                    payload: notice_payload
                 };
                 send_notice(&self.proxy_addr, notice).await;
             }
@@ -209,7 +205,7 @@ impl Model {
                 self.test_echo_data.reports
             );
             for _ in 0..self.test_echo_data.reports {
-                let report_payload = request.payload.clone();
+                let report_payload = "0x".to_string() +  &hex::encode(&request.payload);
                 inspect_report.reports.push(Report {
                     payload: report_payload,
                 });
