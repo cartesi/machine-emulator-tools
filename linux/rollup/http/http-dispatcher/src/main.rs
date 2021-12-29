@@ -60,15 +60,16 @@ async fn handle_rollup_requests(
     match next_request_type {
         rollup::CARTESI_ROLLUP_ADVANCE_STATE => {
             log::debug!("handle advance state request...");
-            let fd = rollup_fd.lock().await;
-            // Read advance request from rollup device
-            let advance_state =
+            let advance_state = {
+                let fd = rollup_fd.lock().await;
+                // Read advance request from rollup device
                 match rollup::rollup_read_advance_state_request(*fd, &mut finish_request) {
                     Ok(r) => r,
                     Err(e) => {
                         return Err(std::io::Error::new(ErrorKind::Other, e.to_string()));
                     }
-                };
+                }
+            };
             if log::log_enabled!(log::Level::Info) {
                 rollup::print_advance(&advance_state);
             }
@@ -88,15 +89,16 @@ async fn handle_rollup_requests(
         }
         rollup::CARTESI_ROLLUP_INSPECT_STATE => {
             log::debug!("handle inspect state request...");
-            let fd = rollup_fd.lock().await;
             // Read inspect request from rollup device
-            let inspect_state =
+            let inspect_state = {
+                let fd = rollup_fd.lock().await;
                 match rollup::rollup_read_inspect_state_request(*fd, &mut finish_request) {
                     Ok(r) => r,
                     Err(e) => {
                         return Err(std::io::Error::new(ErrorKind::Other, e.to_string()));
                     }
-                };
+                }
+            };
             if log::log_enabled!(log::Level::Info) {
                 rollup::print_inspect(&inspect_state);
             }
@@ -125,6 +127,7 @@ async fn handle_rollup_requests(
                         // Write reports one by one to rollup device
                         log::debug!("writing reports to rollup device...");
                         for report in inspect_report.reports {
+                            let fd = rollup_fd.lock().await;
                             match rollup::rollup_write_report(*fd, &report) {
                                 Ok(_) => {}
                                 Err(e) => {
