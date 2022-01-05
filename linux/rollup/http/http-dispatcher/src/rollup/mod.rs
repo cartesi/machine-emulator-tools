@@ -84,11 +84,11 @@ impl From<bindings::rollup_finish> for RollupFinish {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdvanceMetadata {
-    pub address: String,
-    pub epoch_number: u64,
-    pub input_number: u64,
+    pub msg_sender: String,
+    pub epoch_index: u64,
+    pub input_index: u64,
     pub block_number: u64,
-    pub timestamp: u64,
+    pub time_stamp: u64,
 }
 
 impl From<bindings::rollup_input_metadata> for AdvanceMetadata {
@@ -96,11 +96,11 @@ impl From<bindings::rollup_input_metadata> for AdvanceMetadata {
         let mut address = "0x".to_string();
         address.push_str(&hex::encode(&other.msg_sender));
         AdvanceMetadata {
-            input_number: other.input_index,
-            epoch_number: other.epoch_index,
-            timestamp: other.time_stamp,
+            input_index: other.input_index,
+            epoch_index: other.epoch_index,
+            time_stamp: other.time_stamp,
             block_number: other.block_number,
-            address,
+            msg_sender: address,
         }
     }
 }
@@ -233,13 +233,14 @@ pub fn rollup_read_inspect_state_request(
         )));
     }
 
-    let mut query: Vec<u8> = Vec::with_capacity(bytes_c.length as usize);
+    let mut payload: Vec<u8> = Vec::with_capacity(bytes_c.length as usize);
     unsafe {
-        std::ptr::copy(bytes_c.data, query.as_mut_ptr(), bytes_c.length as usize);
-        query.set_len(bytes_c.length as usize);
+        std::ptr::copy(bytes_c.data, payload.as_mut_ptr(), bytes_c.length as usize);
+        payload.set_len(bytes_c.length as usize);
     }
     let result = InspectRequest {
-        payload: std::str::from_utf8(&query)?.to_string(),
+        payload: "0x".to_string() + &hex::encode(&payload),
+
     };
     *finish = RollupFinish::from(*finish_c);
     Ok(result)
@@ -382,13 +383,13 @@ pub fn print_address(address: &str) {
 
 pub fn print_advance(advance: &AdvanceRequest) {
     log::debug!("advance: {{\n\tmsg_sender: ");
-    print_address(&advance.metadata.address);
+    print_address(&advance.metadata.msg_sender);
     log::debug!(
         "\tblock_number: {}\n\ttime_stamp: {}\n\tepoch_index: {}\n\tinput_index: {}\n}}",
         advance.metadata.block_number,
-        advance.metadata.timestamp,
-        advance.metadata.epoch_number,
-        advance.metadata.input_number
+        advance.metadata.time_stamp,
+        advance.metadata.epoch_index,
+        advance.metadata.input_index
     );
 }
 

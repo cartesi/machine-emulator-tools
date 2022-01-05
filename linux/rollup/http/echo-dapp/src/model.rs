@@ -26,11 +26,11 @@ pub struct SyncRequest<T: Send + Sync, U: Send + Sync> {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdvanceMetadata {
-    pub address: String,
-    pub epoch_number: u64,
-    pub input_number: u64,
+    pub msg_sender: String,
+    pub epoch_index: u64,
+    pub input_index: u64,
     pub block_number: u64,
-    pub timestamp: u64,
+    pub time_stamp: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -143,7 +143,7 @@ impl Model {
             for _ in 0..self.test_echo_data.vouchers {
                 let voucher_payload = request.payload.clone();
                 let voucher = Voucher {
-                    address: request.metadata.address.clone(),
+                    address: request.metadata.msg_sender.clone(),
                     payload: voucher_payload
                 };
 
@@ -205,7 +205,7 @@ impl Model {
                 self.test_echo_data.reports
             );
             for _ in 0..self.test_echo_data.reports {
-                let report_payload = "0x".to_string() +  &hex::encode(&request.payload);
+                let report_payload = request.payload.clone(); // payload is in Ethereum hex binary format
                 inspect_report.reports.push(Report {
                     payload: report_payload,
                 });

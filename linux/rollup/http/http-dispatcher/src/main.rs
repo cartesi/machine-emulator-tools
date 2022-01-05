@@ -103,7 +103,7 @@ async fn handle_rollup_requests(
                 rollup::print_inspect(&inspect_state);
             }
             let mut inspect_endpoint_query = inspect_base_endpoint;
-            inspect_endpoint_query.push_str(urlencoding::encode(&inspect_state.payload).as_ref()); // payload is endpoint query
+            inspect_endpoint_query.push_str(&inspect_state.payload); // payload is endpoint query
             // Prepare GET request
             let client = hyper::Client::new();
             let req = hyper::Request::builder()
