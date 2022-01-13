@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [0.5.0] - 2022-01-13
+### Changed
+- Updated http-dispatcher and echo-dapp according to openapi-interfaces changes
+- Remove index from voucher and notice http-requests on http-dispatcher and echo-dapp
+- Fixed http-dispatcher payload handling
+
+## [0.4.1] - 2021-12-29
+### Changed
+- Fixed deadlock on http-dispatcher
+
 ## [0.4.0] - 2021-12-21
 ### Added
 - New ioctl-echo-loop tool to test rollups
@@ -15,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Previous Versions]
 
+[0.5.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.5.0
+[0.4.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.4.1
 [0.4.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.4.0
 [0.3.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.3.0
 [0.2.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.2.0
