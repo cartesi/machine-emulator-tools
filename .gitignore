@@ -32,7 +32,6 @@
 *.app
 
 #Rust 
-*Cargo.lock
 *target
 
 #VS Code
