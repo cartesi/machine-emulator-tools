@@ -151,8 +151,7 @@ static int write_reports(int fd, unsigned count, struct rollup_bytes *bytes, uns
     return 0;
 }
 
-static int handle_advance_state_request(int fd, struct parsed_args *args, struct rollup_finish *finish,
-    struct rollup_bytes *bytes) {
+static int handle_advance_state_request(int fd, struct parsed_args *args, struct rollup_finish *finish, struct rollup_bytes *bytes, struct rollup_input_metadata *metadata) {
     struct rollup_advance_state req;
     int res = 0;
     if (resize_bytes(bytes, finish->next_request_payload_length) != 0) {
@@ -167,6 +166,7 @@ static int handle_advance_state_request(int fd, struct parsed_args *args, struct
         fprintf(stderr, "IOCTL_ROLLUP_READ_ADVANCE_STATE returned error (%d)\n", res);
         return res;
     }
+    *metadata = req.metadata;
     if (args->verbose)
         show_advance(&req);
     if (write_vouchers(fd, args->voucher_count, &req.payload, req.metadata.msg_sender, args->verbose) != 0) {
@@ -205,10 +205,10 @@ static int handle_inspect_state_request(int fd, struct parsed_args *args, struct
     return 0;
 }
 
-static int handle_request(int fd, struct parsed_args *args, struct rollup_finish *finish, struct rollup_bytes *bytes) {
+static int handle_request(int fd, struct parsed_args *args, struct rollup_finish *finish, struct rollup_bytes *bytes, struct rollup_input_metadata *metadata) {
     switch (finish->next_request_type) {
         case CARTESI_ROLLUP_ADVANCE_STATE:
-            return handle_advance_state_request(fd, args, finish, bytes);
+            return handle_advance_state_request(fd, args, finish, bytes, metadata);
         case CARTESI_ROLLUP_INSPECT_STATE:
             return handle_inspect_state_request(fd, args, finish, bytes);
         default:
@@ -220,10 +220,13 @@ static int handle_request(int fd, struct parsed_args *args, struct rollup_finish
 }
 
 int main(int argc, char *argv[]) {
+    struct rollup_input_metadata metadata;
+    struct rollup_finish finish;
     struct parsed_args args;
     struct rollup_bytes bytes;
     int fd;
 
+    memset(&metadata, 0, sizeof(metadata));
     parse_args(argc, argv, &args);
 
     fd = open(ROLLUP_DEVICE_NAME, O_RDWR);
@@ -237,16 +240,26 @@ int main(int argc, char *argv[]) {
 
     memset(&bytes, 0, sizeof(bytes));
 
-    /* Loop accepting previous request, waiting for next, and handling it */
-    for (int i = 0;; ++i) {
-        struct rollup_finish finish;
-        if (finish_request(fd, &finish, !(i == args.reject)) != 0) {
+    /* Accept the initial request */
+    if (finish_request(fd, &finish, true) != 0) {
+        exit(1);
+    } else if (args.verbose) {
+        show_finish(&finish);
+    }
+
+    /* handle a request, then wait for next */
+    for (;;) {
+        bool accept;
+        if (handle_request(fd, &args, &finish, &bytes, &metadata) != 0) {
+            break;
+        }
+        /* accept inspects, maybe reject advances */
+        accept = (finish.next_request_type == CARTESI_ROLLUP_INSPECT_STATE) ||
+            !(args.reject == metadata.input_index);
+        if (finish_request(fd, &finish, accept) != 0) {
             break;
         } else if (args.verbose) {
             show_finish(&finish);
-        }
-        if (handle_request(fd, &args, &finish, &bytes) != 0) {
-            break;
         }
     }
 
