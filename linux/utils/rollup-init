@@ -1,0 +1,141 @@
+#!/bin/sh
+# Copyright 2022 Cartesi Pte. Ltd.
+#
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+# this file except in compliance with the License. You may obtain a copy of the
+# License at http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed
+# under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+# CONDITIONS OF ANY KIND, either express or implied. See the License for the
+# specific language governing permissions and limitations under the License.
+
+DEFAULT_DAPP_PORT=5003
+DEFAULT_DAPP_TIMEOUT=100
+DEFAULT_HTTP_DISPATCHER_PORT=5004
+
+usage() {
+    echo "Usage:
+
+    $0 [options] <command> [arguments]
+
+where options are:
+
+    --help
+        Prints this message.
+
+    --dapp-port <port>
+        Passes to the http-dispatcher the port that the dapp listens to.
+        (default: $DEFAULT_DAPP_PORT)
+
+    --http-dispatcher-port <port>
+        Passes to the http-dispatcher the port it should listen to.
+        (default: $DEFAULT_HTTP_DISPATCHER_PORT)
+
+    --dapp-timeout <seconds>
+        Maximum number of seconds that the dapp should take to start up.
+        (default: $DEFAULT_DAPP_TIMEOUT)
+
+    --http-dispatcher-verbose
+        Enables verbose messages from the http-dispatcher.
+        (default: disabled)
+
+and command and arguments:
+
+    command
+        The command to start up the dapp.
+
+    arguments
+        The given command arguments."
+}
+
+check_integer() {
+    if [ $# -eq 0 ]
+    then
+        echo "Error: missing argument" >&2
+        exit 1
+    fi
+    if ! [ $1 -eq $1 ] > /dev/null 2>&1
+    then
+        echo "Error: port must be a number" >&2
+        exit 1
+    fi
+}
+
+DAPP_PORT=$DEFAULT_DAPP_PORT
+DAPP_TIMEOUT=$DEFAULT_DAPP_TIMEOUT
+HTTP_DISPATCHER_PORT=$DEFAULT_HTTP_DISPATCHER_PORT
+HTTP_DISPATCHER_VERBOSE=""
+
+while [ $# -gt 0 ]
+do
+    case "$1" in
+    --help)
+        usage
+        exit 0
+        ;;
+    --dapp-port)
+        shift
+        check_integer $1
+        DAPP_PORT=$1
+        shift
+        ;;
+    --http-dispatcher-port)
+        shift
+        check_integer $1
+        HTTP_DISPATCHER_PORT=$1
+        shift
+        ;;
+    --dapp-timeout)
+        shift
+        check_integer $1
+        DAPP_TIMEOUT=$1
+        shift
+        ;;
+    --http-dispatcher-verbose)
+        HTTP_DISPATCHER_VERBOSE="--verbose"
+        shift
+        ;;
+    -*)
+        echo "Error: unknown option $1" >&2
+        exit 1
+        ;;
+    *)
+        break
+        ;;
+    esac
+done
+
+# Check if there are any arguments left to start up the dapp
+if [ $# -eq 0 ]
+then
+    echo "Error: missing dapp startup command" >&2
+    exit 1
+fi
+
+# Start dapp
+echo -n "Starting dapp: "
+sh -c "$*" &
+
+# Wait for the dapp to start up
+RETRY=0
+while ! netstat -ntl 2>&1 | grep $DAPP_PORT > /dev/null
+do
+    echo -n "."
+    sleep 1
+    RETRY=$((RETRY + 1))
+    if [ $RETRY -ge $DAPP_TIMEOUT ]
+    then
+        echo "Error: dapp timed out"
+        exit 1
+    fi
+done
+echo ""
+
+# Start http dispatcher
+echo "Starting http-dispatcher: "
+http-dispatcher \
+    --address 127.0.0.1:$HTTP_DISPATCHER_PORT \
+    --dapp 127.0.0.1:$DAPP_PORT \
+    $HTTP_DISPATCHER_VERBOSE
