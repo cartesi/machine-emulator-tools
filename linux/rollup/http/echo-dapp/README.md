@@ -24,7 +24,7 @@ $ cargo +nightly build -Z build-std=std,core,alloc,panic_abort,proc_macro --targ
 
 ## Execution 
 
-Dapp application starts `http-dispatcher` service as part of its startup. Http dispatcher path is defined by `HTTP_DISPATCHER_PATH` environment variable.
+Utility script `rollup-init`  is used to start simultaneously Dapp application and http dispatcher service (available in `linux/utils` folder of the root `machine-emulator-tools` project).
 
 After build copy Dapp and http dispatcher application to the new directory. Create ext2 filesystem image from that directory.
 
@@ -38,13 +38,24 @@ $ cartesi-machine-server --server-address=127.0.0.1:10001
 ```
 In other terminal send advance request:
 ```shell
-$  cartesi-machine --rollup --server-address=127.0.0.1:10001 --checkin-address=127.0.0.1:10003 --flash-drive=label:hello,filename:echo.ext2 --rollup-advance-state=epoch_index:0,input_index_begin:0,input_index_end:1 --server-shutdown -- HTTP_DISPATCHER_PATH=/mnt/echo/http-dispatcher /mnt/echo/echo-dapp --vouchers=3 --notices=2 --reports=1
+$  cartesi-machine --rollup --server-address=127.0.0.1:10001 --checkin-address=127.0.0.1:10003 --flash-drive=label:hello,filename:echo.ext2 --rollup-advance-state=epoch_index:0,input_index_begin:0,input_index_end:1 --server-shutdown -- PATH=/mnt/echo:$PATH /mnt/echo/rollup-init /mnt/echo/echo-dapp  --vouchers=3 --notices=2 --reports=1
 ```
 
 Inspect request:
 ```shell
-$  cartesi-machine --rollup --server-address=127.0.0.1:10001 --checkin-address=127.0.0.1:10003 --flash-drive=label:hello,filename:echo.ext2 --rollup-inspect-state=query:testquery.bin --server-shutdown -- HTTP_DISPATCHER_PATH=/mnt/echo/http-dispatcher /mnt/echo/echo-dapp --reports=1
+$  cartesi-machine --rollup --server-address=127.0.0.1:10001 --checkin-address=127.0.0.1:10003 --flash-drive=label:hello,filename:echo.ext2 --rollup-inspect-state=query:testquery.bin --server-shutdown -- PATH=/mnt/echo:$PATH /mnt/echo/rollup-init /mnt/echo/echo-dapp --reports=1
 ```
 
 To generate test input and decode output check `rollup-memory-range.lua` script options from the [emulator](https://github.com/cartesi/machine-emulator) project. 
+
+
+## Authors
+
+* *Marko Atanasievski*
+* *Alex Mikhalevich*
+
+## License
+
+The echo-dapp project and all contributions are licensed under
+[APACHE 2.0](https://www.apache.org/licenses/LICENSE-2.0). Please review our [LICENSE](LICENSE) file.
 

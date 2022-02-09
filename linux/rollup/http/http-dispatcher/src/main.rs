@@ -254,10 +254,10 @@ async fn main() -> std::io::Result<()> {
     opts.optopt(
         "",
         "address",
-        "Address to listen (default: 127.0.0.1:5001)",
+        "Address to listen (default: 127.0.0.1:5004)",
         "",
     );
-    opts.optopt("", "dapp", "Dapp address (default: 127.0.0.1:5002)", "");
+    opts.optopt("", "dapp", "Dapp address (default: 127.0.0.1:5003)", "");
     opts.optflag("", "verbose", "print more info about application execution");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
@@ -286,7 +286,7 @@ async fn main() -> std::io::Result<()> {
     {
         // Parse addresses and ports
         let address_matches = matches
-            .opt_get_default("address", "127.0.0.1:5001".to_string())
+            .opt_get_default("address", "127.0.0.1:5004".to_string())
             .unwrap_or_default();
         let mut address = address_matches.split(':');
         http_config.http_address = address.next().expect("address is not valid").to_string();
@@ -297,7 +297,7 @@ async fn main() -> std::io::Result<()> {
             .parse::<u16>()
             .unwrap();
         let dapp_matches = matches
-            .opt_get_default("dapp", "127.0.0.1:5002".to_string())
+            .opt_get_default("dapp", "127.0.0.1:5003".to_string())
             .unwrap_or_default();
         let mut dapp_address = dapp_matches.split(':');
         http_config.dapp_http_address = dapp_address

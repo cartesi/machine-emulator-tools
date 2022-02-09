@@ -4,7 +4,7 @@ For Cartesi decentralized application to communicate with the client outside of 
 
 Http dispatcher application implements interface defined [here](https://github.com/cartesi/rollups/blob/develop/openapi/dapp.yaml).
 
-DApp application starts `http-dispatcher` service as part of its startup. `Target-proxy` path is defined by `TARGET_PROXY_PATH` environment variable when starting Dapp.
+DApp application and http dispatcher services communicate with each other, and they need to be started simultaneously. For that, `rollup-init` script is used.
 
 
 ## Getting Started
@@ -20,3 +20,12 @@ Prerequisites: `riscv64-cartesi-linux-gnu` toolchain must be in the $PATH
 $ source ./environment.sh
 $ cargo +nightly build -Z build-std=std,core,alloc,panic_abort,proc_macro --target riscv64ima-cartesi-linux-gnu.json --release
 ```
+
+## Authors
+
+* *Marko Atanasievski*
+
+## License
+
+The http-dispatcher project and all contributions are licensed under
+[APACHE 2.0](https://www.apache.org/licenses/LICENSE-2.0). Please review our [LICENSE](LICENSE) file.

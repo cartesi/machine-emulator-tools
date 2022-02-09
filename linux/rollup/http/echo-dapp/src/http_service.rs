@@ -29,7 +29,6 @@ pub async fn run(config: &Config, ctx: ControllerChannel) -> std::io::Result<()>
             .wrap(Logger::default())
             .service(advance)
             .service(inspect)
-            .service(ping)
     })
     .bind((config.http_address.as_str(), config.http_port))?
     .run()
@@ -90,13 +89,4 @@ async fn inspect(req: HttpRequest, ctx: Data<ControllerChannel>) -> impl Respond
             HttpResponse::BadRequest().body("unable to accept inspect request: no payload provided")
         }
     }
-}
-
-/// Implementation of http dummy ping endpoint
-/// Used to check if service is alive when starting up
-/// internal emulator http dispatcher service
-#[actix_web::get("/health")]
-async fn ping(_req: HttpRequest, _ctx: Data<ControllerChannel>) -> impl Responder {
-    // Return ok
-    HttpResponse::Ok().body("")
 }

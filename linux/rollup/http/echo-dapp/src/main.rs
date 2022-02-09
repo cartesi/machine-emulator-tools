@@ -23,59 +23,6 @@ use getopts::Options;
 use model::Model;
 use std::io::ErrorKind;
 
-/// Environment path for specifying http-dispatcher application binary
-const HTTP_DISPATCHER_PATH_ENV: &str = "HTTP_DISPATCHER_PATH";
-const HTTP_DISPATCHER_PATH_DEFAULT: &str = "/opt/cartesi/bin/http-dispatcher";
-const HTTP_INSPECT_ENDPOINT_RETRIES: usize = 10;
-const HTTP_INSPECT_ENDPOINT_RETRIES_TIMEOUT: u64 = 1000; //ms
-
-/// Instantiate http dispatcher in subprocess
-async fn start_http_dispatcher(config: &Config, verbose: bool) {
-    let http_dispatcher_bin_path = std::env::var(HTTP_DISPATCHER_PATH_ENV).unwrap_or_else(|e| {
-        log::info!(
-            "Error fetching `{}`: {}. Defaulting to {}",
-            HTTP_DISPATCHER_PATH_ENV,
-            e,
-            HTTP_DISPATCHER_PATH_DEFAULT
-        );
-        HTTP_DISPATCHER_PATH_DEFAULT.to_string()
-    });
-    // Wait for Dapp http service to start because http dispatcher and
-    // Dapp are mutually dependant
-    log::debug!("Waiting for ping endpoint to start...");
-    let mut i = 0;
-    let service_addr = format!("{}:{}", &config.http_address, &config.http_port);
-    loop {
-        if http_dispatcher::probe_inspect_endpoint(&service_addr).await {
-            log::debug!("Inspect ping up and running");
-            break;
-        }
-        if i >= HTTP_INSPECT_ENDPOINT_RETRIES {
-            panic!("Timeout, Dapp ping http service unavailable");
-        }
-        std::thread::sleep(std::time::Duration::from_millis(
-            HTTP_INSPECT_ENDPOINT_RETRIES_TIMEOUT,
-        ));
-        i += 1;
-    }
-
-    log::info!(
-        "Dapp http endpoints online, starting http dispatcher service {}",
-        http_dispatcher_bin_path
-    );
-    let _output = std::process::Command::new(http_dispatcher_bin_path)
-        .arg(&format!(
-            "--address={}",
-            &format!("{}:{}", config.dispatcher_address, config.dispatcher_port)
-        ))
-        .arg(&format!(
-            "--dapp={}",
-            format_args!("{}:{}", config.http_address, config.http_port)
-        ))
-        .arg(if verbose { "--verbose" } else { "" })
-        .spawn()
-        .expect("Unable to launch http dispatcher");
-}
 
 fn print_usage(program: &str, opts: Options) {
     let brief = format!("Usage: {} [options]\n Where options are:", program);
@@ -91,13 +38,13 @@ async fn main() -> std::io::Result<()> {
     opts.optopt(
         "",
         "address",
-        "Address of the dapp http service (default: 127.0.0.1:5002)",
+        "Address of the dapp http service (default: 127.0.0.1:5003)",
         "",
     );
     opts.optopt(
         "",
         "dispatcher",
-        "Http dispatcher address (default: 127.0.0.1:5001)",
+        "Http dispatcher address (default: 127.0.0.1:5004)",
         "",
     );
     opts.optopt(
@@ -120,11 +67,6 @@ async fn main() -> std::io::Result<()> {
     );
     opts.optopt("", "reject", "Reject the nth input (default: -1)", "");
     opts.optflag("h", "help", "show this help message and exit");
-    opts.optflag(
-        "",
-        "without-dispatcher",
-        "start dapp wihtout http-dispatcher (for x86 execution) ",
-    );
     opts.optflag("", "verbose", "print more info about application execution");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
@@ -149,11 +91,10 @@ async fn main() -> std::io::Result<()> {
 
     // Setup configuration
     let mut config = Config::new();
-    config.with_dispatcher = !matches.opt_present("without-dispatcher");
     {
         // Parse addresses and ports
         let address_match = matches
-            .opt_get_default("address", "127.0.0.1:5002".to_string())
+            .opt_get_default("address", "127.0.0.1:5003".to_string())
             .unwrap_or_default();
         let mut address = address_match.split(':');
         config.http_address = address.next().expect("address is not valid").to_string();
@@ -164,7 +105,7 @@ async fn main() -> std::io::Result<()> {
             .parse::<u16>()
             .unwrap();
         let dispatcher_match = matches
-            .opt_get_default("dispatcher", "127.0.0.1:5001".to_string())
+            .opt_get_default("dispatcher", "127.0.0.1:5004".to_string())
             .unwrap_or_default();
         let mut dispatcher = dispatcher_match.split(':');
         config.dispatcher_address = dispatcher
@@ -201,16 +142,6 @@ async fn main() -> std::io::Result<()> {
             reject,
         },
     ));
-
-    // Start http dispatcher in the background
-    if config.with_dispatcher {
-        let config = config.clone();
-        tokio::spawn(async move {
-            crate::start_http_dispatcher(&config, verbose).await;
-        });
-    } else {
-        log::info!("starting dapp without http dispatcher")
-    }
 
     // Controller handles application flow
     let (channel, service) = new_controller(model, config.clone());

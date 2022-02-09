@@ -17,7 +17,6 @@ pub struct Config {
     pub http_port: u16,
     pub dispatcher_address: String,
     pub dispatcher_port: u16,
-    pub with_dispatcher: bool,
     pub reject: i32,
 }
 
@@ -28,7 +27,6 @@ impl Config {
             http_port: 5002,
             dispatcher_address: String::from("127.0.0.1"),
             dispatcher_port: 5001,
-            with_dispatcher: true,
             reject: -1,
         }
     }

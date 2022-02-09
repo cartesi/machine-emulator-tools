@@ -12,30 +12,6 @@
 
 use crate::model::{AdvanceResult, IndexResponse, Notice, Report, Voucher};
 
-// Perform get request to this app inspect endpoint, return true
-// if it is up and running
-pub async fn probe_inspect_endpoint(http_service_addr: &str) -> bool {
-    let client = hyper::Client::new();
-    let uri = format!("http://{}/health", http_service_addr);
-    let req = hyper::Request::builder()
-        .method(hyper::Method::GET)
-        .uri(uri)
-        .body(hyper::Body::from(""))
-        .expect("inspect request");
-    // Send GET request to DApp
-    match client.request(req).await {
-        Ok(res) => {
-            if res.status().is_success() {
-                true
-            } else {
-                log::debug!("Unable to probe inspect endpoint, responose {:?}", res);
-                false
-            }
-        }
-        Err(_e) => false,
-    }
-}
-
 pub async fn send_voucher(proxy_addr: &str, voucher: Voucher) {
     let client = hyper::Client::new();
     let req = hyper::Request::builder()
