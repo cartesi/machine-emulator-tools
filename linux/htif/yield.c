@@ -26,13 +26,13 @@
 
 static void help(const char *progname) {
     fprintf(stderr,
-        "Usage: %s [--ack] <mode> <reason> [<data>]\n"
+        "Usage: %s <mode> <reason> [<data>]\n"
         "Where: \n"
         "  <mode>       \"manual\" or \"automatic\"\n"
         "  <reason>     \"progress\", \"rx-accepted\", \"rx-rejected\",\n"
-        "               \"tx-voucher\", \"tx-notice\", or \"tx-report\"\n"
-        "  <data>       32-bit unsigned integer (decimal, default 0)\n"
-        "  --ack        writes the acknowledge code to stdout\n",
+        "               \"tx-voucher\", \"tx-notice\", \"tx-exception\" or\n"
+        "               \"tx-report\"\n"
+        "  <data>       32-bit unsigned integer (decimal, default 0)\n",
         progname);
 
     exit(1);
@@ -57,38 +57,40 @@ int send_request(struct yield_request* request) {
     return 0;
 }
 
-int get_mode(const char *s, uint64_t *mode) {
-    if (strcmp(s, "manual") == 0) {
-        *mode = HTIF_YIELD_MANUAL;
-        return 1;
-    } else if (strcmp(s, "automatic") == 0) {
-        mode = HTIF_YIELD_AUTOMATIC;
-        return 1;
+struct name_value {
+    const char *name;
+    uint64_t   value;
+};
+static int find_value(const struct name_value *pairs, size_t n, const char *s, uint64_t *value)
+{
+    for (size_t i=0; i<n; ++i) {
+        if (strcmp(s, pairs[i].name) == 0) {
+            *value = pairs[i].value;
+            return 1;
+        }
     }
     return 0;
 }
 
+int get_mode(const char *s, uint64_t *mode) {
+    struct name_value modes[] = {
+        {"manual",    HTIF_YIELD_MANUAL},
+        {"automatic", HTIF_YIELD_AUTOMATIC},
+    };
+    return find_value(modes, sizeof(modes)/sizeof(*modes), s, mode);
+}
+
 int get_reason(const char *s, uint64_t *reason) {
-    if (strcmp(s, "progress") == 0) {
-        *reason = HTIF_YIELD_REASON_PROGRESS;
-        return 1;
-    } else if (strcmp(s, "tx-report") == 0) {
-        *reason = HTIF_YIELD_REASON_TX_REPORT;
-        return 1;
-    } else if (strcmp(s, "tx-notice") == 0) {
-        *reason = HTIF_YIELD_REASON_TX_NOTICE;
-        return 1;
-    } else if (strcmp(s, "tx-voucher") == 0) {
-        *reason = HTIF_YIELD_REASON_TX_VOUCHER;
-        return 1;
-    } else if (strcmp(s, "rx-accepted") == 0) {
-        *reason = HTIF_YIELD_REASON_RX_ACCEPTED;
-        return 1;
-    } else if (strcmp(s, "rx-rejected") == 0) {
-        *reason = HTIF_YIELD_REASON_RX_REJECTED;
-        return 1;
-    }
-    return 0;
+    struct name_value reasons[] = {
+        {"progress",     HTIF_YIELD_REASON_PROGRESS},
+        {"rx-accepted",  HTIF_YIELD_REASON_RX_ACCEPTED},
+        {"rx-rejected",  HTIF_YIELD_REASON_RX_REJECTED},
+        {"tx-exception", HTIF_YIELD_REASON_TX_EXCEPTION},
+        {"tx-notice",    HTIF_YIELD_REASON_TX_NOTICE},
+        {"tx-report",    HTIF_YIELD_REASON_TX_REPORT},
+        {"tx-voucher",   HTIF_YIELD_REASON_TX_VOUCHER},
+    };
+    return find_value(reasons, sizeof(reasons)/sizeof(*reasons), s, reason);
 }
 
 int get_data(const char *s, uint64_t *data) {
@@ -102,7 +104,6 @@ int get_data(const char *s, uint64_t *data) {
 }
 
 struct parsed_args {
-    int output_ack;
     uint64_t mode;
     uint64_t reason;
     uint64_t data;
@@ -117,15 +118,6 @@ void parse_args(int argc, char *argv[], struct parsed_args *p) {
     i = 1;
     if (i >= argc) {
         fprintf(stderr, "Too few arguments.\n\n");
-        help(progname);
-    }
-
-    if (!strcmp(argv[i], "--ack")) {
-        p->output_ack = 1;
-        i++;
-    }
-
-    if (i >= argc) {
         help(progname);
     }
 
@@ -167,16 +159,12 @@ int main(int argc, char *argv[]) {
 
     parse_args(argc, argv, &args);
 
-    request.tohost = (uint64_t) HTIF_DEVICE_YIELD << 56 |
-                     (args.mode << 56 >> 8) |
-                     (args.reason << 48 >> 16) |
-                     (args.data << 32 >> 32);
-    request.fromhost = 0;
+    request.dev = HTIF_DEVICE_YIELD;
+    request.cmd = args.mode;
+    request.reason = args.reason;
+    request.data = args.data;
     if ((res = send_request(&request)))
         return res;
-
-    if (args.output_ack)
-        fprintf(stdout, "0x%" PRIx64 "\n", request.fromhost);
 
     return 0;
 }

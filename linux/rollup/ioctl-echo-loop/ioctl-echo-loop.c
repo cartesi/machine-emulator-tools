@@ -29,6 +29,7 @@ static void show_inspect(struct rollup_inspect_state *inspect);
 static void show_voucher(struct rollup_voucher *voucher);
 static void show_notice(struct rollup_notice *notice);
 static void show_report(struct rollup_report *report);
+static void show_exception(struct rollup_exception *exception);
 
 static void help(const char *progname) {
     fprintf(stderr,
@@ -53,6 +54,7 @@ struct parsed_args {
     unsigned verbose;
     unsigned reject;
     bool reject_inspects;
+    unsigned exception;
 };
 
 static int parse_token(const char *s, const char *fmt, bool *yes) {
@@ -75,6 +77,7 @@ static void parse_args(int argc, char *argv[], struct parsed_args *args) {
     args->report_count = 1;
     args->reject = -1;
     args->reject_inspects = 0;
+    args->exception = -1;
 
     for (i = 1; i < argc; i++) {
         if (!parse_number(argv[i], "--vouchers=%u%n", &args->voucher_count) &&
@@ -82,6 +85,7 @@ static void parse_args(int argc, char *argv[], struct parsed_args *args) {
             !parse_number(argv[i], "--reports=%u%n", &args->report_count) &&
             !parse_number(argv[i], "--verbose=%u%n", &args->verbose) &&
             !parse_token(argv[i], "--reject-inspects", &args->reject_inspects) &&
+            !parse_number(argv[i], "--exception=%u%n", &args->exception) &&
             !parse_number(argv[i], "--reject=%u%n", &args->reject)) {
             help(progname);
         }
@@ -156,6 +160,20 @@ static int write_reports(int fd, unsigned count, struct rollup_bytes *bytes, uns
             fprintf(stderr, "IOCTL_ROLLUP_WRITE_REPORT returned error %d\n", res);
             return res;
         }
+    }
+    return 0;
+}
+
+static int write_exception(int fd, struct rollup_bytes *bytes, unsigned verbose) {
+    struct rollup_exception e;
+    memset(&e, 0, sizeof(e));
+    e.payload = *bytes;
+    if (verbose)
+        show_exception(&e);
+    int res = ioctl(fd, IOCTL_ROLLUP_THROW_EXCEPTION, (unsigned long) &e);
+    if (res != 0) {
+        fprintf(stderr, "IOCTL_ROLLUP_THROW_EXCEPTION returned error %d\n", res);
+        return res;
     }
     return 0;
 }
@@ -258,7 +276,7 @@ int main(int argc, char *argv[]) {
 
     /* handle a request, then wait for next */
     for (;;) {
-        bool reject_advance, reject_inspect;
+        bool reject_advance, reject_inspect, throw_exception;
         if (handle_request(fd, &args, &finish, &bytes, &metadata) != 0) {
             break;
         }
@@ -267,6 +285,11 @@ int main(int argc, char *argv[]) {
             (args.reject == metadata.input_index);
         reject_inspect =
             (finish.next_request_type == CARTESI_ROLLUP_INSPECT_STATE) && args.reject_inspects;
+        throw_exception = (finish.next_request_type == CARTESI_ROLLUP_ADVANCE_STATE) &&
+            (args.exception == metadata.input_index);
+        if (throw_exception) {
+            write_exception(fd, &bytes, args.verbose);
+        }
         if (finish_request(fd, &finish, !(reject_advance || reject_inspect)) != 0) {
             break;
         } else if (args.verbose) {
@@ -345,4 +368,10 @@ static void show_report(struct rollup_report *report) {
     printf("report:\n"
            "\tlength: %lu\n",
         report->payload.length);
+}
+
+static void show_exception(struct rollup_exception *exception) {
+    printf("exception:\n"
+           "\tlength: %lu\n",
+        exception->payload.length);
 }

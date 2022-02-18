@@ -74,9 +74,7 @@ static std::string get_ioctl_name(int ioctl) {
         {IOCTL_ROLLUP_FINISH, "finish"},
         {IOCTL_ROLLUP_READ_ADVANCE_STATE, "advance state"},
         {IOCTL_ROLLUP_READ_INSPECT_STATE, "inspect state"},
-#if 0
         {IOCTL_ROLLUP_THROW_EXCEPTION, "throw exception"},
-#endif
     };
     auto got = ioctl_names.find(ioctl);
     if (got == ioctl_names.end()) {
@@ -271,15 +269,13 @@ static int write_report(void) try {
 
 // Read input for exception data, throw exception
 static int throw_exception(void) try {
-#if 0
-	auto ji = nlohmann::json::parse(read_input());
+    auto ji = nlohmann::json::parse(read_input());
     auto payload = ji["payload"].get<std::string>();
     struct rollup_exception e;
     memset(&e, 0, sizeof(e));
     e.payload.data = reinterpret_cast<unsigned char *>(payload.data());
     e.payload.length = payload.size();
     file_desc_ioctl(unique_open(ROLLUP_DEVICE_NAME, O_RDWR), IOCTL_ROLLUP_THROW_EXCEPTION, &e);
-#endif
     return 0;
 } catch (std::exception &x) {
     std::cerr << x.what() << '\n';
