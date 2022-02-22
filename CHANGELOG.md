@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Added ioctl-echo-loop and rollup tools to CI
 - Added rollup-exception handling to ioctl-echo-loop
 - Added --reject-inspects as an option to ioctl-echo-loop
 

@@ -23,3 +23,9 @@ jobs:
 
       - name: Build yield tool
         run: cd linux/htif && make toolchain-exec CONTAINER_COMMAND="/usr/bin/make yield.toolchain"
+
+      - name: Build ioctl-echo-loop tool
+        run: cd linux/rollup/ioctl-echo-loop && make toolchain-exec CONTAINER_COMMAND="/usr/bin/make ioctl-echo-loop.toolchain"
+
+      - name: Build rollup tool
+        run: cd linux/rollup/rollup && make toolchain-exec CONTAINER_COMMAND="/usr/bin/make rollup.toolchain"
