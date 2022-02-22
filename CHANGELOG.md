@@ -6,7 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Changed
+- Lock dependencies versions using Cargo.lock on http-dispatcher and echo-dapp
+- Fix --reject option on ioctl-echo-loop
 - Add --reject-inspects as an option to ioctl-echo-loop
+
+## [0.5.1] - 2022-02-22
+### Changed
+- Lock dependencies versions using Cargo.lock on http-dispatcher and echo-dapp
+- Fix --reject option on ioctl-echo-loop
 
 ## [0.5.0] - 2022-01-13
 ### Changed
@@ -28,7 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated yield command line tool to be compatible with Linux kernel v5.5.19-ctsi-3
 
 ## [Previous Versions]
+- [0.3.0]
+- [0.2.0]
+- [0.1.0]
 
+[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.5.1
 [0.5.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.5.0
 [0.4.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.4.1
 [0.4.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.4.0
