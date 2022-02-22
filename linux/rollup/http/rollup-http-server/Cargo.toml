@@ -1,17 +1,17 @@
 cargo-features = ["strip"]
 
 [package]
-name = "http-dispatcher"
+name = "rollup-http-server"
 version = "0.1.0"
 edition = "2021"
 authors = ["Marko Atanasievski <marko.atanasievski@cartesi.io>"]
 
 [lib]
-name = "http_dispatcher"
+name = "rollup_http_server"
 path = "src/lib.rs"
 
 [[bin]]
-name = "http-dispatcher"
+name = "rollup-http-server"
 path = "src/main.rs"
 
 [dependencies]

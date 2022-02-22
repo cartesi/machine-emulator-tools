@@ -17,8 +17,8 @@ mod http_service;
 use crate::config::Config;
 use async_mutex::Mutex;
 use getopts::Options;
-use http_dispatcher::rollup;
-use http_dispatcher::rollup::{InspectReport, RollupFinish};
+use rollup_http_server::rollup;
+use rollup_http_server::rollup::{InspectReport, RollupFinish};
 use std::fs::File;
 use std::io::ErrorKind;
 #[cfg(unix)]

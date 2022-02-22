@@ -690,26 +690,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "http-dispatcher"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "async-mutex",
- "bindgen",
- "cc",
- "env_logger",
- "getopts",
- "hex",
- "hyper",
- "libc",
- "log",
- "serde",
- "serde_json",
- "tokio",
- "tonic-build",
-]
-
-[[package]]
 name = "httparse"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1213,6 +1193,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3acd125665422973a33ac9d3dd2df85edad0f4ae9b00dafb1a05e43a9f5ef8e7"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "rollup-http-server"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "async-mutex",
+ "bindgen",
+ "cc",
+ "env_logger",
+ "getopts",
+ "hex",
+ "hyper",
+ "libc",
+ "log",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tonic-build",
 ]
 
 [[package]]
