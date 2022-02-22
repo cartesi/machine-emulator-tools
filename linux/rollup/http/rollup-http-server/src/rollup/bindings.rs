@@ -54,7 +54,7 @@ fn bindgen_test_layout_rollup_bytes() {
 pub struct rollup_input_metadata {
     pub msg_sender: [u8; 20usize],
     pub block_number: u64,
-    pub time_stamp: u64,
+    pub timestamp: u64,
     pub epoch_index: u64,
     pub input_index: u64,
 }
@@ -96,14 +96,14 @@ fn bindgen_test_layout_rollup_input_metadata() {
     );
     assert_eq!(
         unsafe {
-            &(*(::std::ptr::null::<rollup_input_metadata>())).time_stamp as *const _ as usize
+            &(*(::std::ptr::null::<rollup_input_metadata>())).timestamp as *const _ as usize
         },
         32usize,
         concat!(
             "Offset of field: ",
             stringify!(rollup_input_metadata),
             "::",
-            stringify!(time_stamp)
+            stringify!(timestamp)
         )
     );
     assert_eq!(

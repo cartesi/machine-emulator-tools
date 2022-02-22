@@ -13,7 +13,6 @@
 mod config;
 mod controller;
 mod http_dispatcher;
-mod http_service;
 mod model;
 
 use crate::config::Config;
@@ -150,11 +149,6 @@ async fn main() -> std::io::Result<()> {
         service.run().await;
         log::info!("http service service terminated successfully");
     });
-    // Run actix http service with advance/inspect interface implementation
-    match http_service::run(&config, channel).await {
-        Ok(_) => log::info!("http service terminated successfully"),
-        Err(e) => log::warn!("http service terminated with error: {}", e),
-    }
 
     Ok(())
 }

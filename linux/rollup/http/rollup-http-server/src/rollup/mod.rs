@@ -24,6 +24,10 @@ pub use bindings::CARTESI_ROLLUP_ADDRESS_SIZE;
 pub use bindings::CARTESI_ROLLUP_ADVANCE_STATE;
 pub use bindings::CARTESI_ROLLUP_INSPECT_STATE;
 
+
+pub const REQUEST_TYPE_ADVANCE_STATE: &str = "advance_state";
+pub const REQUEST_TYPE_INSPECT_STATE: &str = "inspect_state";
+
 #[derive(Debug, Default)]
 pub struct RollupError {
     message: String,
@@ -88,7 +92,7 @@ pub struct AdvanceMetadata {
     pub epoch_index: u64,
     pub input_index: u64,
     pub block_number: u64,
-    pub time_stamp: u64,
+    pub timestamp: u64,
 }
 
 impl From<bindings::rollup_input_metadata> for AdvanceMetadata {
@@ -98,7 +102,7 @@ impl From<bindings::rollup_input_metadata> for AdvanceMetadata {
         AdvanceMetadata {
             input_index: other.input_index,
             epoch_index: other.epoch_index,
-            time_stamp: other.time_stamp,
+            timestamp: other.timestamp,
             block_number: other.block_number,
             msg_sender: address,
         }
@@ -114,6 +118,11 @@ pub struct AdvanceRequest {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InspectRequest {
     pub payload: String,
+}
+
+pub enum RollupRequest {
+    Inspect(InspectRequest),
+    Advance(AdvanceRequest),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -170,7 +179,7 @@ pub fn rollup_read_advance_state_request(
     let mut input_metadata_c = Box::new(bindings::rollup_input_metadata {
         msg_sender: Default::default(),
         block_number: 0,
-        time_stamp: 0,
+        timestamp: 0,
         epoch_index: 0,
         input_index: 0,
     });
@@ -385,9 +394,9 @@ pub fn print_advance(advance: &AdvanceRequest) {
     log::debug!("advance: {{\n\tmsg_sender: ");
     print_address(&advance.metadata.msg_sender);
     log::debug!(
-        "\tblock_number: {}\n\ttime_stamp: {}\n\tepoch_index: {}\n\tinput_index: {}\n}}",
+        "\tblock_number: {}\n\ttimestamp: {}\n\tepoch_index: {}\n\tinput_index: {}\n}}",
         advance.metadata.block_number,
-        advance.metadata.time_stamp,
+        advance.metadata.timestamp,
         advance.metadata.epoch_index,
         advance.metadata.input_index
     );

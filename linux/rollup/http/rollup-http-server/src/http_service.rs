@@ -23,6 +23,15 @@ use async_mutex::Mutex;
 use serde::{Deserialize, Serialize};
 use std::os::unix::io::RawFd;
 use std::sync::Arc;
+use rollup_http_server::rollup::{AdvanceRequest, InspectRequest, RollupRequest, REQUEST_TYPE_INSPECT_STATE, REQUEST_TYPE_ADVANCE_STATE};
+
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type")]
+enum RollupHttpRequest {
+    Advance {r#request_type: String, data: AdvanceRequest},
+    Inspect {r#request_type: String, data: InspectRequest},
+}
 
 /// Setup the HTTP server that receives requests from the DApp backend
 pub async fn run(
@@ -30,12 +39,15 @@ pub async fn run(
     start_rollup_tx: std::sync::mpsc::Sender<bool>,
     rollup_fd: Arc<Mutex<RawFd>>,
     finish_tx: tokio::sync::mpsc::Sender<bool>,
+    request_rx: tokio::sync::mpsc::Receiver<RollupRequest>,
 ) -> std::io::Result<()> {
     log::info!("starting http dispatcher http service!");
+    let request_rx = Arc::new(Mutex::new(request_rx));
     HttpServer::new(move || {
         let data = Data::new(Mutex::new(Context {
             rollup_fd: rollup_fd.clone(),
             finish_tx: finish_tx.clone(),
+            request_rx: request_rx.clone()
         }));
         App::new()
             .app_data(data)
@@ -129,6 +141,7 @@ async fn report(report: Json<Report>, data: Data<Mutex<Context>>) -> HttpRespons
     };
 }
 
+
 /// Process finish request from DApp, write finish to rollup device
 /// and pass RollupFinish struct to linux rollup advance/inspect requests loop thread
 #[actix_web::post("/finish")]
@@ -145,9 +158,33 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
     let context = data.lock().await;
     // Indicate to loop thread that request is finished
     if let Err(e) = context.finish_tx.send(accept).await {
-        log::error!("error opening rollup device {}", e.to_string());
+        log::error!("error passing finish request to linux driver loop {}", e.to_string());
     }
-    HttpResponse::Accepted().finish()
+
+    // Wait for the next request
+    let mut request_rx = context.request_rx.lock().await;
+    match request_rx.recv().await {
+        Some(rollup_request) => {
+            match rollup_request {
+                RollupRequest::Advance(advance_request) => {
+                    // prepare http response with advance request
+                    return HttpResponse::Ok()
+                        .append_header((hyper::header::CONTENT_TYPE, "application/json"))
+                        .json(RollupHttpRequest::Advance {request_type: REQUEST_TYPE_ADVANCE_STATE.to_string(), data: advance_request });
+                },
+                RollupRequest::Inspect(inspect_reqeust) => {
+                    // prepare http response with inspect request
+                    return HttpResponse::Ok()
+                        .append_header((hyper::header::CONTENT_TYPE, "application/json"))
+                        .json(RollupHttpRequest::Inspect {request_type: REQUEST_TYPE_INSPECT_STATE.to_string(), data: inspect_reqeust });
+                }
+            }
+        }
+        None => {
+            log::error!("error getting new rollup request from the driver");
+            return HttpResponse::NotFound().body("Unable to provide new rollup request");
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -175,4 +212,5 @@ struct Error {
 struct Context {
     pub rollup_fd: Arc<Mutex<RawFd>>,
     pub finish_tx: tokio::sync::mpsc::Sender<bool>,
+    pub request_rx: Arc<Mutex<tokio::sync::mpsc::Receiver<RollupRequest>>>,
 }

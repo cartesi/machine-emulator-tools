@@ -18,7 +18,7 @@ use crate::config::Config;
 use async_mutex::Mutex;
 use getopts::Options;
 use rollup_http_server::rollup;
-use rollup_http_server::rollup::{InspectReport, RollupFinish};
+use rollup_http_server::rollup::{RollupFinish, RollupRequest};
 use std::fs::File;
 use std::io::ErrorKind;
 #[cfg(unix)]
@@ -51,16 +51,13 @@ async fn perform_rollup_finish_request(
 async fn handle_rollup_requests(
     rollup_fd: Arc<Mutex<RawFd>>,
     mut finish_request: RollupFinish,
-    dapp_address: &str,
-    finish_tx: &mpsc::Sender<bool>,
+    request_tx: &mpsc::Sender<RollupRequest>
 ) -> std::io::Result<()> {
     let next_request_type = finish_request.next_request_type as u32;
-    let advance_endpoint = format!("{}/advance", dapp_address);
-    let inspect_base_endpoint = format!("{}/inspect/", dapp_address);
     match next_request_type {
         rollup::CARTESI_ROLLUP_ADVANCE_STATE => {
             log::debug!("handle advance state request...");
-            let advance_state = {
+            let advance_request = {
                 let fd = rollup_fd.lock().await;
                 // Read advance request from rollup device
                 match rollup::rollup_read_advance_state_request(*fd, &mut finish_request) {
@@ -71,26 +68,17 @@ async fn handle_rollup_requests(
                 }
             };
             if log::log_enabled!(log::Level::Info) {
-                rollup::print_advance(&advance_state);
+                rollup::print_advance(&advance_request);
             }
-            // Send DApp advance request
-            let client = hyper::Client::new();
-            let req = hyper::Request::builder()
-                .method(hyper::Method::POST)
-                .header(hyper::header::CONTENT_TYPE, "application/json")
-                .uri(advance_endpoint)
-                .body(hyper::Body::from(
-                    serde_json::to_string(&advance_state).expect("advance state json"),
-                ))
-                .expect("advance request");
-            if let Err(e) = client.request(req).await {
-                log::error!("failed to send advance request to the server: {}", e);
+            // Send newly read advance request to http service
+            if let Err(e) = request_tx.send(RollupRequest::Advance(advance_request)).await {
+                log::error!("error passing advance request to http service {}", e.to_string());
             }
         }
         rollup::CARTESI_ROLLUP_INSPECT_STATE => {
             log::debug!("handle inspect state request...");
             // Read inspect request from rollup device
-            let inspect_state = {
+            let inspect_request = {
                 let fd = rollup_fd.lock().await;
                 match rollup::rollup_read_inspect_state_request(*fd, &mut finish_request) {
                     Ok(r) => r,
@@ -100,88 +88,11 @@ async fn handle_rollup_requests(
                 }
             };
             if log::log_enabled!(log::Level::Info) {
-                rollup::print_inspect(&inspect_state);
+                rollup::print_inspect(&inspect_request);
             }
-            let mut inspect_endpoint_query = inspect_base_endpoint;
-            inspect_endpoint_query.push_str(&inspect_state.payload); // payload is endpoint query
-            // Prepare GET request
-            let client = hyper::Client::new();
-            let req = hyper::Request::builder()
-                .method(hyper::Method::GET)
-                .uri(inspect_endpoint_query)
-                .body(hyper::Body::from(""))
-                .expect("inspect request");
-            // Send GET request to DApp
-            match client.request(req).await {
-                Ok(res) => {
-                    if res.status().is_success() {
-                        // Handle InspectReport received in json body
-                        let buf = hyper::body::to_bytes(res)
-                            .await
-                            .expect("error in inspect response handling")
-                            .to_vec();
-                        let inspect_report = serde_json::from_slice::<InspectReport>(&buf)
-                            .expect("inspect report deserialization failed");
-                        log::info!("dapp inspect response: {:?}", &inspect_report);
-
-                        // Write reports one by one to rollup device
-                        log::debug!("writing reports to rollup device...");
-                        for report in inspect_report.reports {
-                            let fd = rollup_fd.lock().await;
-                            match rollup::rollup_write_report(*fd, &report) {
-                                Ok(_) => {}
-                                Err(e) => {
-                                    log::error!(
-                                        "failed to write rollup report to rollup device: {}",
-                                        e.to_string()
-                                    );
-                                    return Err(std::io::Error::new(
-                                        ErrorKind::Other,
-                                        e.to_string(),
-                                    ));
-                                }
-                            };
-                        }
-
-                        // Send rollup finish request to indicate inspect request is finished with accept
-                        if let Err(e) = finish_tx.send(true).await {
-                            log::error!("error opening rollup device {}", e.to_string());
-                        }
-                        return Ok(());
-                    } else {
-                        // Dapp returned error on inspect request
-                        // Handle InspectError received in plain http response
-                        let inspect_error = String::from_utf8(
-                            hyper::body::to_bytes(res)
-                                .await
-                                .expect("error in inspect response handling")
-                                .into_iter()
-                                .collect(),
-                        )
-                        .expect("failed to decode message");
-
-                        // Send rollup finish request to indicate inspect request is finished with reject
-                        if let Err(e) = finish_tx.send(false).await {
-                            log::error!("error opening rollup device {}", e.to_string());
-                        }
-                        return Err(std::io::Error::new(
-                            ErrorKind::Other,
-                            format!("{}", inspect_error),
-                        ));
-                    }
-                }
-                Err(e) => {
-                    log::error!(
-                        "error with inspect request to the server: {}",
-                        e.to_string()
-                    );
-                    // Send rollup finish request to indicate inspect request is finished with reject
-                    // as there was error in communication with the dapp
-                    if let Err(e) = finish_tx.send(false).await {
-                        log::error!("error opening rollup device {}", e.to_string());
-                    }
-                    return Err(std::io::Error::new(ErrorKind::Other, e.to_string()));
-                }
+            // Send newly read inspect request to http service
+            if let Err(e) = request_tx.send(RollupRequest::Inspect(inspect_request)).await {
+                log::error!("error passing inspect request to http service {}", e.to_string());
             }
         }
         _ => {
@@ -198,15 +109,9 @@ async fn handle_rollup_requests(
 /// and processing advance/inspect request
 async fn linux_rollup_loop(
     rollup_fd: Arc<Mutex<RawFd>>,
-    dapp_address: String,
     mut finish_rx: mpsc::Receiver<bool>,
-    finish_tx: mpsc::Sender<bool>,
+    request_tx: mpsc::Sender<RollupRequest>
 ) {
-    // Perform initial finish request and send rollup finish info to rollup loop
-    if let Err(e) = finish_tx.send(true).await {
-        log::error!("error opening rollup device {}", e.to_string());
-    }
-
     // Loop and wait for indication of pending advance/inspect request
     // got from last performed finish request
     log::debug!("entering linux rollup device loop");
@@ -225,7 +130,7 @@ async fn linux_rollup_loop(
                                 1 => "INSPECT",
                                 _ => "UNKNOWN"
                             });
-                            match handle_rollup_requests(rollup_fd.clone(), finish_request, &dapp_address, &finish_tx).await {
+                            match handle_rollup_requests(rollup_fd.clone(), finish_request, &request_tx).await {
                                 Ok(_) => {}
                                 Err(e) => {
                                     log::error!("error performing handle_rollup_requests: `{}`", e.to_string());
@@ -296,20 +201,6 @@ async fn main() -> std::io::Result<()> {
             .to_string()
             .parse::<u16>()
             .unwrap();
-        let dapp_matches = matches
-            .opt_get_default("dapp", "127.0.0.1:5003".to_string())
-            .unwrap_or_default();
-        let mut dapp_address = dapp_matches.split(':');
-        http_config.dapp_http_address = dapp_address
-            .next()
-            .expect("dapp address is not valid")
-            .to_string();
-        http_config.dapp_http_port = dapp_address
-            .next()
-            .expect("port is not valid")
-            .to_string()
-            .parse::<u16>()
-            .unwrap();
     }
 
     // Open rollup device
@@ -328,26 +219,21 @@ async fn main() -> std::io::Result<()> {
     ) = std::sync::mpsc::channel();
     let rollup_fd: Arc<Mutex<RawFd>> = Arc::new(Mutex::new(rollup_file.into_raw_fd()));
     // Channel for communicating rollup finish requests between http service and linux rollup loop
-    let (finish_tx, finish_rx) = mpsc::channel::<bool>(1000);
+    let (finish_tx, finish_rx) = mpsc::channel::<bool>(100);
+    let (request_tx, request_rx) = mpsc::channel::<RollupRequest>(100);
 
     {
         // Start rollup advance/inspect requests handling loop
         let rollup_fd: Arc<Mutex<RawFd>> = rollup_fd.clone();
-        let http_config = http_config.clone();
-        let finish_tx = finish_tx.clone();
         tokio::spawn(async move {
             start_rollup_rx.recv().unwrap();
-            let dapp_http_service = format!(
-                "http://{}:{}",
-                &http_config.dapp_http_address, &http_config.dapp_http_port
-            );
-            linux_rollup_loop(rollup_fd, dapp_http_service, finish_rx, finish_tx).await;
+            linux_rollup_loop(rollup_fd, finish_rx, request_tx).await;
         });
     }
 
     // Open http service
     tokio::select! {
-        result = http_service::run(&http_config, start_rollup_tx, rollup_fd, finish_tx) => {
+        result = http_service::run(&http_config, start_rollup_tx, rollup_fd, finish_tx, request_rx) => {
             match result {
                 Ok(_) => log::info!("http service terminated successfully"),
                 Err(e) => log::warn!("http service terminated with error: {}", e),

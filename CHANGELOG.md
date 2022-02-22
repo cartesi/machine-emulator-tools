@@ -20,6 +20,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lock dependencies versions using Cargo.lock on http-dispatcher and echo-dapp
 - Fix --reject option on ioctl-echo-loop
 
+## [unreleased]
+### Added
+- Added ioctl-echo-loop and rollup tools to CI
+- Added rollup-exception handling to ioctl-echo-loop
+
+### Changed
+- Enabled rollup-exception in rollup
+- Updated yield to the new yield\_request format
+- Removed --ack from yield
+- Rename http-dispatcher to rollup-http-server
+- Switch rollup-http-server to server only and echo-dapp to client only implementation
+
 ## [0.5.0] - 2022-01-13
 ### Changed
 - Updated http-dispatcher and echo-dapp according to openapi-interfaces changes
