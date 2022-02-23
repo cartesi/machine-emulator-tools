@@ -34,11 +34,13 @@ static void help(const char *progname) {
     fprintf(stderr,
         "Usage: %s [options]\n"
         "Where options are: \n"
-        "  --vouchers=<n>   replicate input in n vouchers (default: 0)\n"
-        "  --notices=<n>    replicate input in n notices (default: 0)\n"
-        "  --reports=<n>    replicate input in n reports (default: 1)\n"
-        "  --reject=<n>     reject the nth input (default: -1)\n"
-        "  --verbose=<n>    display information of structures (default: 0)\n",
+        "  --vouchers=<n>    replicate input in n vouchers (default: 0)\n"
+        "  --notices=<n>     replicate input in n notices (default: 0)\n"
+        "  --reports=<n>     replicate input in n reports (default: 1)\n"
+        "  --reject=<n>      reject the nth input (default: -1)\n"
+        "  --reject-inspects reject all inspects\n"
+        "  --exception=<n>   cause an exception on the nth input (default: -1)\n"
+        "  --verbose=<n>     display information of structures (default: 0)\n",
         progname);
 
     exit(1);
@@ -50,7 +52,12 @@ struct parsed_args {
     unsigned report_count;
     unsigned verbose;
     unsigned reject;
+    bool reject_inspects;
 };
+
+static int parse_token(const char *s, const char *fmt, bool *yes) {
+    return *yes |= strcmp(fmt, s) == 0;
+}
 
 static int parse_number(const char *s, const char *fmt, unsigned *number) {
     int end = 0;
@@ -67,12 +74,14 @@ static void parse_args(int argc, char *argv[], struct parsed_args *args) {
     memset(args, 0, sizeof(*args));
     args->report_count = 1;
     args->reject = -1;
+    args->reject_inspects = 0;
 
     for (i = 1; i < argc; i++) {
         if (!parse_number(argv[i], "--vouchers=%u%n", &args->voucher_count) &&
             !parse_number(argv[i], "--notices=%u%n", &args->notice_count) &&
             !parse_number(argv[i], "--reports=%u%n", &args->report_count) &&
             !parse_number(argv[i], "--verbose=%u%n", &args->verbose) &&
+            !parse_token(argv[i], "--reject-inspects", &args->reject_inspects) &&
             !parse_number(argv[i], "--reject=%u%n", &args->reject)) {
             help(progname);
         }
@@ -249,14 +258,16 @@ int main(int argc, char *argv[]) {
 
     /* handle a request, then wait for next */
     for (;;) {
-        bool accept;
+        bool reject_advance, reject_inspect;
         if (handle_request(fd, &args, &finish, &bytes, &metadata) != 0) {
             break;
         }
-        /* accept inspects, maybe reject advances */
-        accept = (finish.next_request_type == CARTESI_ROLLUP_INSPECT_STATE) ||
-            !(args.reject == metadata.input_index);
-        if (finish_request(fd, &finish, accept) != 0) {
+        reject_advance =
+            (finish.next_request_type == CARTESI_ROLLUP_ADVANCE_STATE) &&
+            (args.reject == metadata.input_index);
+        reject_inspect =
+            (finish.next_request_type == CARTESI_ROLLUP_INSPECT_STATE) && args.reject_inspects;
+        if (finish_request(fd, &finish, !(reject_advance || reject_inspect)) != 0) {
             break;
         } else if (args.verbose) {
             show_finish(&finish);
