@@ -125,7 +125,7 @@ R"(Usage:
         {"request_type": <request-type>, "data": <request-data>}
 
       when field "request_type" contains "advance_state",
-      field "data" should contain a JSON object in the format
+      field "data" contains a JSON object in the format
         {
           "metadata": {
             "msg_sender": <msg-sender>,
@@ -139,7 +139,7 @@ R"(Usage:
       where field "msg_sender" contains a 20-byte EVM address in hex
 
       when field "request_type" contains "inspect_state",
-      field "data" should cointain a JSON object in the format
+      field "data" contains a JSON object in the format
         {"payload": <string> }
 
     exception
