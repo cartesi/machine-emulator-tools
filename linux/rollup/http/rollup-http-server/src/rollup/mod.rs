@@ -24,7 +24,6 @@ pub use bindings::CARTESI_ROLLUP_ADDRESS_SIZE;
 pub use bindings::CARTESI_ROLLUP_ADVANCE_STATE;
 pub use bindings::CARTESI_ROLLUP_INSPECT_STATE;
 
-
 pub const REQUEST_TYPE_ADVANCE_STATE: &str = "advance_state";
 pub const REQUEST_TYPE_INSPECT_STATE: &str = "inspect_state";
 
@@ -86,7 +85,7 @@ impl From<bindings::rollup_finish> for RollupFinish {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdvanceMetadata {
     pub msg_sender: String,
     pub epoch_index: u64,
@@ -109,13 +108,13 @@ impl From<bindings::rollup_input_metadata> for AdvanceMetadata {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdvanceRequest {
     pub metadata: AdvanceMetadata,
     pub payload: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InspectRequest {
     pub payload: String,
 }
@@ -125,31 +124,40 @@ pub enum RollupRequest {
     Advance(AdvanceRequest),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InspectReport {
     pub reports: Vec<Report>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Notice {
-    pub payload: String
+    pub payload: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Voucher {
     pub address: String,
-    pub payload: String
+    pub payload: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Report {
     pub payload: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Exception {
+    pub payload: String,
+}
+
+pub enum RollupResponse {
+    Finish(bool)
 }
 
 pub fn rollup_finish_request(
     fd: RawFd,
     finish: &mut RollupFinish,
-    accept: bool
+    accept: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut finish_c = Box::new(bindings::rollup_finish::from(&mut *finish));
 
@@ -249,7 +257,6 @@ pub fn rollup_read_inspect_state_request(
     }
     let result = InspectRequest {
         payload: "0x".to_string() + &hex::encode(&payload),
-
     };
     *finish = RollupFinish::from(*finish_c);
     Ok(result)
@@ -267,7 +274,7 @@ pub fn rollup_write_notices(
                 "Error decoding notice payload, payload must be in Ethereum hex binary format"
             ))));
         }
-     };
+    };
     let mut buffer: Vec<u8> = Vec::with_capacity(binary_payload.len());
     let mut bytes_c = Box::new(bindings::rollup_bytes {
         data: buffer.as_mut_ptr() as *mut ::std::os::raw::c_uchar,
@@ -382,6 +389,43 @@ pub fn rollup_write_report(fd: RawFd, report: &Report) -> Result<(), Box<dyn std
     Ok(())
 }
 
+pub fn rollup_throw_exception(
+    fd: RawFd,
+    exception: &Exception,
+) -> Result<(), Box<dyn std::error::Error>> {
+    print_exception(exception);
+    let binary_payload = match hex::decode(&exception.payload[2..]) {
+        Ok(payload) => payload,
+        Err(_err) => {
+            return Err(Box::new(RollupError::new(&format!(
+                "Error decoding report payload, payload must be in Ethereum hex binary format"
+            ))));
+        }
+    };
+    let mut buffer: Vec<u8> = Vec::with_capacity(binary_payload.len());
+    let mut bytes_c = Box::new(bindings::rollup_bytes {
+        data: buffer.as_mut_ptr() as *mut ::std::os::raw::c_uchar,
+        length: binary_payload.len() as u64,
+    });
+    let res = unsafe {
+        std::ptr::copy(
+            binary_payload.as_ptr(),
+            buffer.as_mut_ptr(),
+            binary_payload.len(),
+        );
+        bindings::rollup_throw_exception(fd as i32, bytes_c.as_mut())
+    };
+    if res != 0 {
+        return Err(Box::new(RollupError::new(&format!(
+            "IOCTL_ROLLUP_THROW_EXCEPTION returned error {}",
+            res
+        ))));
+    } else {
+        log::debug!("exception successfully thrown!");
+    }
+    Ok(())
+}
+
 pub fn print_address(address: &str) {
     if address.starts_with("0x") {
         log::debug!("{}", address);
@@ -433,5 +477,13 @@ pub fn print_report(report: &Report) {
         "report: {{\n\tlength: {} payload: {}\n}}",
         report.payload.len(),
         report.payload
+    );
+}
+
+pub fn print_exception(exception: &Exception) {
+    log::debug!(
+        "exception: {{\n\tlength: {} payload: {}\n}}",
+        exception.payload.len(),
+        exception.payload
     );
 }

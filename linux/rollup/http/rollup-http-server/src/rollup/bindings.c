@@ -128,3 +128,17 @@ int rollup_write_reports(int fd, struct rollup_bytes *bytes) {
     return 0;
 }
 
+/* Outputs a dapp exception.
+ * Returns 0 on success, -1 on error */
+int rollup_throw_exception(int fd, struct rollup_bytes *bytes) {
+    struct rollup_exception e;
+    memset(&e, 0, sizeof(e));
+    e.payload = *bytes;
+    int res = ioctl(fd, IOCTL_ROLLUP_THROW_EXCEPTION, (unsigned long) &e);
+    if (res != 0) {
+        fprintf(stderr, "IOCTL_ROLLUP_THROW_EXCEPTION returned error %d\n", res);
+        return res;
+    }
+    return 0;
+}
+

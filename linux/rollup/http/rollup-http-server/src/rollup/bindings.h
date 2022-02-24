@@ -36,4 +36,5 @@ int rollup_read_inspect_state_request(int fd, struct rollup_finish *finish, stru
 int rollup_write_vouchers(int fd, uint8_t address[CARTESI_ROLLUP_ADDRESS_SIZE], struct rollup_bytes *bytes, uint64_t* voucher_index);
 int rollup_write_notices(int fd, struct rollup_bytes *bytes, uint64_t* notice_index);
 int rollup_write_reports(int fd, struct rollup_bytes *bytes);
+int rollup_throw_exception(int fd, struct rollup_bytes *bytes);
 

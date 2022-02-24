@@ -18,7 +18,9 @@ use crate::config::Config;
 use async_mutex::Mutex;
 use getopts::Options;
 use rollup_http_server::rollup;
-use rollup_http_server::rollup::{RollupFinish, RollupRequest};
+use rollup_http_server::rollup::{
+    RollupFinish, RollupRequest, RollupResponse,
+};
 use std::fs::File;
 use std::io::ErrorKind;
 #[cfg(unix)]
@@ -51,7 +53,7 @@ async fn perform_rollup_finish_request(
 async fn handle_rollup_requests(
     rollup_fd: Arc<Mutex<RawFd>>,
     mut finish_request: RollupFinish,
-    request_tx: &mpsc::Sender<RollupRequest>
+    request_tx: &mpsc::Sender<RollupRequest>,
 ) -> std::io::Result<()> {
     let next_request_type = finish_request.next_request_type as u32;
     match next_request_type {
@@ -71,8 +73,14 @@ async fn handle_rollup_requests(
                 rollup::print_advance(&advance_request);
             }
             // Send newly read advance request to http service
-            if let Err(e) = request_tx.send(RollupRequest::Advance(advance_request)).await {
-                log::error!("error passing advance request to http service {}", e.to_string());
+            if let Err(e) = request_tx
+                .send(RollupRequest::Advance(advance_request))
+                .await
+            {
+                log::error!(
+                    "error passing advance request to http service {}",
+                    e.to_string()
+                );
             }
         }
         rollup::CARTESI_ROLLUP_INSPECT_STATE => {
@@ -91,8 +99,14 @@ async fn handle_rollup_requests(
                 rollup::print_inspect(&inspect_request);
             }
             // Send newly read inspect request to http service
-            if let Err(e) = request_tx.send(RollupRequest::Inspect(inspect_request)).await {
-                log::error!("error passing inspect request to http service {}", e.to_string());
+            if let Err(e) = request_tx
+                .send(RollupRequest::Inspect(inspect_request))
+                .await
+            {
+                log::error!(
+                    "error passing inspect request to http service {}",
+                    e.to_string()
+                );
             }
         }
         _ => {
@@ -109,8 +123,8 @@ async fn handle_rollup_requests(
 /// and processing advance/inspect request
 async fn linux_rollup_loop(
     rollup_fd: Arc<Mutex<RawFd>>,
-    mut finish_rx: mpsc::Receiver<bool>,
-    request_tx: mpsc::Sender<RollupRequest>
+    mut finish_rx: mpsc::Receiver<RollupResponse>,
+    request_tx: mpsc::Sender<RollupRequest>,
 ) {
     // Loop and wait for indication of pending advance/inspect request
     // got from last performed finish request
@@ -118,32 +132,47 @@ async fn linux_rollup_loop(
     loop {
         log::debug!("waiting for finish request...");
         tokio::select! {
-            Some(accept) = finish_rx.recv() => {
-                {
-                    log::debug!("request finished, writing to driver result `{}` ...", accept);
-                    // Write finish request, read indicator for next request
-                    match perform_rollup_finish_request(&rollup_fd, accept).await {
-                        Ok(finish_request) => {
-                            // Received new request, process it
-                            log::info!("Received new request of type {}", match finish_request.next_request_type {
-                                0 => "ADVANCE",
-                                1 => "INSPECT",
-                                _ => "UNKNOWN"
-                            });
-                            match handle_rollup_requests(rollup_fd.clone(), finish_request, &request_tx).await {
-                                Ok(_) => {}
-                                Err(e) => {
-                                    log::error!("error performing handle_rollup_requests: `{}`", e.to_string());
+            Some(response) = finish_rx.recv() =>
+            {
+                match response {
+                    RollupResponse::Finish(accept) => {
+                        log::debug!(
+                            "request finished, writing to driver result `{}` ...",
+                            accept
+                        );
+                        // Write finish request, read indicator for next request
+                        match perform_rollup_finish_request(&rollup_fd, accept).await {
+                            Ok(finish_request) => {
+                                // Received new request, process it
+                                log::info!(
+                                    "Received new request of type {}",
+                                    match finish_request.next_request_type {
+                                        0 => "ADVANCE",
+                                        1 => "INSPECT",
+                                        _ => "UNKNOWN",
+                                    }
+                                );
+                                match handle_rollup_requests(rollup_fd.clone(), finish_request, &request_tx)
+                                    .await
+                                {
+                                    Ok(_) => {}
+                                    Err(e) => {
+                                        log::error!(
+                                            "error performing handle_rollup_requests: `{}`",
+                                            e.to_string()
+                                        );
+                                    }
                                 }
                             }
-                    }
-                        Err(e) => {
-                            log::error!("error performing initial finish request: `{}`", e.to_string());
+                            Err(e) => {
+                                log::error!(
+                                    "error performing initial finish request: `{}`",
+                                    e.to_string()
+                                );
+                            }
                         }
                     }
                 }
-
-
             }
         }
     }
@@ -219,7 +248,7 @@ async fn main() -> std::io::Result<()> {
     ) = std::sync::mpsc::channel();
     let rollup_fd: Arc<Mutex<RawFd>> = Arc::new(Mutex::new(rollup_file.into_raw_fd()));
     // Channel for communicating rollup finish requests between http service and linux rollup loop
-    let (finish_tx, finish_rx) = mpsc::channel::<bool>(100);
+    let (finish_tx, finish_rx) = mpsc::channel::<RollupResponse>(100);
     let (request_tx, request_rx) = mpsc::channel::<RollupRequest>(100);
 
     {

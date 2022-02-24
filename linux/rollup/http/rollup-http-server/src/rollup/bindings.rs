@@ -95,9 +95,7 @@ fn bindgen_test_layout_rollup_input_metadata() {
         )
     );
     assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<rollup_input_metadata>())).timestamp as *const _ as usize
-        },
+        unsafe { &(*(::std::ptr::null::<rollup_input_metadata>())).timestamp as *const _ as usize },
         32usize,
         concat!(
             "Offset of field: ",
@@ -370,45 +368,46 @@ fn bindgen_test_layout_rollup_report() {
         )
     );
 }
+
 extern "C" {
     pub fn rollup_finish_request(
         fd: ::std::os::raw::c_int,
         finish: *mut rollup_finish,
         accept: bool,
     ) -> ::std::os::raw::c_int;
-}
-extern "C" {
+
     pub fn rollup_read_advance_state_request(
         fd: ::std::os::raw::c_int,
         finish: *mut rollup_finish,
         bytes: *mut rollup_bytes,
         metadata: *mut rollup_input_metadata,
     ) -> ::std::os::raw::c_int;
-}
-extern "C" {
+
     pub fn rollup_read_inspect_state_request(
         fd: ::std::os::raw::c_int,
         finish: *mut rollup_finish,
         query: *mut rollup_bytes,
     ) -> ::std::os::raw::c_int;
-}
-extern "C" {
+
     pub fn rollup_write_vouchers(
         fd: ::std::os::raw::c_int,
         address: *mut u8,
         bytes: *mut rollup_bytes,
         voucher_index: *mut u64,
     ) -> ::std::os::raw::c_int;
-}
-extern "C" {
+
     pub fn rollup_write_notices(
         fd: ::std::os::raw::c_int,
         bytes: *mut rollup_bytes,
         notice_index: *mut u64,
     ) -> ::std::os::raw::c_int;
-}
-extern "C" {
+
     pub fn rollup_write_reports(
+        fd: ::std::os::raw::c_int,
+        bytes: *mut rollup_bytes,
+    ) -> ::std::os::raw::c_int;
+
+    pub fn rollup_throw_exception(
         fd: ::std::os::raw::c_int,
         bytes: *mut rollup_bytes,
     ) -> ::std::os::raw::c_int;
