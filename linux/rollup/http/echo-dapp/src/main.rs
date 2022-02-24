@@ -11,21 +11,99 @@
 // specific language governing permissions and limitations under the License.
 
 mod config;
-mod controller;
-mod http_dispatcher;
-mod model;
+mod rollup;
+mod rollup_http_server;
 
-use crate::config::Config;
-use crate::model::TestEchoData;
-use controller::new_controller;
+use crate::config::{Config, TestConfig};
+use crate::rollup::{
+    AdvanceRequest, Exception, InspectRequest, Notice, Report, RollupRequest, RollupRequestError,
+    RollupResponse, Voucher,
+};
+
 use getopts::Options;
-use model::Model;
 use std::io::ErrorKind;
-
 
 fn print_usage(program: &str, opts: Options) {
     let brief = format!("Usage: {} [options]\n Where options are:", program);
     print!("{}", opts.usage(&brief));
+}
+
+pub async fn process_advance_request(
+    config: &mut Config,
+    request: &AdvanceRequest,
+) -> Result<(), RollupRequestError> {
+    log::debug!("dapp Received advance request {:?}", &request);
+    // Generate test echo vouchers
+    if config.test_config.vouchers > 0 {
+        log::debug!("generating {} echo vouchers", config.test_config.vouchers);
+        // Generate test vouchers
+        for _ in 0..config.test_config.vouchers {
+            let voucher_payload = request.payload.clone();
+            let voucher = Voucher {
+                address: request.metadata.msg_sender.clone(),
+                payload: voucher_payload,
+            };
+
+            // Send voucher to http dispatcher
+            rollup_http_server::send_voucher(&config.rollup_http_server_address, voucher).await;
+        }
+    }
+    // Generate test echo notices
+    if config.test_config.notices > 0 {
+        // Generate test notice
+        log::debug!("Generating {} echo notices", config.test_config.notices);
+        for _ in 0..config.test_config.notices {
+            let notice_payload = request.payload.clone();
+            let notice = Notice {
+                payload: notice_payload,
+            };
+            rollup_http_server::send_notice(&config.rollup_http_server_address, notice).await;
+        }
+    }
+    // Generate test echo reports
+    if config.test_config.reports > 0 {
+        // Generate test reports
+        log::debug!("generating {} echo reports", config.test_config.reports);
+        for _ in 0..config.test_config.reports {
+            let report_payload = request.payload.clone();
+            let report = Report {
+                payload: report_payload,
+            };
+            rollup_http_server::send_report(&config.rollup_http_server_address, report).await;
+        }
+    }
+
+    Ok(())
+}
+
+pub async fn process_inspect_request(
+    config: &mut Config,
+    request: &InspectRequest,
+) -> Result<(), RollupRequestError> {
+    log::debug!("Dapp received inspect request {:?}", &request);
+    if config.test_config.reports > 0 {
+        // Generate test reports for inspect
+        log::debug!(
+            "generating {} echo inspect state reports",
+            config.test_config.reports
+        );
+        for _ in 0..config.test_config.reports {
+            let report_payload = request.payload.clone();
+            let report = Report {
+                payload: report_payload,
+            };
+            rollup_http_server::send_report(&config.rollup_http_server_address, report).await;
+        }
+    }
+
+    // Reject if reject paramter in the app was used
+    if config.test_config.reject == 1 {
+        return Err(RollupRequestError {
+            cause: "rejected due to reject parameter".to_string(),
+        });
+    };
+
+    Ok(())
 }
 
 #[actix_web::main]
@@ -36,14 +114,8 @@ async fn main() -> std::io::Result<()> {
     let mut opts = Options::new();
     opts.optopt(
         "",
-        "address",
-        "Address of the dapp http service (default: 127.0.0.1:5003)",
-        "",
-    );
-    opts.optopt(
-        "",
-        "dispatcher",
-        "Http dispatcher address (default: 127.0.0.1:5004)",
+        "rollup-http-server",
+        "Rollup http server address (default: 127.0.0.1:5004)",
         "",
     );
     opts.optopt(
@@ -65,6 +137,12 @@ async fn main() -> std::io::Result<()> {
         "",
     );
     opts.optopt("", "reject", "Reject the nth input (default: -1)", "");
+    opts.optopt(
+        "",
+        "exception",
+        "Cause an exception on the nth input (default: -1)",
+        "",
+    );
     opts.optflag("h", "help", "show this help message and exit");
     opts.optflag("", "verbose", "print more info about application execution");
     let matches = match opts.parse(&args[1..]) {
@@ -88,36 +166,7 @@ async fn main() -> std::io::Result<()> {
     // Set the global log level
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(log_level)).init();
 
-    // Setup configuration
-    let mut config = Config::new();
-    {
-        // Parse addresses and ports
-        let address_match = matches
-            .opt_get_default("address", "127.0.0.1:5003".to_string())
-            .unwrap_or_default();
-        let mut address = address_match.split(':');
-        config.http_address = address.next().expect("address is not valid").to_string();
-        config.http_port = address
-            .next()
-            .expect("port is not valid")
-            .to_string()
-            .parse::<u16>()
-            .unwrap();
-        let dispatcher_match = matches
-            .opt_get_default("dispatcher", "127.0.0.1:5004".to_string())
-            .unwrap_or_default();
-        let mut dispatcher = dispatcher_match.split(':');
-        config.dispatcher_address = dispatcher
-            .next()
-            .expect("http dispatcher address is not valid")
-            .to_string();
-        config.dispatcher_port = dispatcher
-            .next()
-            .expect("http dispatcher port is not valid")
-            .to_string()
-            .parse::<u16>()
-            .unwrap();
-    }
+    // Parse echo dapp parameters
     let vouchers = matches
         .opt_get_default("vouchers", 0)
         .expect("vouchers could not be parsed");
@@ -130,25 +179,77 @@ async fn main() -> std::io::Result<()> {
     let reject = matches
         .opt_get_default("reject", -1)
         .expect("reject could not be parsed");
-    // Instantiate Dapp model that implements DApp logic
-    let model = Box::new(Model::new(
-        &config.dispatcher_address,
-        config.dispatcher_port,
-        TestEchoData {
-            vouchers,
-            notices,
-            reports,
-            reject,
-        },
-    ));
+    let exception = matches
+        .opt_get_default("exception", -1)
+        .expect("exception could not be parsed");
 
-    // Controller handles application flow
-    let (channel, service) = new_controller(model, config.clone());
-    // Run controller service as async service
-    tokio::spawn(async {
-        service.run().await;
-        log::info!("http service service terminated successfully");
+    // Setup configuration
+    let mut config = Config::new(TestConfig {
+        vouchers,
+        notices,
+        reports,
+        reject,
+        exception,
     });
 
-    Ok(())
+
+    // Parse rollup http server address
+    let server_address = matches
+        .opt_get_default("rollup-http-server", "127.0.0.1:5004".to_string())
+        .unwrap_or_default();
+    config.rollup_http_server_address = format!("http://{}", server_address);
+
+
+    let mut request_response = RollupResponse::Finish(true);
+
+    loop {
+        let request = rollup_http_server::send_finish_request(
+            &config.rollup_http_server_address,
+            &request_response,
+        )
+        .await?;
+
+        match request {
+            RollupRequest::Inspect(inspect_request) => {
+                match process_inspect_request(&mut config, &inspect_request).await {
+                    Ok(_) => {
+                        request_response = RollupResponse::Finish(true);
+                    }
+                    Err(error) => {
+                        log::error!("Error processing inspect request: {}", error.to_string());
+                    }
+                }
+            }
+            RollupRequest::Advance(advance_request) => {
+                match process_advance_request(&mut config, &advance_request).await {
+                    Ok(_) => {}
+                    Err(error) => {
+                        log::error!("Error processing advance request: {}", error.to_string());
+                    }
+                }
+                // Reject request if specified by app parameter
+                request_response =
+                    if config.test_config.reject == advance_request.metadata.input_index as i32 {
+                        RollupResponse::Finish(false)
+                    } else {
+                        RollupResponse::Finish(true)
+                    };
+
+                // Do the exception if specified by app parameter
+                if config.test_config.exception == advance_request.metadata.input_index as i32 {
+                    rollup_http_server::throw_exception(
+                        &config.rollup_http_server_address,
+                        Exception {
+                            payload: "0x".to_string()
+                                + &hex::encode(format!(
+                                    "exception thrown after {}th input ",
+                                    exception
+                                )),
+                        },
+                    )
+                    .await;
+                };
+            }
+        }
+    }
 }

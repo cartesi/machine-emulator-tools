@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed --ack from yield
 - Rename http-dispatcher to rollup-http-server
 - Switch rollup-http-server to server only and echo-dapp to client only implementation
+- Added exception to rollup-http-server and echo-dapp
 
 ## [0.5.0] - 2022-01-13
 ### Changed

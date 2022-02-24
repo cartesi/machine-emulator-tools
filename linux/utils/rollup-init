@@ -101,8 +101,6 @@ sh -c "rollup-http-server
     --address 127.0.0.1:$ROLLUP_HTTP_SERVER_PORT \
     $ROLLUP_HTTP_SERVER_VERBOSE" &
 
-echo "Rollup http server started"
-
 # Wait for the rollup http server to start up
 RETRY=0
 while ! netstat -ntl 2>&1 | grep $ROLLUP_HTTP_SERVER_PORT > /dev/null
@@ -116,7 +114,9 @@ do
         exit 1
     fi
 done
+echo "Rollup http server started"
 echo ""
+
 
 # Check if there are any arguments left to start up the dapp
 if [ $# -eq 0 ]
@@ -130,6 +130,3 @@ echo -n "Starting dapp: " "$*"
 sh -c "$*"
 
 echo "Result:" $?
-
-
-
