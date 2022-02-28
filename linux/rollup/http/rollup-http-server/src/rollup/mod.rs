@@ -17,6 +17,7 @@
 pub const ROLLUP_DEVICE_NAME: &str = "/dev/rollup";
 
 use serde::{Deserialize, Serialize};
+use std::io::ErrorKind;
 use std::os::unix::prelude::RawFd;
 
 mod bindings;
@@ -151,7 +152,7 @@ pub struct Exception {
 }
 
 pub enum RollupResponse {
-    Finish(bool)
+    Finish(bool),
 }
 
 pub fn rollup_finish_request(
@@ -424,6 +425,71 @@ pub fn rollup_throw_exception(
         log::debug!("exception successfully thrown!");
     }
     Ok(())
+}
+
+pub async fn perform_rollup_finish_request(
+    fd: RawFd,
+    accept: bool,
+) -> std::io::Result<RollupFinish> {
+    let mut finish_request = RollupFinish::default();
+    match rollup_finish_request(fd, &mut finish_request, accept) {
+        Ok(_) => Ok(finish_request),
+        Err(e) => {
+            log::error!("error inserting finish request, details: {}", e.to_string());
+            Err(std::io::Error::new(ErrorKind::Other, e.to_string()))
+        }
+    }
+}
+
+/// Read advance/inspect request from rollup device
+/// and send http request to DApp REST server
+pub async fn handle_rollup_requests(
+    fd: RawFd,
+    mut finish_request: RollupFinish,
+) -> Result<RollupRequest, std::io::Error> {
+    let next_request_type = finish_request.next_request_type as u32;
+    match next_request_type {
+        CARTESI_ROLLUP_ADVANCE_STATE => {
+            log::debug!("handle advance state request...");
+            let advance_request = {
+                // Read advance request from rollup device
+                match rollup_read_advance_state_request(fd, &mut finish_request) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        return Err(std::io::Error::new(ErrorKind::Other, e.to_string()));
+                    }
+                }
+            };
+            if log::log_enabled!(log::Level::Info) {
+                print_advance(&advance_request);
+            }
+            // Send newly read advance request to http service
+            Ok(RollupRequest::Advance(advance_request))
+        }
+        CARTESI_ROLLUP_INSPECT_STATE => {
+            log::debug!("handle inspect state request...");
+            // Read inspect request from rollup device
+            let inspect_request = {
+                match rollup_read_inspect_state_request(fd, &mut finish_request) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        return Err(std::io::Error::new(ErrorKind::Other, e.to_string()));
+                    }
+                }
+            };
+            if log::log_enabled!(log::Level::Info) {
+                print_inspect(&inspect_request);
+            }
+            // Send newly read inspect request to http service
+            Ok(RollupRequest::Inspect(inspect_request))
+        }
+        _ => {
+            return Err(std::io::Error::new(
+                ErrorKind::Unsupported,
+                "request type unsupported",
+            ));
+        }
+    }
 }
 
 pub fn print_address(address: &str) {

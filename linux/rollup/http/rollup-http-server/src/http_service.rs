@@ -21,8 +21,8 @@ use crate::rollup;
 use crate::rollup::{Notice, Report, Voucher};
 use async_mutex::Mutex;
 use rollup_http_server::rollup::{
-    AdvanceRequest, Exception, InspectRequest, RollupRequest, RollupResponse,
-    REQUEST_TYPE_ADVANCE_STATE, REQUEST_TYPE_INSPECT_STATE,
+    AdvanceRequest, Exception, InspectRequest, RollupRequest, REQUEST_TYPE_ADVANCE_STATE,
+    REQUEST_TYPE_INSPECT_STATE,
 };
 use serde::{Deserialize, Serialize};
 use std::os::unix::io::RawFd;
@@ -42,20 +42,11 @@ enum RollupHttpRequest {
 }
 
 /// Setup the HTTP server that receives requests from the DApp backend
-pub async fn run(
-    config: &Config,
-    start_rollup_tx: std::sync::mpsc::Sender<bool>,
-    rollup_fd: Arc<Mutex<RawFd>>,
-    finish_tx: tokio::sync::mpsc::Sender<RollupResponse>,
-    request_rx: tokio::sync::mpsc::Receiver<RollupRequest>,
-) -> std::io::Result<()> {
+pub async fn run(config: &Config, rollup_fd: Arc<Mutex<RawFd>>) -> std::io::Result<()> {
     log::info!("starting http dispatcher http service!");
-    let request_rx = Arc::new(Mutex::new(request_rx));
     HttpServer::new(move || {
         let data = Data::new(Mutex::new(Context {
             rollup_fd: rollup_fd.clone(),
-            finish_tx: finish_tx.clone(),
-            request_rx: request_rx.clone(),
         }));
         App::new()
             .app_data(data)
@@ -67,10 +58,7 @@ pub async fn run(
             .service(finish)
     })
     .bind((config.http_address.as_str(), config.http_port))
-    .map(|t| {
-        start_rollup_tx.send(true).unwrap();
-        t
-    })?
+    .map(|t| t)?
     .run()
     .await
 }
@@ -185,43 +173,65 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
             return HttpResponse::UnprocessableEntity().body("status must be 'accept' or 'reject'");
         }
     };
+    log::debug!(
+        "request finished, writing to driver result `{}` ...",
+        accept
+    );
     let context = data.lock().await;
-    // Indicate to loop thread that request is finished
-    if let Err(e) = context.finish_tx.send(RollupResponse::Finish(accept)).await {
-        log::error!(
-            "error passing finish request to linux driver loop {}",
-            e.to_string()
-        );
-    }
-
-    // Wait for the next request
-    let mut request_rx = context.request_rx.lock().await;
-    match request_rx.recv().await {
-        Some(rollup_request) => {
-            match rollup_request {
-                RollupRequest::Advance(advance_request) => {
-                    // prepare http response with advance request
-                    return HttpResponse::Ok()
-                        .append_header((hyper::header::CONTENT_TYPE, "application/json"))
-                        .json(RollupHttpRequest::Advance {
-                            request_type: REQUEST_TYPE_ADVANCE_STATE.to_string(),
-                            data: advance_request,
-                        });
+    let rollup_fd = context.rollup_fd.lock().await;
+    // Write finish request, read indicator for next request
+    let new_rollup_request = match rollup::perform_rollup_finish_request(*rollup_fd, accept).await {
+        Ok(finish_request) => {
+            // Received new request, process it
+            log::info!(
+                "Received new request of type {}",
+                match finish_request.next_request_type {
+                    0 => "ADVANCE",
+                    1 => "INSPECT",
+                    _ => "UNKNOWN",
                 }
-                RollupRequest::Inspect(inspect_reqeust) => {
-                    // prepare http response with inspect request
-                    return HttpResponse::Ok()
-                        .append_header((hyper::header::CONTENT_TYPE, "application/json"))
-                        .json(RollupHttpRequest::Inspect {
-                            request_type: REQUEST_TYPE_INSPECT_STATE.to_string(),
-                            data: inspect_reqeust,
-                        });
+            );
+            match rollup::handle_rollup_requests(*rollup_fd, finish_request).await {
+                Ok(rollup_request) => rollup_request,
+                Err(e) => {
+                    let error_message = format!(
+                        "error performing handle_rollup_requests: `{}`",
+                        e.to_string()
+                    );
+                    log::error!("{}", &error_message);
+                    return HttpResponse::InternalServerError().body(error_message);
                 }
             }
         }
-        None => {
-            log::error!("error getting new rollup request from the driver");
-            return HttpResponse::NotFound().body("Unable to provide new rollup request");
+        Err(e) => {
+            let error_message = format!(
+                "error performing initial finish request: `{}`",
+                e.to_string()
+            );
+            log::error!("{}", &error_message);
+            return HttpResponse::InternalServerError().body(error_message);
+        }
+    };
+
+    // Respond to Dapp with the new rollup request
+    match new_rollup_request {
+        RollupRequest::Advance(advance_request) => {
+            // prepare http response with advance request
+            return HttpResponse::Ok()
+                .append_header((hyper::header::CONTENT_TYPE, "application/json"))
+                .json(RollupHttpRequest::Advance {
+                    request_type: REQUEST_TYPE_ADVANCE_STATE.to_string(),
+                    data: advance_request,
+                });
+        }
+        RollupRequest::Inspect(inspect_reqeust) => {
+            // prepare http response with inspect request
+            return HttpResponse::Ok()
+                .append_header((hyper::header::CONTENT_TYPE, "application/json"))
+                .json(RollupHttpRequest::Inspect {
+                    request_type: REQUEST_TYPE_INSPECT_STATE.to_string(),
+                    data: inspect_reqeust,
+                });
         }
     }
 }
@@ -250,6 +260,4 @@ struct Error {
 
 struct Context {
     pub rollup_fd: Arc<Mutex<RawFd>>,
-    pub finish_tx: tokio::sync::mpsc::Sender<RollupResponse>,
-    pub request_rx: Arc<Mutex<tokio::sync::mpsc::Receiver<RollupRequest>>>,
 }
