@@ -104,7 +104,7 @@ async fn notice(mut notice: Json<Notice>, data: Data<Mutex<Context>>) -> HttpRes
     log::debug!("received notice request");
     let context = data.lock().await;
     // Write notice to linux rollup device
-    return match rollup::rollup_write_notices(*context.rollup_fd.lock().await, &mut notice.0) {
+    return match rollup::rollup_write_notice(*context.rollup_fd.lock().await, &mut notice.0) {
         Ok(notice_index) => {
             log::debug!("notice successfully inserted {:#?}", notice);
             HttpResponse::Created().json(IndexResponse {

@@ -33,8 +33,8 @@
 int rollup_finish_request(int fd, struct rollup_finish *finish, bool accept);
 int rollup_read_advance_state_request(int fd, struct rollup_finish *finish, struct rollup_bytes *bytes, struct rollup_input_metadata *metadata);
 int rollup_read_inspect_state_request(int fd, struct rollup_finish *finish, struct rollup_bytes *query);
-int rollup_write_vouchers(int fd, uint8_t address[CARTESI_ROLLUP_ADDRESS_SIZE], struct rollup_bytes *bytes, uint64_t* voucher_index);
-int rollup_write_notices(int fd, struct rollup_bytes *bytes, uint64_t* notice_index);
-int rollup_write_reports(int fd, struct rollup_bytes *bytes);
+int rollup_write_voucher(int fd, uint8_t address[CARTESI_ROLLUP_ADDRESS_SIZE], struct rollup_bytes *bytes, uint64_t* voucher_index);
+int rollup_write_notice(int fd, struct rollup_bytes *bytes, uint64_t* notice_index);
+int rollup_write_report(int fd, struct rollup_bytes *bytes);
 int rollup_throw_exception(int fd, struct rollup_bytes *bytes);
 

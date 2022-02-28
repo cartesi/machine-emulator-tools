@@ -263,7 +263,7 @@ pub fn rollup_read_inspect_state_request(
     Ok(result)
 }
 
-pub fn rollup_write_notices(
+pub fn rollup_write_notice(
     fd: RawFd,
     notice: &mut Notice,
 ) -> Result<u64, Box<dyn std::error::Error>> {
@@ -288,7 +288,7 @@ pub fn rollup_write_notices(
             buffer.as_mut_ptr(),
             binary_payload.len(),
         );
-        bindings::rollup_write_notices(fd as i32, bytes_c.as_mut(), &mut notice_index)
+        bindings::rollup_write_notice(fd as i32, bytes_c.as_mut(), &mut notice_index)
     };
     if res != 0 {
         return Err(Box::new(RollupError::new(&format!(
@@ -337,7 +337,7 @@ pub fn rollup_write_voucher(
             buffer.as_mut_ptr(),
             binary_payload.len(),
         );
-        bindings::rollup_write_vouchers(
+        bindings::rollup_write_voucher(
             fd as i32,
             address_c.as_mut_ptr(),
             bytes_c.as_mut(),
@@ -377,7 +377,7 @@ pub fn rollup_write_report(fd: RawFd, report: &Report) -> Result<(), Box<dyn std
             buffer.as_mut_ptr(),
             binary_payload.len(),
         );
-        bindings::rollup_write_reports(fd as i32, bytes_c.as_mut())
+        bindings::rollup_write_report(fd as i32, bytes_c.as_mut())
     };
     if res != 0 {
         return Err(Box::new(RollupError::new(&format!(
@@ -442,7 +442,6 @@ pub async fn perform_rollup_finish_request(
 }
 
 /// Read advance/inspect request from rollup device
-/// and send http request to DApp REST server
 pub async fn handle_rollup_requests(
     fd: RawFd,
     mut finish_request: RollupFinish,

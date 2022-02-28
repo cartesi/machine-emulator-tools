@@ -9,14 +9,9 @@ Rollup HTTP Server application implements interface defined [here](https://githu
 This project requires Rust.
 To install Rust follow the instructions [here](https://www.rust-lang.org/tools/install).
 
-
-## Build for risc-v cpu
-Prerequisites: `riscv64-cartesi-linux-gnu` toolchain must be in the $PATH
-
-###Build
+###Build using toolchain docker
 ```shell
-$ source ./environment.sh
-$ cargo +nightly build -Z build-std=std,core,alloc,panic_abort,proc_macro --target riscv64ima-cartesi-linux-gnu.json --release
+$ ./build.sh
 ```
 
 ## Authors

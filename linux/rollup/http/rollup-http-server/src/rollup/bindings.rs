@@ -389,20 +389,20 @@ extern "C" {
         query: *mut rollup_bytes,
     ) -> ::std::os::raw::c_int;
 
-    pub fn rollup_write_vouchers(
+    pub fn rollup_write_voucher(
         fd: ::std::os::raw::c_int,
         address: *mut u8,
         bytes: *mut rollup_bytes,
         voucher_index: *mut u64,
     ) -> ::std::os::raw::c_int;
 
-    pub fn rollup_write_notices(
+    pub fn rollup_write_notice(
         fd: ::std::os::raw::c_int,
         bytes: *mut rollup_bytes,
         notice_index: *mut u64,
     ) -> ::std::os::raw::c_int;
 
-    pub fn rollup_write_reports(
+    pub fn rollup_write_report(
         fd: ::std::os::raw::c_int,
         bytes: *mut rollup_bytes,
     ) -> ::std::os::raw::c_int;

@@ -11,6 +11,7 @@
  * the License.
  */
 
+#include <errno.h>
 #include "bindings.h"
 
 static int resize_bytes(struct rollup_bytes *bytes, uint64_t size) {
@@ -31,7 +32,7 @@ int rollup_finish_request(int fd, struct rollup_finish *finish, bool accept) {
     int res = 0;
     memset(finish, 0, sizeof(*finish));
     finish->accept_previous_request = accept;
-    res = ioctl(fd, IOCTL_ROLLUP_FINISH, (unsigned long)finish);
+    res = ioctl(fd, IOCTL_ROLLUP_FINISH, (unsigned long) finish);
     return res;
 }
 
@@ -39,7 +40,7 @@ int rollup_finish_request(int fd, struct rollup_finish *finish, bool accept) {
  * Outputs metadata and payload in structs
  * Returns 0 on success, -1 on error */
 int rollup_read_advance_state_request(int fd, struct rollup_finish *finish,
-        struct rollup_bytes *bytes, struct rollup_input_metadata *metadata) {
+                                      struct rollup_bytes *bytes, struct rollup_input_metadata *metadata) {
     struct rollup_advance_state req;
     int res = 0;
     if (resize_bytes(bytes, finish->next_request_payload_length) != 0) {
@@ -50,7 +51,7 @@ int rollup_read_advance_state_request(int fd, struct rollup_finish *finish,
     req.payload = *bytes;
     res = ioctl(fd, IOCTL_ROLLUP_READ_ADVANCE_STATE, (unsigned long) &req);
     if (res != 0) {
-        fprintf(stderr, "IOCTL_ROLLUP_READ_ADVANCE_STATE returned error (%d)\n", res);
+        fprintf(stderr, "IOCTL_ROLLUP_READ_ADVANCE_STATE returned error (%d), err message: %s\n", res, strerror(errno));
     }
     *metadata = req.metadata;
     return res;
@@ -70,7 +71,7 @@ int rollup_read_inspect_state_request(int fd, struct rollup_finish *finish, stru
     req.payload = *query;
     res = ioctl(fd, IOCTL_ROLLUP_READ_INSPECT_STATE, (unsigned long) &req);
     if (res != 0) {
-        fprintf(stderr, "IOCTL_ROLLUP_READ_INSPECT_STATE returned error (%d)\n", res);
+        fprintf(stderr, "IOCTL_ROLLUP_READ_INSPECT_STATE returned error (%d), err message: %s\n", res, strerror(errno));
         return res;
     }
     return 0;
@@ -79,15 +80,15 @@ int rollup_read_inspect_state_request(int fd, struct rollup_finish *finish, stru
 /* Outputs a new voucher.
  * voucher_index is filled with new index from the driver
  * Returns 0 on success, -1 on error */
-int rollup_write_vouchers(int fd, uint8_t address[CARTESI_ROLLUP_ADDRESS_SIZE], struct rollup_bytes *bytes, uint64_t* voucher_index) {
-    unsigned i;
+int rollup_write_voucher(int fd, uint8_t address[CARTESI_ROLLUP_ADDRESS_SIZE], struct rollup_bytes *bytes,
+                         uint64_t *voucher_index) {
     struct rollup_voucher v;
     memset(&v, 0, sizeof(v));
     memcpy(v.address, address, CARTESI_ROLLUP_ADDRESS_SIZE);
     v.payload = *bytes;
     int res = ioctl(fd, IOCTL_ROLLUP_WRITE_VOUCHER, (unsigned long) &v);
     if (res != 0) {
-        fprintf(stderr, "IOCTL_ROLLUP_WRITE_VOUCHER returned error %d\n", res);
+        fprintf(stderr, "IOCTL_ROLLUP_WRITE_VOUCHER returned error %d, err message: %s\n", res, strerror(errno));
         return res;
     }
     *voucher_index = v.index;
@@ -97,14 +98,13 @@ int rollup_write_vouchers(int fd, uint8_t address[CARTESI_ROLLUP_ADDRESS_SIZE], 
 /* Outputs a new notice.
  * notice_index is filled with new index from the driver
  * Returns 0 on success, -1 on error */
-int rollup_write_notices(int fd, struct rollup_bytes *bytes, uint64_t* notice_index) {
-    unsigned i;
+int rollup_write_notice(int fd, struct rollup_bytes *bytes, uint64_t *notice_index) {
     struct rollup_notice n;
     memset(&n, 0, sizeof(n));
     n.payload = *bytes;
     int res = ioctl(fd, IOCTL_ROLLUP_WRITE_NOTICE, (unsigned long) &n);
     if (res != 0) {
-        fprintf(stderr, "IOCTL_ROLLUP_WRITE_NOTICE returned error %d\n", res);
+        fprintf(stderr, "IOCTL_ROLLUP_WRITE_NOTICE returned error %d, err message: %s\n", res, strerror(errno));
         return res;
     }
     *notice_index = n.index;
@@ -114,14 +114,13 @@ int rollup_write_notices(int fd, struct rollup_bytes *bytes, uint64_t* notice_in
 
 /* Outputs a new report.
  * Returns 0 on success, -1 on error */
-int rollup_write_reports(int fd, struct rollup_bytes *bytes) {
-    unsigned i;
+int rollup_write_report(int fd, struct rollup_bytes *bytes) {
     struct rollup_report r;
     memset(&r, 0, sizeof(r));
     r.payload = *bytes;
     int res = ioctl(fd, IOCTL_ROLLUP_WRITE_REPORT, (unsigned long) &r);
     if (res != 0) {
-        fprintf(stderr, "IOCTL_ROLLUP_WRITE_REPORT returned error %d\n", res);
+        fprintf(stderr, "IOCTL_ROLLUP_WRITE_REPORT returned error %d, err message: %s\n", res, strerror(errno));
         return res;
     }
 
@@ -136,7 +135,7 @@ int rollup_throw_exception(int fd, struct rollup_bytes *bytes) {
     e.payload = *bytes;
     int res = ioctl(fd, IOCTL_ROLLUP_THROW_EXCEPTION, (unsigned long) &e);
     if (res != 0) {
-        fprintf(stderr, "IOCTL_ROLLUP_THROW_EXCEPTION returned error %d\n", res);
+        fprintf(stderr, "IOCTL_ROLLUP_THROW_EXCEPTION returned error %d, err message: %d\n", res, strerror(errno));
         return res;
     }
     return 0;

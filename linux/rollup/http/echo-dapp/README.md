@@ -14,12 +14,9 @@ To install Rust follow the instructions [here](https://www.rust-lang.org/tools/i
 
 ## Build for risc-v cpu
 
-Prerequisites: `riscv64-cartesi-linux-gnu` toolchain must be in the $PATH
-
-### Build
+###Build using toolchain docker
 ```shell
-$ source ./environment.sh
-$ cargo +nightly build -Z build-std=std,core,alloc,panic_abort,proc_macro --target riscv64ima-cartesi-linux-gnu.json --release
+$ sh build.sh
 ```
 
 ## Execution 

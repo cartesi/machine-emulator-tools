@@ -3,6 +3,7 @@ on: [push]
 env:
   TOOLCHAIN_IMAGE: ${{ secrets.DOCKER_ORGANIZATION }}/toolchain
   TOOLCHAIN_TAG: 0.8.0
+  CONTAINER_BASE: /opt/cartesi/tools
 jobs:
   build:
     runs-on: ubuntu-20.04
@@ -29,3 +30,13 @@ jobs:
 
       - name: Build rollup tool
         run: cd linux/rollup/rollup && make toolchain-exec CONTAINER_COMMAND="/usr/bin/make rollup.toolchain"
+
+      - name: Build rollup http server
+        run: | 
+          cd linux/rollup/http/rollup-http-server          
+          ./build.sh
+
+      - name: Build echo dapp
+        run: | 
+          cd linux/rollup/http/echo-dapp        
+          ./build.sh
