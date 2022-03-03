@@ -3,7 +3,6 @@ on: [push]
 env:
   TOOLCHAIN_IMAGE: ${{ secrets.DOCKER_ORGANIZATION }}/toolchain
   TOOLCHAIN_TAG: 0.8.0
-  CONTAINER_BASE: /opt/cartesi/tools
 jobs:
   build:
     runs-on: ubuntu-20.04
@@ -40,3 +39,8 @@ jobs:
         run: | 
           cd linux/rollup/http/echo-dapp        
           ./build.sh
+
+      - name: Test rollup-http-server and echo-dapp client
+        run: | 
+          cd linux/rollup/http/rollup-http-server          
+          USE_ROLLUP_BINDINGS_MOCK=1 cargo test -- --show-output --test-threads=1

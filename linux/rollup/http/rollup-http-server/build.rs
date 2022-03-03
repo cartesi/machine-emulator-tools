@@ -13,9 +13,17 @@
 extern crate cc;
 
 fn main() {
-    println!("cargo:rerun-if-changed=src/rollup/bindings.c,src/rollup/bindings.h");
-    cc::Build::new()
-        .file("src/rollup/bindings.c")
-        .compile("libbindings.a");
-    println!("cargo:rustc-link-lib=bindings");
+    println!("cargo:rerun-if-changed=src/rollup/bindings.c,src/rollup/bindings.h,tests/rollup_test_bindings.c,tests/rollup_test.h");
+    let test = std::env::var("USE_ROLLUP_BINDINGS_MOCK").unwrap_or("0".to_string());
+    if test == "1" {
+        cc::Build::new()
+            .file("tests/rollup_test_bindings.c")
+            .compile("libtest_bindings.a");
+        println!("cargo:rustc-link-lib=test_bindings");
+    } else {
+        cc::Build::new()
+            .file("src/rollup/bindings.c")
+            .compile("libbindings.a");
+        println!("cargo:rustc-link-lib=bindings");
+    }
 }

@@ -14,9 +14,11 @@ To install Rust follow the instructions [here](https://www.rust-lang.org/tools/i
 $ ./build.sh
 ```
 
-## Authors
+### Run tests
+```shell
+$ USE_ROLLUP_BINDINGS_MOCK=1 cargo test -- --show-output --test-threads=1
+```
 
-* *Marko Atanasievski*
 
 ## License
 

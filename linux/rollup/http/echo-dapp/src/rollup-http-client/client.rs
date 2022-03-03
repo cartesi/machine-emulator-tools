@@ -10,8 +10,7 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use crate::rollup::{Exception, IndexResponse, Notice, Report, RollupRequest, Voucher};
-use crate::{AdvanceRequest, InspectRequest, RollupResponse};
+use crate::rollup::{AdvanceRequest, Exception, IndexResponse, InspectRequest, Notice, Report, RollupRequest, RollupResponse, Voucher};
 use serde::{Deserialize, Serialize};
 use std::io::ErrorKind;
 
@@ -115,7 +114,12 @@ pub async fn throw_exception(rollup_http_server_addr: &str, exception: Exception
             e
         );
     }
-    panic!("exception happened due to exception parameter!");
+    // Here it doesn't matter what application does, as server manager
+    // will terminate machine execution
+    #[cfg(target_arch = "riscv64")]
+    {
+        panic!("exception happened due to exception parameter!");
+    }
 }
 
 pub async fn send_finish_request(

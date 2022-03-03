@@ -65,6 +65,7 @@ pub struct Exception {
     pub payload: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RollupRequest {
     Inspect(InspectRequest),
     Advance(AdvanceRequest),

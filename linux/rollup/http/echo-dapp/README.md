@@ -16,7 +16,7 @@ To install Rust follow the instructions [here](https://www.rust-lang.org/tools/i
 
 ###Build using toolchain docker
 ```shell
-$ sh build.sh
+$ ./build.sh
 ```
 
 ## Execution 
@@ -45,11 +45,6 @@ $  cartesi-machine --rollup --remote-address=127.0.0.1:10001 --checkin-address=1
 
 To generate test input and decode output check `rollup-memory-range.lua` script options from the [emulator](https://github.com/cartesi/machine-emulator) project. 
 
-
-## Authors
-
-* *Marko Atanasievski*
-* *Alex Mikhalevich*
 
 ## License
 

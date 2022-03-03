@@ -11,19 +11,18 @@
  * the License.
  */
 
+use crate::rollup;
 /// Implement http dispatcher http REST api, including
 /// voucher/notice/report/finish endpoints, used by the DApp
 /// to communicate its output
 use actix_web::{middleware::Logger, web::Data, web::Json, App, HttpResponse, HttpServer};
 
 use crate::config::Config;
-use crate::rollup;
-use crate::rollup::{Notice, Report, Voucher};
-use async_mutex::Mutex;
-use rollup_http_server::rollup::{
-    AdvanceRequest, Exception, InspectRequest, RollupRequest, REQUEST_TYPE_ADVANCE_STATE,
-    REQUEST_TYPE_INSPECT_STATE,
+use crate::rollup::{
+    AdvanceRequest, Exception, InspectRequest, Notice, Report, RollupRequest, Voucher,
+    REQUEST_TYPE_ADVANCE_STATE, REQUEST_TYPE_INSPECT_STATE,
 };
+use async_mutex::Mutex;
 use serde::{Deserialize, Serialize};
 use std::os::unix::io::RawFd;
 use std::sync::Arc;
@@ -41,10 +40,12 @@ enum RollupHttpRequest {
     },
 }
 
-/// Setup the HTTP server that receives requests from the DApp backend
-pub async fn run(config: &Config, rollup_fd: Arc<Mutex<RawFd>>) -> std::io::Result<()> {
-    log::info!("starting http dispatcher http service!");
-    HttpServer::new(move || {
+/// Create new instance of http server
+pub fn create_server(
+    config: &Config,
+    rollup_fd: Arc<Mutex<RawFd>>,
+) -> std::io::Result<actix_server::Server> {
+    let server = HttpServer::new(move || {
         let data = Data::new(Mutex::new(Context {
             rollup_fd: rollup_fd.clone(),
         }));
@@ -59,8 +60,15 @@ pub async fn run(config: &Config, rollup_fd: Arc<Mutex<RawFd>>) -> std::io::Resu
     })
     .bind((config.http_address.as_str(), config.http_port))
     .map(|t| t)?
-    .run()
-    .await
+    .run();
+    Ok(server)
+}
+
+/// Create and run new instance of http server
+pub async fn run(config: &Config, rollup_fd: Arc<Mutex<RawFd>>) -> std::io::Result<()> {
+    log::info!("starting http dispatcher http service!");
+    let server = create_server(config, rollup_fd)?;
+    server.await
 }
 
 /// Process voucher request from DApp, write voucher to rollup device

@@ -10,4 +10,6 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+pub mod config;
+pub mod http_service;
 pub mod rollup;

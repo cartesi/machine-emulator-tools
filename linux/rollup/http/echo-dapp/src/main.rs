@@ -11,17 +11,16 @@
 // specific language governing permissions and limitations under the License.
 
 mod config;
-mod rollup;
-mod rollup_http_server;
 
 use crate::config::{Config, TestConfig};
-use crate::rollup::{
+use rollup_http_client::rollup::{
     AdvanceRequest, Exception, InspectRequest, Notice, Report, RollupRequest, RollupRequestError,
     RollupResponse, Voucher,
 };
 
 use getopts::Options;
 use std::io::ErrorKind;
+use rollup_http_client::client;
 
 fn print_usage(program: &str, opts: Options) {
     let brief = format!("Usage: {} [options]\n Where options are:", program);
@@ -45,7 +44,7 @@ pub async fn process_advance_request(
             };
 
             // Send voucher to http dispatcher
-            rollup_http_server::send_voucher(&config.rollup_http_server_address, voucher).await;
+            client::send_voucher(&config.rollup_http_server_address, voucher).await;
         }
     }
     // Generate test echo notices
@@ -57,7 +56,7 @@ pub async fn process_advance_request(
             let notice = Notice {
                 payload: notice_payload,
             };
-            rollup_http_server::send_notice(&config.rollup_http_server_address, notice).await;
+            client::send_notice(&config.rollup_http_server_address, notice).await;
         }
     }
     // Generate test echo reports
@@ -69,7 +68,7 @@ pub async fn process_advance_request(
             let report = Report {
                 payload: report_payload,
             };
-            rollup_http_server::send_report(&config.rollup_http_server_address, report).await;
+            client::send_report(&config.rollup_http_server_address, report).await;
         }
     }
 
@@ -92,7 +91,7 @@ pub async fn process_inspect_request(
             let report = Report {
                 payload: report_payload,
             };
-            rollup_http_server::send_report(&config.rollup_http_server_address, report).await;
+            client::send_report(&config.rollup_http_server_address, report).await;
         }
     }
 
@@ -203,7 +202,7 @@ async fn main() -> std::io::Result<()> {
     let mut request_response = RollupResponse::Finish(true);
 
     loop {
-        let request = rollup_http_server::send_finish_request(
+        let request = client::send_finish_request(
             &config.rollup_http_server_address,
             &request_response,
         )
@@ -237,7 +236,7 @@ async fn main() -> std::io::Result<()> {
 
                 // Do the exception if specified by app parameter
                 if config.test_config.exception == advance_request.metadata.input_index as i32 {
-                    rollup_http_server::throw_exception(
+                    client::throw_exception(
                         &config.rollup_http_server_address,
                         Exception {
                             payload: "0x".to_string()

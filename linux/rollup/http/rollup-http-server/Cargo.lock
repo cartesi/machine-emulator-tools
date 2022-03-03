@@ -246,6 +246,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-trait"
+version = "0.1.52"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "061a7acccaa286c011ddc30970520b98fa40e00c9d644633fb26b5fc63a265e3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -458,6 +469,22 @@ dependencies = [
  "block-buffer",
  "crypto-common",
  "generic-array",
+]
+
+[[package]]
+name = "echo-dapp"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "async-trait",
+ "env_logger",
+ "getopts",
+ "hex",
+ "hyper",
+ "log",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -1199,20 +1226,36 @@ dependencies = [
 name = "rollup-http-server"
 version = "0.1.0"
 dependencies = [
+ "actix-server",
  "actix-web",
  "async-mutex",
  "bindgen",
  "cc",
+ "echo-dapp",
  "env_logger",
  "getopts",
  "hex",
  "hyper",
  "libc",
  "log",
+ "rstest",
  "serde",
  "serde_json",
  "tokio",
  "tonic-build",
+]
+
+[[package]]
+name = "rstest"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d912f35156a3f99a66ee3e11ac2e0b3f34ac85a07e05263d05a7e2c8810d616f"
+dependencies = [
+ "cfg-if",
+ "proc-macro2",
+ "quote",
+ "rustc_version",
+ "syn",
 ]
 
 [[package]]

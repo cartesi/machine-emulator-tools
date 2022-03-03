@@ -8,6 +8,10 @@ authors = ["Alex Mikhalevich <alex.mikhalevich@cartesi.io>", "Marko Atnasievski 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "rollup_http_client"
+path = "src/rollup-http-client/mod.rs"
+
 [dependencies]
 actix-web = "4.0.0-rc.2"
 serde = { version = "1.0", features = ["derive"] }
