@@ -335,10 +335,10 @@ static void show_advance(struct rollup_advance_state *advance) {
            "\tmsg_sender: ");
     print_address(advance->metadata.msg_sender);
     printf("\tblock_number: %lu\n"
-           "\ttime_stamp: %lu\n"
+           "\ttimestamp: %lu\n"
            "\tepoch_index: %lu\n"
            "\tinput_index: %lu\n",
-        advance->metadata.block_number, advance->metadata.time_stamp, advance->metadata.epoch_index,
+        advance->metadata.block_number, advance->metadata.timestamp, advance->metadata.epoch_index,
         advance->metadata.input_index);
 }
 

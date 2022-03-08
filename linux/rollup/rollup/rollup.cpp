@@ -132,7 +132,7 @@ R"(Usage:
             "epoch_index": <number>,
             "input_index": <number>,
             "block_number": <number>,
-            "time_stamp": <number>
+            "timestamp": <number>
             },
             "payload": <string>
         },
@@ -299,7 +299,7 @@ static void write_advance_state(const unique_file_desc &fd, const struct rollup_
                 {"epoch_index", m.epoch_index},
                 {"input_index", m.input_index},
                 {"block_number", m.block_number},
-                {"time_stamp", m.time_stamp}
+                {"timestamp", m.timestamp}
             }}
         }}
     };
