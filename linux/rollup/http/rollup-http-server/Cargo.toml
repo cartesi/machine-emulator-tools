@@ -36,7 +36,7 @@ cc = "1.0"
 tonic-build = "0.5"
 
 [dev-dependencies]
-echo-dapp = {path = "../echo-dapp"}
+rollup-http-client = {path = "../rollup-http-client"}
 
 
 

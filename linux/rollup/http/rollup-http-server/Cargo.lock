@@ -472,22 +472,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "echo-dapp"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "async-trait",
- "env_logger",
- "getopts",
- "hex",
- "hyper",
- "log",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1223,6 +1207,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "rollup-http-client"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "env_logger",
+ "getopts",
+ "hex",
+ "hyper",
+ "log",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rollup-http-server"
 version = "0.1.0"
 dependencies = [
@@ -1231,13 +1229,13 @@ dependencies = [
  "async-mutex",
  "bindgen",
  "cc",
- "echo-dapp",
  "env_logger",
  "getopts",
  "hex",
  "hyper",
  "libc",
  "log",
+ "rollup-http-client",
  "rstest",
  "serde",
  "serde_json",
