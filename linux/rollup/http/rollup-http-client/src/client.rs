@@ -15,14 +15,14 @@ use serde::{Deserialize, Serialize};
 use std::io::ErrorKind;
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "request_type")]
 enum RollupHttpRequest {
+    #[serde(rename = "advance_state")]
     Advance {
-        request_type: String,
         data: AdvanceRequest,
     },
+    #[serde(rename = "inspect_request")]
     Inspect {
-        request_type: String,
         data: InspectRequest,
     },
 }
@@ -173,11 +173,9 @@ pub async fn send_finish_request(
 
                     match finish_response {
                         RollupHttpRequest::Advance {
-                            request_type: _,
                             data: advance_request,
                         } => Ok(RollupRequest::Advance(advance_request)),
                         RollupHttpRequest::Inspect {
-                            request_type: _,
                             data: inspect_request,
                         } => Ok(RollupRequest::Inspect(inspect_request)),
                     }

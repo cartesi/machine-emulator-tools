@@ -20,7 +20,6 @@ use actix_web::{middleware::Logger, web::Data, web::Json, App, HttpResponse, Htt
 use crate::config::Config;
 use crate::rollup::{
     AdvanceRequest, Exception, InspectRequest, Notice, Report, RollupRequest, Voucher,
-    REQUEST_TYPE_ADVANCE_STATE, REQUEST_TYPE_INSPECT_STATE,
 };
 use async_mutex::Mutex;
 use serde::{Deserialize, Serialize};
@@ -28,14 +27,14 @@ use std::os::unix::io::RawFd;
 use std::sync::Arc;
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "request_type")]
 enum RollupHttpRequest {
+    #[serde(rename = "advance_state")]
     Advance {
-        r#request_type: String,
         data: AdvanceRequest,
     },
+    #[serde(rename = "inspect_request")]
     Inspect {
-        r#request_type: String,
         data: InspectRequest,
     },
 }
@@ -222,26 +221,21 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
     };
 
     // Respond to Dapp with the new rollup request
-    match new_rollup_request {
+    let http_rollup_request = match new_rollup_request {
         RollupRequest::Advance(advance_request) => {
-            // prepare http response with advance request
-            return HttpResponse::Ok()
-                .append_header((hyper::header::CONTENT_TYPE, "application/json"))
-                .json(RollupHttpRequest::Advance {
-                    request_type: REQUEST_TYPE_ADVANCE_STATE.to_string(),
-                    data: advance_request,
-                });
+            RollupHttpRequest::Advance {
+                data: advance_request,
+            }
         }
-        RollupRequest::Inspect(inspect_reqeust) => {
-            // prepare http response with inspect request
-            return HttpResponse::Ok()
-                .append_header((hyper::header::CONTENT_TYPE, "application/json"))
-                .json(RollupHttpRequest::Inspect {
-                    request_type: REQUEST_TYPE_INSPECT_STATE.to_string(),
-                    data: inspect_reqeust,
-                });
+        RollupRequest::Inspect(inspect_request) => {
+            RollupHttpRequest::Inspect {
+                data: inspect_request,
+            }
         }
-    }
+    };
+    HttpResponse::Ok()
+        .append_header((hyper::header::CONTENT_TYPE, "application/json"))
+        .json(http_rollup_request)
 }
 
 #[derive(Debug, Clone, Deserialize)]
