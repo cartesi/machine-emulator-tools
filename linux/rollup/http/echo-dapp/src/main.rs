@@ -80,6 +80,7 @@ pub async fn process_inspect_request(
     request: &InspectRequest,
 ) -> Result<(), RollupRequestError> {
     log::debug!("Dapp received inspect request {:?}", &request);
+
     if config.test_config.reports > 0 {
         // Generate test reports for inspect
         log::debug!(
@@ -94,13 +95,6 @@ pub async fn process_inspect_request(
             client::send_report(&config.rollup_http_server_address, report).await;
         }
     }
-
-    // Reject if reject paramter in the app was used
-    if config.test_config.reject == 1 {
-        return Err(RollupRequestError {
-            cause: "rejected due to reject parameter".to_string(),
-        });
-    };
 
     Ok(())
 }
@@ -136,6 +130,7 @@ async fn main() -> std::io::Result<()> {
         "",
     );
     opts.optopt("", "reject", "Reject the nth input (default: -1)", "");
+    opts.optflag("", "reject-inspects", "reject all inspect requests");
     opts.optopt(
         "",
         "exception",
@@ -178,6 +173,7 @@ async fn main() -> std::io::Result<()> {
     let reject = matches
         .opt_get_default("reject", -1)
         .expect("reject could not be parsed");
+    let reject_inspects = matches.opt_present("reject-inspects");
     let exception = matches
         .opt_get_default("exception", -1)
         .expect("exception could not be parsed");
@@ -188,6 +184,7 @@ async fn main() -> std::io::Result<()> {
         notices,
         reports,
         reject,
+        reject_inspects,
         exception,
     });
 
@@ -210,29 +207,27 @@ async fn main() -> std::io::Result<()> {
 
         match request {
             RollupRequest::Inspect(inspect_request) => {
-                match process_inspect_request(&mut config, &inspect_request).await {
+                request_response = match process_inspect_request(&mut config, &inspect_request).await {
                     Ok(_) => {
-                        request_response = RollupResponse::Finish(true);
+                        RollupResponse::Finish(!config.test_config.reject_inspects)
                     }
                     Err(error) => {
                         log::error!("Error processing inspect request: {}", error.to_string());
+                        RollupResponse::Finish(false)
                     }
-                }
+                };
             }
             RollupRequest::Advance(advance_request) => {
-                match process_advance_request(&mut config, &advance_request).await {
-                    Ok(_) => {}
+                request_response = match process_advance_request(&mut config, &advance_request).await {
+                    Ok(_) => {
+                            let accept = !(config.test_config.reject == advance_request.metadata.input_index as i32);
+                            RollupResponse::Finish(accept)
+                    }
                     Err(error) => {
                         log::error!("Error processing advance request: {}", error.to_string());
-                    }
-                }
-                // Reject request if specified by app parameter
-                request_response =
-                    if config.test_config.reject == advance_request.metadata.input_index as i32 {
                         RollupResponse::Finish(false)
-                    } else {
-                        RollupResponse::Finish(true)
-                    };
+                    }
+                };
 
                 // Do the exception if specified by app parameter
                 if config.test_config.exception == advance_request.metadata.input_index as i32 {

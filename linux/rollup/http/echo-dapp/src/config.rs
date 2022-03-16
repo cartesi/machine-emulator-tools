@@ -16,6 +16,7 @@ pub struct TestConfig {
     pub reports: u32,
     pub notices: u32,
     pub reject: i32,
+    pub reject_inspects: bool,
     pub exception: i32,
 }
 
