@@ -31,16 +31,12 @@ jobs:
         run: cd linux/rollup/rollup && make toolchain-exec CONTAINER_COMMAND="/usr/bin/make rollup.toolchain"
 
       - name: Build rollup http server
-        run: | 
-          cd linux/rollup/http/rollup-http-server          
-          ./build.sh
+        run: cd linux/rollup/http/rollup-http-server && ./build.sh
 
       - name: Build echo dapp
-        run: | 
-          cd linux/rollup/http/echo-dapp        
-          ./build.sh
+        run: cd linux/rollup/http/echo-dapp && ./build.sh
 
       - name: Test rollup-http-server and echo-dapp client
-        run: | 
-          cd linux/rollup/http/rollup-http-server          
+        run: |
+          cd linux/rollup/http/rollup-http-server
           USE_ROLLUP_BINDINGS_MOCK=1 cargo test -- --show-output --test-threads=1
