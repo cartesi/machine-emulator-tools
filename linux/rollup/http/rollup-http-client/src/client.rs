@@ -21,7 +21,7 @@ enum RollupHttpRequest {
     Advance {
         data: AdvanceRequest,
     },
-    #[serde(rename = "inspect_request")]
+    #[serde(rename = "inspect_state")]
     Inspect {
         data: InspectRequest,
     },
