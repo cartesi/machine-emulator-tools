@@ -119,9 +119,13 @@ R"(Usage:
       emit a report read from stdin as a JSON object in the format
         {"payload": <string> }
 
-    accept | reject
-      accept or reject the previous request and print the
-      next request to stdout as a JSON object in the format
+    finish
+      accept or reject the previous request based on a JSON object
+      read from stdin in the format
+        {"status": <string> }
+      where "status" is either "accept" or "reject".
+
+      print the next request to stdout as a JSON object in the format
         {"request_type": <request-type>, "data": <request-data>}
 
       when field "request_type" contains "advance_state",
@@ -141,6 +145,16 @@ R"(Usage:
       when field "request_type" contains "inspect_state",
       field "data" contains a JSON object in the format
         {"payload": <string> }
+
+    accept
+      a shortcut for finish with implied input
+        {"status": "accept" }
+      no input is read from stdin
+
+    reject
+      a shortcut for finish with implied input
+        {"status": "reject" }
+      no input is read from stdin
 
     exception
       throw an exception read from stdin as a JSON object in the format
@@ -350,7 +364,24 @@ static int reject_request(void) {
     return finish_request_and_get_next(false);
 }
 
-// Figure out command and
+// Finish current request and get next
+static int finish_request(void) try {
+	auto ji = nlohmann::json::parse(read_input());
+    auto status = ji["status"].get<std::string>();
+    if (status == "accept") {
+        return finish_request_and_get_next(true);
+    } else if (status == "reject") {
+        return finish_request_and_get_next(false);
+    } else {
+        std::cerr << "invalid status '" << status << "'\n";
+        return 1;
+    }
+} catch (std::exception &x) {
+    std::cerr << x.what() << '\n';
+    return 1;
+}
+
+// Figure out command and run it
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         print_help();
@@ -365,6 +396,8 @@ int main(int argc, char *argv[]) {
         return write_report();
     } else if (strcmp(command, "exception") == 0) {
         return throw_exception();
+    } else if (strcmp(command, "finish") == 0) {
+        return finish_request();
     } else if (strcmp(command, "accept") == 0) {
         return accept_request();
     } else if (strcmp(command, "reject") == 0) {
