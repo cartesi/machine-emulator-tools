@@ -97,7 +97,7 @@ done
 
 # Start http dispatcher
 echo "Starting rollup-http-server: "
-sh -c "rollup-http-server 
+sh -c "rollup-http-server \
     --address 127.0.0.1:$ROLLUP_HTTP_SERVER_PORT \
     $ROLLUP_HTTP_SERVER_VERBOSE" &
 
