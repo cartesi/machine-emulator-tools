@@ -209,16 +209,17 @@ pub fn rollup_read_advance_state_request(
     }
 
     if bytes_c.length == 0 {
-        return Err(Box::new(RollupError::new(
-            "read zero size from advance state request ",
-        )));
+        log::info!("read zero size payload from advance state request");
     }
 
     let mut payload: Vec<u8> = Vec::with_capacity(bytes_c.length as usize);
-    unsafe {
-        std::ptr::copy(bytes_c.data, payload.as_mut_ptr(), bytes_c.length as usize);
-        payload.set_len(bytes_c.length as usize);
+    if bytes_c.length > 0 {
+        unsafe {
+            std::ptr::copy(bytes_c.data, payload.as_mut_ptr(), bytes_c.length as usize);
+            payload.set_len(bytes_c.length as usize);
+        }
     }
+
     let result = AdvanceRequest {
         metadata: AdvanceMetadata::from(*input_metadata_c),
         payload: "0x".to_string() + &hex::encode(&payload),
