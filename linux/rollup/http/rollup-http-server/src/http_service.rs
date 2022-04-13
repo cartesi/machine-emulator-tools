@@ -99,7 +99,7 @@ async fn voucher(mut voucher: Json<Voucher>, data: Data<Mutex<Context>>) -> Http
                 "unable to insert voucher, error details: '{}'",
                 e.to_string()
             );
-            HttpResponse::Conflict()
+            HttpResponse::BadRequest()
                 .body(format!("unable to insert voucher, error details: '{}'", e))
         }
     };
@@ -120,7 +120,7 @@ async fn notice(mut notice: Json<Notice>, data: Data<Mutex<Context>>) -> HttpRes
         }
         Err(e) => {
             log::error!("unable to insert notice, error details: '{}'", e);
-            HttpResponse::Conflict()
+            HttpResponse::BadRequest()
                 .body(format!("Unable to insert notice, error details: '{}'", e))
         }
     };
@@ -139,7 +139,7 @@ async fn report(report: Json<Report>, data: Data<Mutex<Context>>) -> HttpRespons
         }
         Err(e) => {
             log::error!("unable to insert report, error details: '{}'", e);
-            HttpResponse::Conflict()
+            HttpResponse::BadRequest()
                 .body(format!("unable to insert notice, error details: '{}'", e))
         }
     };
@@ -161,7 +161,7 @@ async fn exception(exception: Json<Exception>, data: Data<Mutex<Context>>) -> Ht
         }
         Err(e) => {
             log::error!("unable to throw exception, error details: '{}'", e);
-            HttpResponse::Conflict()
+            HttpResponse::BadRequest()
                 .body(format!("unable to throw exception, error details: '{}'", e))
         }
     };
@@ -177,7 +177,7 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
         "accept" => true,
         "reject" => false,
         _ => {
-            return HttpResponse::UnprocessableEntity().body("status must be 'accept' or 'reject'");
+            return HttpResponse::BadRequest().body("status must be 'accept' or 'reject'");
         }
     };
     log::debug!(
@@ -206,7 +206,7 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
                         e.to_string()
                     );
                     log::error!("{}", &error_message);
-                    return HttpResponse::InternalServerError().body(error_message);
+                    return HttpResponse::BadRequest().body(error_message);
                 }
             }
         }
@@ -216,7 +216,7 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
                 e.to_string()
             );
             log::error!("{}", &error_message);
-            return HttpResponse::InternalServerError().body(error_message);
+            return HttpResponse::BadRequest().body(error_message);
         }
     };
 
