@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved error handling in rollup command line tool
 - Fixed indentation in rollup command line tool
 - Removed explict strip feature from Cargo.toml files
+- Moved dapp initialization from rollup-init to rollup-http-server
+- Simplified rollup-init script to only call rollup-http-server
+- Handled rollup-http-server exit status in rollup-init
+- Handled dapp exit status in rollup-http-server
 
 ## [0.6.0] - 2022-04-20
 ### Added

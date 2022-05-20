@@ -1,4 +1,4 @@
-/* Copyright 2021 Cartesi Pte. Ltd.
+/* Copyright 2021-2022 Cartesi Pte. Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -11,17 +11,24 @@
  * the License.
  */
 
-use async_mutex::Mutex;
-use getopts::Options;
-use rollup_http_server::{config::Config, http_service, rollup};
 use std::fs::File;
 use std::io::ErrorKind;
 #[cfg(unix)]
 use std::os::unix::io::{IntoRawFd, RawFd};
 use std::sync::Arc;
 
+use async_mutex::Mutex;
+use getopts::{Options, ParsingStyle};
+use rollup_http_server::{config::Config, dapp_process, http_service, rollup};
+use tokio::sync::Notify;
+
 fn print_usage(program: &str, opts: Options) {
-    let brief = format!("Usage: {} [options]\n Where options are:", program);
+    let brief = format!(
+        "Usage: {} [options] <command> [args]\n\
+        \n\
+        Where command and args start the DApp.",
+        program
+    );
     print!("{}", opts.usage(&brief));
 }
 
@@ -31,6 +38,7 @@ async fn main() -> std::io::Result<()> {
     let program = args[0].clone();
     // Process command line arguments
     let mut opts = Options::new();
+    opts.parsing_style(ParsingStyle::StopAtFirstFree);
     opts.optflag("h", "help", "show this help message and exit");
     opts.optopt(
         "",
@@ -59,6 +67,14 @@ async fn main() -> std::io::Result<()> {
     }
     // Set the global log level
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(log_level)).init();
+
+    // Check if there are enough arguments to start the dapp
+    if matches.free.is_empty() {
+        return Err(std::io::Error::new(
+            ErrorKind::InvalidInput,
+            "expected dapp command after flags",
+        ));
+    }
 
     log::info!("starting http dispatcher service...");
 
@@ -89,9 +105,21 @@ async fn main() -> std::io::Result<()> {
     };
 
     let rollup_fd: Arc<Mutex<RawFd>> = Arc::new(Mutex::new(rollup_file.into_raw_fd()));
+    let server_ready = Arc::new(Notify::new());
+
+    // In another thread, wait until the server is ready and then start the dapp
+    {
+        let rollup_fd = rollup_fd.clone();
+        let server_ready = server_ready.clone();
+        tokio::spawn(async move {
+            server_ready.notified().await;
+            dapp_process::run(matches.free, rollup_fd).await;
+        })
+    };
+
     // Open http service
     tokio::select! {
-        result = http_service::run(&http_config, rollup_fd) => {
+        result = http_service::run(&http_config, rollup_fd, server_ready) => {
             match result {
                 Ok(_) => log::info!("http service terminated successfully"),
                 Err(e) => log::warn!("http service terminated with error: {}", e),

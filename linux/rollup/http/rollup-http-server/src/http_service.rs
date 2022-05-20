@@ -1,4 +1,4 @@
-/* Copyright 2021 Cartesi Pte. Ltd.
+/* Copyright 2021-2022 Cartesi Pte. Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -11,32 +11,30 @@
  * the License.
  */
 
-use crate::rollup;
 /// Implement http dispatcher http REST api, including
 /// voucher/notice/report/finish endpoints, used by the DApp
 /// to communicate its output
+use std::os::unix::io::RawFd;
+use std::sync::Arc;
+
 use actix_web::{middleware::Logger, web::Data, web::Json, App, HttpResponse, HttpServer};
+use async_mutex::Mutex;
+use serde::{Deserialize, Serialize};
+use tokio::sync::Notify;
 
 use crate::config::Config;
+use crate::rollup;
 use crate::rollup::{
     AdvanceRequest, Exception, InspectRequest, Notice, Report, RollupRequest, Voucher,
 };
-use async_mutex::Mutex;
-use serde::{Deserialize, Serialize};
-use std::os::unix::io::RawFd;
-use std::sync::Arc;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "request_type")]
 enum RollupHttpRequest {
     #[serde(rename = "advance_state")]
-    Advance {
-        data: AdvanceRequest,
-    },
+    Advance { data: AdvanceRequest },
     #[serde(rename = "inspect_state")]
-    Inspect {
-        data: InspectRequest,
-    },
+    Inspect { data: InspectRequest },
 }
 
 /// Create new instance of http server
@@ -64,9 +62,14 @@ pub fn create_server(
 }
 
 /// Create and run new instance of http server
-pub async fn run(config: &Config, rollup_fd: Arc<Mutex<RawFd>>) -> std::io::Result<()> {
+pub async fn run(
+    config: &Config,
+    rollup_fd: Arc<Mutex<RawFd>>,
+    server_ready: Arc<Notify>,
+) -> std::io::Result<()> {
     log::info!("starting http dispatcher http service!");
     let server = create_server(config, rollup_fd)?;
+    server_ready.notify_one();
     server.await
 }
 
@@ -222,16 +225,12 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
 
     // Respond to Dapp with the new rollup request
     let http_rollup_request = match new_rollup_request {
-        RollupRequest::Advance(advance_request) => {
-            RollupHttpRequest::Advance {
-                data: advance_request,
-            }
-        }
-        RollupRequest::Inspect(inspect_request) => {
-            RollupHttpRequest::Inspect {
-                data: inspect_request,
-            }
-        }
+        RollupRequest::Advance(advance_request) => RollupHttpRequest::Advance {
+            data: advance_request,
+        },
+        RollupRequest::Inspect(inspect_request) => RollupHttpRequest::Inspect {
+            data: inspect_request,
+        },
     };
     HttpResponse::Ok()
         .append_header((hyper::header::CONTENT_TYPE, "application/json"))
