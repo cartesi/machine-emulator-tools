@@ -59,7 +59,7 @@ using unique_file_desc = std::unique_ptr<file_desc, file_desc_deleter>;
 // maker for unique_file_desc
 static unique_file_desc unique_open(const char *filename, int flags) {
     int fd = open(filename, flags);
-    if (!fd) {
+    if (fd < 0) {
         throw std::system_error(errno, std::generic_category(), "unable to open '" + std::string{filename} + "'");
     }
     return unique_file_desc(file_desc(fd));
@@ -85,8 +85,8 @@ static std::string get_ioctl_name(int ioctl) {
 
 // ioctl for unique_file_desc
 static void file_desc_ioctl(const unique_file_desc &fd, unsigned long request, void *data) {
-    if (int res = ioctl(fd.get(), request, (unsigned long) data); res != 0) {
-        throw std::runtime_error{get_ioctl_name(request) + " ioctl returned error " + std::to_string(res)};
+    if (ioctl(fd.get(), request, (unsigned long) data) < 0) {
+        throw std::runtime_error{get_ioctl_name(request) + " ioctl returned error '" + strerror(errno) + "'"};
     }
 }
 
