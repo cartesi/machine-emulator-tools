@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Improved error handling in rollup command line tool
 - Fixed indentation in rollup command line tool
+- Removed explict strip feature from Cargo.toml files
 
 ## [0.6.0] - 2022-04-20
 ### Added
