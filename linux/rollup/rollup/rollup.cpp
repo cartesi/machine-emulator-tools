@@ -218,17 +218,17 @@ static std::string unhex(const std::string &s) {
 
 // Convert binary data into hex string
 static std::string hex(const uint8_t *data, uint64_t length) {
-	std::stringstream ss;
+    std::stringstream ss;
     ss << "0x";
     for (auto b: std::string_view{reinterpret_cast<const char *>(data), length}) {
         ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned>(b);
     }
-	return ss.str();
+    return ss.str();
 }
 
 // Read input for voucher data, issue voucher, write result to output
 static int write_voucher(void) try {
-	auto ji = nlohmann::json::parse(read_input());
+    auto ji = nlohmann::json::parse(read_input());
     auto payload = ji["payload"].get<std::string>();
     struct rollup_voucher v;
     memset(&v, 0, sizeof(v));
@@ -237,10 +237,10 @@ static int write_voucher(void) try {
     auto address = unhex(ji["address"].get<std::string>());
     memcpy(v.address, address.data(), std::min(address.size(), sizeof(v.address)));
     file_desc_ioctl(unique_open(ROLLUP_DEVICE_NAME, O_RDWR), IOCTL_ROLLUP_WRITE_VOUCHER, &v);
-	nlohmann::json jo = {
+    nlohmann::json jo = {
         {"index", v.index},
     };
-	std::cout << jo.dump(2) << '\n';
+    std::cout << jo.dump(2) << '\n';
     return 0;
 } catch (std::exception &x) {
     std::cerr << x.what() << '\n';
@@ -249,17 +249,17 @@ static int write_voucher(void) try {
 
 // Read input for notice data, issue notice, write result to output
 static int write_notice(void) try {
-	auto ji = nlohmann::json::parse(read_input());
+    auto ji = nlohmann::json::parse(read_input());
     auto payload = ji["payload"].get<std::string>();
     struct rollup_notice n;
     memset(&n, 0, sizeof(n));
     n.payload.data = reinterpret_cast<unsigned char *>(payload.data());
     n.payload.length = payload.size();
     file_desc_ioctl(unique_open(ROLLUP_DEVICE_NAME, O_RDWR), IOCTL_ROLLUP_WRITE_NOTICE, &n);
-	nlohmann::json jo = {
+    nlohmann::json jo = {
         {"index", n.index},
     };
-	std::cout << jo.dump(2) << '\n';
+    std::cout << jo.dump(2) << '\n';
     return 0;
 } catch (std::exception &x) {
     std::cerr << x.what() << '\n';
@@ -268,7 +268,7 @@ static int write_notice(void) try {
 
 // Read input for report data, issue report
 static int write_report(void) try {
-	auto ji = nlohmann::json::parse(read_input());
+    auto ji = nlohmann::json::parse(read_input());
     auto payload = ji["payload"].get<std::string>();
     struct rollup_report r;
     memset(&r, 0, sizeof(r));
@@ -303,13 +303,13 @@ static void write_advance_state(const unique_file_desc &fd, const struct rollup_
     resize_bytes(&r.payload, f->next_request_payload_length);
     file_desc_ioctl(fd, IOCTL_ROLLUP_READ_ADVANCE_STATE, &r);
     auto payload = std::string_view{reinterpret_cast<const char *>(r.payload.data), r.payload.length};
-	const auto &m = r.metadata;
-	nlohmann::json j = {
+    const auto &m = r.metadata;
+    nlohmann::json j = {
         {"request_type", "advance_state"},
         {"data", {
             {"payload", payload},
             {"metadata", {
-	            {"msg_sender", hex(m.msg_sender, sizeof(m.msg_sender))},
+                {"msg_sender", hex(m.msg_sender, sizeof(m.msg_sender))},
                 {"epoch_index", m.epoch_index},
                 {"input_index", m.input_index},
                 {"block_number", m.block_number},
@@ -317,7 +317,7 @@ static void write_advance_state(const unique_file_desc &fd, const struct rollup_
             }}
         }}
     };
-	std::cout << j.dump(2) << '\n';
+    std::cout << j.dump(2) << '\n';
 }
 
 // Read inspect state data from driver, write to output
@@ -327,13 +327,13 @@ static void write_inspect_state(const unique_file_desc &fd, const struct rollup_
     resize_bytes(&r.payload, f->next_request_payload_length);
     file_desc_ioctl(fd, IOCTL_ROLLUP_READ_INSPECT_STATE, &r);
     auto payload = std::string_view{reinterpret_cast<const char *>(r.payload.data), r.payload.length};
-	nlohmann::json j = {
+    nlohmann::json j = {
         {"request_type", "inspect_state"},
         {"data", {
             {"payload", payload},
         }}
     };
-	std::cout << j.dump(2) << '\n';
+    std::cout << j.dump(2) << '\n';
 }
 
 // Finish current request and get next
@@ -366,7 +366,7 @@ static int reject_request(void) {
 
 // Finish current request and get next
 static int finish_request(void) try {
-	auto ji = nlohmann::json::parse(read_input());
+    auto ji = nlohmann::json::parse(read_input());
     auto status = ji["status"].get<std::string>();
     if (status == "accept") {
         return finish_request_and_get_next(true);
@@ -404,7 +404,7 @@ int main(int argc, char *argv[]) {
         return reject_request();
     } else if (strcmp(command, "-h") == 0 || strcmp(command, "--help") == 0) {
         print_help();
-		return 0;
+        return 0;
     } else {
         std::cerr << "Unexpected command '" << command << "'\n\n";
         return 1;
