@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.7.0] - 2022-06-27
 ### Changed
 - Improved error handling in rollup command line tool
 - Fixed indentation in rollup command line tool
@@ -13,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified rollup-init script to only call rollup-http-server
 - Handled rollup-http-server exit status in rollup-init
 - Handled dapp exit status in rollup-http-server
+- Updated regex crate on rollup-http-server and echo-dapp to address CVE-2022-24713
 
 ## [0.6.0] - 2022-04-20
 ### Added
@@ -31,7 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed --ack from yield
 - Rename http-dispatcher to rollup-http-server
 - Switch rollup-http-server to server only and echo-dapp to client only implementation
-
 
 ## [0.5.1] - 2022-02-22
 ### Changed
@@ -62,7 +64,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [0.2.0]
 - [0.1.0]
 
-[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.7.0
 [0.6.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.6.0
 [0.5.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.5.1
 [0.5.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.5.0
@@ -71,5 +74,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.3.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.3.0
 [0.2.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.2.0
 [0.1.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.1.0
-
-
