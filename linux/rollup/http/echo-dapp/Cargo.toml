@@ -7,6 +7,7 @@ authors = ["Alex Mikhalevich <alex.mikhalevich@cartesi.io>", "Marko Atnasievski 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+regex = "1.5.5"
 actix-web = "4.0.0-rc.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
