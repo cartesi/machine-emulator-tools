@@ -158,7 +158,9 @@ async fn main() -> std::io::Result<()> {
         log_level = "debug";
     }
     // Set the global log level
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(log_level)).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(log_level))
+        .format_timestamp(None)
+        .init();
 
     // Parse echo dapp parameters
     let vouchers = matches

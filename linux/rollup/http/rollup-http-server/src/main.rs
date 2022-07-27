@@ -65,8 +65,10 @@ async fn main() -> std::io::Result<()> {
     if matches.opt_present("verbose") {
         log_level = "debug";
     }
-    // Set the global log level
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(log_level)).init();
+    // Set the global log level, disable timestamp
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(log_level))
+        .format_timestamp(None)
+        .init();
 
     // Check if there are enough arguments to start the dapp
     if matches.free.is_empty() {

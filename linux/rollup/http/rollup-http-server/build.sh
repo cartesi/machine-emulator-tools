@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TOOLCHAIN_IMAGE="${TOOLCHAIN_IMAGE:-cartesi/toolchain}"
-TOOLCHAIN_TAG="${TOOLCHAIN_TAG:-0.9.0}"
+TOOLCHAIN_TAG="${TOOLCHAIN_TAG:-0.10.0}"
 CONTAINER_BASE="${CONTAINER_BASE:-/opt/cartesi/tools}"
 
 docker run --rm -e USER=`id -u -n` -e GROUP=`id -g -n` -e UID=`id -u` -e GID=`id -g` -v `pwd`/../:$CONTAINER_BASE \
