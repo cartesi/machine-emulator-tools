@@ -492,29 +492,31 @@ pub async fn handle_rollup_requests(
     }
 }
 
-pub fn print_address(address: &str) {
+pub fn format_address_printout(address: &str, printout_address: &mut String) {
     if address.starts_with("0x") {
-        log::debug!("{}", address);
+        printout_address.push_str(address);
     } else {
-        log::debug!("0x{}", address);
+        printout_address.push_str(&format!("0x{}", address));
     }
 }
 
 pub fn print_advance(advance: &AdvanceRequest) {
-    log::debug!("advance: {{\n\tmsg_sender: ");
-    print_address(&advance.metadata.msg_sender);
-    log::debug!(
-        "\tblock_number: {}\n\ttimestamp: {}\n\tepoch_index: {}\n\tinput_index: {}\n}}",
+    let mut advance_request_printout = String::new();
+    advance_request_printout.push_str("advance: {{msg_sender: ");
+    format_address_printout(&advance.metadata.msg_sender, &mut advance_request_printout);
+    advance_request_printout.push_str(&format!(
+        " block_number: {} timestamp: {} epoch_index: {} input_index: {} }}",
         advance.metadata.block_number,
         advance.metadata.timestamp,
         advance.metadata.epoch_index,
         advance.metadata.input_index
-    );
+    ));
+    log::debug!("{}", &advance_request_printout);
 }
 
 pub fn print_inspect(inspect: &InspectRequest) {
     log::debug!(
-        "Inspect: {{\n\tlength: {} payload: {}\n}}",
+        "Inspect: {{ length: {} payload: {}}}",
         inspect.payload.len(),
         inspect.payload
     );
@@ -522,25 +524,27 @@ pub fn print_inspect(inspect: &InspectRequest) {
 
 pub fn print_notice(notice: &Notice) {
     log::debug!(
-        "Notice: {{\n\tlength: {} payload: {}\n}}",
+        "Notice: {{ length: {} payload: {}}}",
         notice.payload.len(),
         notice.payload
     );
 }
 
 pub fn print_voucher(voucher: &Voucher) {
-    log::debug!("voucher: {{\n\taddress:");
-    print_address(&voucher.address);
-    log::debug!(
-        "\tlength: {} payload: {}\n}}",
+    let mut voucher_request_printout = String::new();
+    voucher_request_printout.push_str("voucher: {{ address: ");
+    format_address_printout(&voucher.address, &mut voucher_request_printout);
+    voucher_request_printout.push_str(&format!(
+        " length: {} payload: {} }}",
         voucher.payload.len(),
         voucher.payload
-    );
+    ));
+    log::debug!("{}", &voucher_request_printout);
 }
 
 pub fn print_report(report: &Report) {
     log::debug!(
-        "report: {{\n\tlength: {} payload: {}\n}}",
+        "report: {{ length: {} payload: {}}}",
         report.payload.len(),
         report.payload
     );
@@ -548,7 +552,7 @@ pub fn print_report(report: &Report) {
 
 pub fn print_exception(exception: &Exception) {
     log::debug!(
-        "exception: {{\n\tlength: {} payload: {}\n}}",
+        "exception: {{ length: {} payload: {}}}",
         exception.payload.len(),
         exception.payload
     );

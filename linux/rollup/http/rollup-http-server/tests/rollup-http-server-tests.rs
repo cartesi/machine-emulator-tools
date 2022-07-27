@@ -15,6 +15,7 @@
 extern crate rollup_http_client;
 extern crate rollup_http_server;
 
+use actix_server::ServerHandle;
 use async_mutex::Mutex;
 use rollup_http_client::rollup::{
     Exception, Notice, Report, RollupRequest, RollupResponse, Voucher,
@@ -26,7 +27,6 @@ use std::fs::File;
 use std::future::Future;
 use std::os::unix::io::{IntoRawFd, RawFd};
 use std::sync::Arc;
-use actix_server::ServerHandle;
 
 const PORT: u16 = 10010;
 const HOST: &str = "127.0.0.1";
@@ -83,7 +83,7 @@ async fn context_future() -> Context {
             Ok(handle) => {
                 server_handle = handle;
                 break;
-            },
+            }
             Err(ex) => {
                 eprint!("Error instantiating rollup http service {}", ex.to_string());
                 if count > 0 {
@@ -92,7 +92,6 @@ async fn context_future() -> Context {
                 } else {
                     break;
                 }
-
             }
         };
         count = count - 1;
