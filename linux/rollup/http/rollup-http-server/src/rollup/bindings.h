@@ -18,7 +18,7 @@
  * Add toolchain `riscv64-cartesi-linux-gnu` to the shell execution path
  * $ cd linux/rollup/http/http-dispatcher/src/rollup
  * $ bindgen ./bindings.h -o ./bindings.rs --whitelist-var '^IOCTL.*' --whitelist-var '^CARTESI.*' --whitelist-type "^rollup_.*" --whitelist-function '^rollup.*'\
-     -- --sysroot=/opt/riscv/riscv64-cartesi-linux-gnu/riscv64-cartesi-linux-gnu/sysroot --target=riscv64-cartesi-linux-gnu -march=rv64ima -mabi=lp64
+     -- --sysroot=/opt/riscv/riscv64-cartesi-linux-gnu/riscv64-cartesi-linux-gnu/sysroot --target=riscv64-cartesi-linux-gnu -march=rv64g -mabi=lp64d
 */
 
 #include <stdlib.h>

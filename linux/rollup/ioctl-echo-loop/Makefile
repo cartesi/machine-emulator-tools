@@ -14,13 +14,15 @@
 UNAME:=$(shell uname)
 
 TOOLCHAIN_IMAGE ?= cartesi/toolchain
-TOOLCHAIN_TAG ?= 0.11.0
+TOOLCHAIN_TAG ?= 0.12.0
+RISCV_ARCH ?= rv64g
+RISCV_ABI ?= lp64d
 
 RVCC  = riscv64-cartesi-linux-gnu-gcc
 RVCXX = riscv64-cartesi-linux-gnu-g++
 RVCOPY = riscv64-cartesi-linux-gnu-objcopy
 RVDUMP = riscv64-cartesi-linux-gnu-objdump
-RISCV_CFLAGS :=-march=rv64ima -mabi=lp64
+RISCV_CFLAGS :=-march=$(RISCV_ARCH) -mabi=$(RISCV_ABI)
 
 CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
