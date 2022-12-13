@@ -135,7 +135,7 @@ int rollup_throw_exception(int fd, struct rollup_bytes *bytes) {
     e.payload = *bytes;
     int res = ioctl(fd, IOCTL_ROLLUP_THROW_EXCEPTION, (unsigned long) &e);
     if (res != 0) {
-        fprintf(stderr, "IOCTL_ROLLUP_THROW_EXCEPTION returned error %d, err message: %d\n", res, strerror(errno));
+        fprintf(stderr, "IOCTL_ROLLUP_THROW_EXCEPTION returned error %d, err message: %s\n", res, strerror(errno));
         return res;
     }
     return 0;
