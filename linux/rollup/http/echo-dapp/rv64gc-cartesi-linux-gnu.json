@@ -7,7 +7,7 @@
     "dynamic-linking": true,
     "env": "gnu",
     "executables": true,
-    "features": "+m,+a,+f,+d",
+    "features": "+m,+a,+f,+d,+c",
     "has-rpath": true,
     "is-builtin": false,
     "llvm-abiname": "lp64d",

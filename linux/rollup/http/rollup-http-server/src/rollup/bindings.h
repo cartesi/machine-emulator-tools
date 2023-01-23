@@ -18,7 +18,7 @@
  * Add toolchain `riscv64-cartesi-linux-gnu` to the shell execution path
  * $ cd linux/rollup/http/http-dispatcher/src/rollup
  * $ bindgen ./bindings.h -o ./bindings.rs --whitelist-var '^IOCTL.*' --whitelist-var '^CARTESI.*' --whitelist-type "^rollup_.*" --whitelist-function '^rollup.*'\
-     -- --sysroot=/opt/riscv/riscv64-cartesi-linux-gnu/riscv64-cartesi-linux-gnu/sysroot --target=riscv64-cartesi-linux-gnu -march=rv64g -mabi=lp64d
+     -- --sysroot=/opt/riscv/riscv64-cartesi-linux-gnu/riscv64-cartesi-linux-gnu/sysroot --target=riscv64-cartesi-linux-gnu -march=rv64gc -mabi=lp64d
 */
 
 #include <stdlib.h>
@@ -37,4 +37,3 @@ int rollup_write_voucher(int fd, uint8_t address[CARTESI_ROLLUP_ADDRESS_SIZE], s
 int rollup_write_notice(int fd, struct rollup_bytes *bytes, uint64_t* notice_index);
 int rollup_write_report(int fd, struct rollup_bytes *bytes);
 int rollup_throw_exception(int fd, struct rollup_bytes *bytes);
-

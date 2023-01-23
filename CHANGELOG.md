@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Compile tools using compressed instructions
+- Updated toolchain to v0.13.0
+- Updated CI image to Ubuntu 22.04
+
 ## [0.9.0] - 2022-11-17
 ### Changed
 - Compile tools using floating-point instructions
