@@ -4,6 +4,53 @@ env:
   TOOLCHAIN_IMAGE: ${{ secrets.DOCKER_ORGANIZATION }}/toolchain
   TOOLCHAIN_TAG: 0.13.0
 jobs:
+  tools:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          token: ${{ secrets.CI_TOKEN }}
+          fetch-depth: 0 # fetch tags
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Export makefile variables
+        run: make env >> $GITHUB_ENV
+
+      - name: Download [linux-headers]
+        uses: Legion2/download-release-action@v2.1.0
+        with:
+          repository: ${{ github.repository_owner }}/image-kernel
+          tag: ${{ env.LINUX_HEADERS_TAG }}
+          file: linux-headers-${{ env.LINUX_HEADERS_VERSION }}.tar.xz
+          token: ${{ secrets.CI_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Build ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
+        run: |
+          mkdir -p dep && mv linux-headers-${{ env.LINUX_HEADERS_VERSION }}.tar.xz dep/
+          make ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
+
+      - name: Upload ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
+          path: ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
+
+      - uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          prerelease: true
+          files: |
+            ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
+
   build:
     runs-on: ubuntu-22.04
     steps:
