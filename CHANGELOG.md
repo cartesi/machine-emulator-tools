@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- Moved skel/ from rootfs to this repository
+- Build tools in a riscv64/ubuntu:22.04 image and pack them with skel/
 
 ### Changed
 - Compile tools using compressed instructions

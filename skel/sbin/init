@@ -1,0 +1,63 @@
+#!/bin/busybox sh
+
+# Copyright 2019 Cartesi Pte. Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+#
+
+# rndaddentropy can be in different places, make sure we can find it
+export PATH=/opt/cartesi/bin:"$PATH"
+
+[ ! -f /opt/cartesi/etc/motd -o "$splash" == "no" ] || busybox cat /opt/cartesi/etc/motd
+
+# mount
+busybox mkdir -p /dev/pts
+busybox mount -t proc proc /proc -o nosuid,nodev,noexec
+busybox mount -t sysfs sys /sys -o nosuid,nodev,noexec
+busybox mount -t devpts devpts /dev/pts -o nosuid,noexec,gid=5,mode=620
+#busybox mdev -s
+
+# rand
+if [ -f /opt/cartesi/var/run/random-seed ]; then
+    rndaddentropy < /opt/cartesi/var/run/random-seed
+    busybox chmod 600 /opt/cartesi/var/run/random-seed
+fi
+
+# disk
+(cd /sys/block && for DEV in *; do
+	[ ! "$DEV" = "mtdblock0" ] && \
+	NAME=$(busybox cat /sys/block/"$DEV"/device/name) && \
+	busybox mkdir "/mnt/$NAME" && \
+	busybox mount "/dev/$DEV" "/mnt/$NAME"
+done)
+
+# net
+busybox hostname -F /etc/hostname
+busybox ifconfig lo 127.0.0.1
+
+# cmdline application
+if [ -n "$*" ]; then
+    export HOME=/root
+    [ -f /etc/environment ] && \
+     source /etc/environment && \
+     export PATH=/opt/cartesi/bin:"$PATH" # put it back on PATH
+
+    cd $HOME && busybox setsid \
+        busybox cttyhack \
+        busybox sh -c "$*"
+else
+    echo "Nothing to do."
+fi
+
+
+busybox mount -o ro,remount /
+busybox umount -af
+busybox poweroff -f

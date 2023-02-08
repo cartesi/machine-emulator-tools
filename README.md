@@ -1,20 +1,29 @@
 > :warning: The Cartesi team keeps working internally on the next version of this repository, following its regular development roadmap. Whenever there's a new version ready or important fix, these are published to the public source tree as new releases.
 
-# Cartesi Machine Emulator Tools 
+# Cartesi Machine Emulator Tools
 
 The Cartesi Machine Emulator Tools a repository that contains a set of tools developed for the RISC-V Linux OS.
 
 ## Getting Started
 
+Users looking to create cartesi-machine applications can use the artifact directly, no need to build this repository themselves. Also check the `example/` folder for the details.
+
 ### Requirements
 
-- Docker 18.x
+- Docker >= 18.x
 - GNU Make >= 3.81
 
-### Build htif yield tool
+### Docker buildx setup
 
 ```bash
-$ cd linux/htif
+$ make setup
+```
+
+### Building
+
+A `make` invocation will download the dependencies if they are not present, build the ubuntu sdk, all tools and finally create the `machine-emulator-tools-$VERSION.tar.gz` artifact.
+
+```bash
 $ make
 ```
 
@@ -22,29 +31,11 @@ $ make
 
 The following options are available as `make` targets:
 
-- **all**: builds the RISC-V yield executable
-- **extra.ext2**: builds the extra.ext2 filesystem image with the yield tool inside
-- **toolchain-env**: runs the toolchain image with current user UID and GID
-- **clean**: clean generated artifacts 
-
-#### Makefile container options
-
-You can pass the following variables to the make target if you wish to use different docker image tags.
-
-- TOOLCHAIN\_IMAGE: toolchain image name 
-- TOOLCHAIN\_TAG: toolchain image tag
-
-```
-$ make TOOLCHAIN_TAG=mytag
-```
-
-It's useful when you want to use prebuilt images like `cartesi/toolchain:latest` 
-
-#### Usage
-
-The purpose of the yield tool please see the emulator documentation.
-
-The purpose of the `extra.ext2` image is to help the development creating a filesystem that contains the yield tool so it can be used with the emulator. For instructions on how to do that, please see the emulator documentation.
+- **tgz**: create "machine-emulator-tools.tar.gz"
+- **setup**: setup riscv64 buildx
+- **setup-required**: check if riscv64 buildx setup is required
+- **clean**: clean generated artifacts
+- **help**: list makefile targets
 
 ## Contributing
 
@@ -53,13 +44,7 @@ Cartesi!
 
 Please note we have a [Code of Conduct](CODE_OF_CONDUCT.md), please follow it in all your interactions with the project.
 
-## Authors
-
-* *Diego Nehab*
-* *Victor Fusco*
-
 ## License
 
 The machine-emulator-tools repository and all contributions are licensed under
 [APACHE 2.0](https://www.apache.org/licenses/LICENSE-2.0). Please review our [LICENSE](LICENSE) file.
-

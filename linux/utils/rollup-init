@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/busybox sh
 # Copyright 2022 Cartesi Pte. Ltd.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -13,7 +13,7 @@
 
 # Start the rollup-http-server and raise a rollup exception when it exits
 
-sh -c "rollup-http-server $*"
+busybox sh -c "/opt/cartesi/bin/rollup-http-server $*"
 MESSAGE="rollup-http-server exited with $? status"
 echo "$MESSAGE"
 echo "{\"payload\": \"$MESSAGE\"}" | rollup exception

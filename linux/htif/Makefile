@@ -18,10 +18,12 @@ TOOLCHAIN_TAG ?= 0.13.0
 RISCV_ARCH ?= rv64gc
 RISCV_ABI ?= lp64d
 
-RVCC  = riscv64-cartesi-linux-gnu-gcc
-RVCXX = riscv64-cartesi-linux-gnu-g++
-RVCOPY = riscv64-cartesi-linux-gnu-objcopy
-RVDUMP = riscv64-cartesi-linux-gnu-objdump
+TC = riscv64-cartesi-linux-gnu-
+RVCC  = $(TC)gcc
+RVCXX = $(TC)g++
+RVCOPY = $(TC)objcopy
+RVDUMP = $(TC)objdump
+STRIP = $(TC)strip
 RISCV_CFLAGS :=-march=$(RISCV_ARCH) -mabi=$(RISCV_ABI)
 
 CONTAINER_MAKE := /usr/bin/make
@@ -38,6 +40,7 @@ extra.ext2: yield
 
 yield.toolchain:
 	$(RVCC) -O2 -o yield yield.c
+	$(STRIP) yield
 
 extra.ext2.toolchain:
 	mkdir -m 0755 ./extra
