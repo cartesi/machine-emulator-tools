@@ -1,6 +1,6 @@
-> :warning: The Cartesi team keeps working internally on the next version of this repository, following its regular development roadmap. Whenever there's a new version ready or important fix, these are published to the public source tree as new releases.
+# Example: Cartesi root filesystem with machine emulator tools
 
-# Cartesi Machine Emulator Tools Example
+The following example demonstrates how to create a bootable root filesystem for the Cartesi Machine based on a Ubuntu RISC-V 64 docker image. It requires the machine-emulator-tools v0.10.0.
 
 ### Requirements
 
@@ -8,10 +8,9 @@
 - GNU Make >= 3.81
 - genext2fs >= 1.5.0
 - bsdtar >= 3.6.2
+- bc >= 1.06
 
 ### Building
-
-The following example demostrates how to create a bootable cartesi machine based on a Ubuntu RISC-V 64 docker image. It requires the machine-emulator-tools v0.10.0.
 
 ```sh
 cp ../machine-emulator-tools-v0.10.0.tar.gz .
