@@ -3,7 +3,7 @@ blocksize=4096
 bytes=$(($(wc -c < "$1") +0))
 bcargs="$(cat <<- EOF
 	define max(a, b) { return (a > b) * a + (a <= b) * b }
-	max(8, 1.2 * ($bytes + $blocksize - 1) / $blocksize)
+	max(8, 1.5 * ($bytes + $blocksize - 1) / $blocksize)
 	EOF
 )"
 blocks=$(echo "$bcargs" | bc)
