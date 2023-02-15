@@ -20,9 +20,11 @@ export PATH=/opt/cartesi/bin:"$PATH"
 
 # mount
 busybox mkdir -p /dev/pts
+busybox mkdir -p -m 777 /dev/shm
 busybox mount -t proc proc /proc -o nosuid,nodev,noexec
 busybox mount -t sysfs sys /sys -o nosuid,nodev,noexec
 busybox mount -t devpts devpts /dev/pts -o nosuid,noexec,gid=5,mode=620
+busybox mount -t tmpfs tmpfs /dev/shm -o nosuid,nodev
 #busybox mdev -s
 
 # rand
@@ -32,31 +34,48 @@ if [ -f /opt/cartesi/var/run/random-seed ]; then
 fi
 
 # disk
-(cd /sys/block && for DEV in *; do
-	[ ! "$DEV" = "mtdblock0" ] && \
-	NAME=$(busybox cat /sys/block/"$DEV"/device/name) && \
-	busybox mkdir "/mnt/$NAME" && \
-	busybox mount "/dev/$DEV" "/mnt/$NAME"
-done)
+if [ -d /mnt ]; then
+    (cd /sys/block && for DEV in *; do
+        [ ! "$DEV" = "mtdblock0" ] && \
+        NAME=$(busybox cat /sys/block/"$DEV"/device/name) && \
+        busybox mkdir "/mnt/$NAME" && \
+        busybox mount "/dev/$DEV" "/mnt/$NAME"
+    done)
+fi
 
 # net
-busybox hostname -F /etc/hostname
+[ -f /etc/hostname ] && busybox hostname -F /etc/hostname
 busybox ifconfig lo 127.0.0.1
 
 # cmdline application
 if [ -n "$*" ]; then
-    export HOME=/root
     [ -f /etc/environment ] && \
-     source /etc/environment && \
-     export PATH=/opt/cartesi/bin:"$PATH" # put it back on PATH
+        source /etc/environment && \
+        export PATH=/opt/cartesi/bin:"$PATH" # put it back on PATH
 
-    cd $HOME && busybox setsid \
+    # can login as dapp user?
+    if [ ! "$single" == "yes" ] && busybox id dapp &> /dev/null; then
+        if [ -c /dev/rollup ]; then
+            busybox chown root:dapp /dev/rollup
+            busybox chmod 660 /dev/rollup
+        fi
+        if [ -c /dev/yield ]; then
+            busybox chown root:dapp /dev/yield
+            busybox chmod 660 /dev/yield
+        fi
+        export HOME=~dapp USER=dapp LOGNAME=dapp
+    else
+        export HOME=~root USER=root LOGNAME=root
+    fi
+
+    # execute cmdline
+    cd $HOME &&
+        busybox setsid \
         busybox cttyhack \
-        busybox sh -c "$*"
+        busybox su -p $USER -c "$*"
 else
     echo "Nothing to do."
 fi
-
 
 busybox mount -o ro,remount /
 busybox umount -af

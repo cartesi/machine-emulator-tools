@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.10.0] - 2023-02-14
+## [0.10.0] - 2023-02-15
 ### Changed
 - Moved skel/ from rootfs to this repository
 - Build tools in a riscv64/ubuntu:22.04 image and pack them with skel/
