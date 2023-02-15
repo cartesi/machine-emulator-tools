@@ -19,12 +19,11 @@ export PATH=/opt/cartesi/bin:"$PATH"
 [ ! -f /opt/cartesi/etc/motd -o "$splash" == "no" ] || busybox cat /opt/cartesi/etc/motd
 
 # mount
-busybox mkdir -p /dev/pts
-busybox mkdir -p -m 777 /dev/shm
+busybox mkdir -p /dev/pts /dev/shm
 busybox mount -t proc proc /proc -o nosuid,nodev,noexec
 busybox mount -t sysfs sys /sys -o nosuid,nodev,noexec
 busybox mount -t devpts devpts /dev/pts -o nosuid,noexec,gid=5,mode=620
-busybox mount -t tmpfs tmpfs /dev/shm -o nosuid,nodev
+busybox mount -t tmpfs tmpfs /dev/shm -o nosuid,nodev,mode=1777
 #busybox mdev -s
 
 # rand
