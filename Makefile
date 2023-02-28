@@ -62,6 +62,11 @@ help:
 	@echo '  setup-required  - check if riscv64 buildx setup is required'
 	@echo '+ tgz             - create "$(MACHINE_EMULATOR_TOOLS_TAR_GZ)" (default)'
 	@echo '  help            - list makefile commands'
+	@echo '  checksum        - verify downloaded files'
+	@echo '  shasumfile      - recreate shasumfile of downloaded files'
+	@echo '  env             - print useful Makefile variables as a KEY=VALUE list'
+	@echo '  clean           - remove the generated artifacts'
+	@echo '  distclean       - clean and remove dependencies'
 
 clean:
 	rm -f $(MACHINE_EMULATOR_TOOLS_TAR_GZ)
