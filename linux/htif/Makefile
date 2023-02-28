@@ -18,12 +18,12 @@ TOOLCHAIN_TAG ?= 0.13.0
 RISCV_ARCH ?= rv64gc
 RISCV_ABI ?= lp64d
 
-TC = riscv64-cartesi-linux-gnu-
-RVCC  = $(TC)gcc
-RVCXX = $(TC)g++
-RVCOPY = $(TC)objcopy
-RVDUMP = $(TC)objdump
-STRIP = $(TC)strip
+CROSS_COMPILE = riscv64-cartesi-linux-gnu-
+RVCC  = $(CROSS_COMPILE)gcc
+RVCXX = $(CROSS_COMPILE)g++
+RVCOPY = $(CROSS_COMPILE)objcopy
+RVDUMP = $(CROSS_COMPILE)objdump
+STRIP = $(CROSS_COMPILE)strip
 RISCV_CFLAGS :=-march=$(RISCV_ARCH) -mabi=$(RISCV_ABI)
 
 CONTAINER_MAKE := /usr/bin/make

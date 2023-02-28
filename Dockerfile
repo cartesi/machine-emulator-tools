@@ -46,9 +46,9 @@ COPY linux/ ${BUILD_BASE}tools/linux/
 
 # build C/C++ tools
 # ------------------------------------------------------------------------------
-RUN make -C ${BUILD_BASE}tools/linux/htif/ TC="" yield.toolchain
-RUN make -C ${BUILD_BASE}tools/linux/rollup/ioctl-echo-loop/ TC="" ioctl-echo-loop.toolchain
-RUN make -C ${BUILD_BASE}tools/linux/rollup/rollup/ TC="" rollup.toolchain
+RUN make -C ${BUILD_BASE}tools/linux/htif/ CROSS_COMPILE="" yield.toolchain
+RUN make -C ${BUILD_BASE}tools/linux/rollup/ioctl-echo-loop/ CROSS_COMPILE="" ioctl-echo-loop.toolchain
+RUN make -C ${BUILD_BASE}tools/linux/rollup/rollup/ CROSS_COMPILE="" rollup.toolchain
 
 # build rust tools
 # ------------------------------------------------------------------------------
