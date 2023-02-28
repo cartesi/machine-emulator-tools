@@ -1,6 +1,6 @@
 FROM --platform=linux/riscv64 riscv64/ubuntu:22.04 as sdk
-ARG LINUX_HEADERS_VERSION=5.15.63-ctsi-1
-ARG LINUX_HEADERS_FILEPATH=dep/linux-headers-${LINUX_HEADERS_VERSION}.tar.xz
+ARG LINUX_SOURCES_VERSION=5.15.63-ctsi-1
+ARG LINUX_SOURCES_FILEPATH=dep/linux-sources-${LINUX_SOURCES_VERSION}.tar.gz
 ARG RNDADDENTROPY_VERSION=3.0.0
 ARG RNDADDENTROPY_FILEPATH=dep/twuewand-$(RNDADDENTROPY_VERSION).tar.gz
 ARG BUILD_BASE=/opt/cartesi/
@@ -14,6 +14,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt update && \
       ca-certificates \
       git \
       protobuf-compiler \
+      rsync \
       rust-all \
       && \
     rm -rf /var/lib/apt/lists/*
@@ -21,10 +22,12 @@ RUN DEBIAN_FRONTEND=noninteractive apt update && \
 # copy & extract kernel headers
 # TODO: Fix apt database entry for linux-headers (it is satisfied here)
 # ------------------------------------------------------------------------------
-COPY ${LINUX_HEADERS_FILEPATH} ${BUILD_BASE}${LINUX_HEADERS_FILEPATH}
-RUN tar xf ${BUILD_BASE}${LINUX_HEADERS_FILEPATH} \
-  --strip-components=5 -C /usr && \
-  rm ${BUILD_BASE}${LINUX_HEADERS_FILEPATH}
+COPY ${LINUX_SOURCES_FILEPATH} ${BUILD_BASE}${LINUX_SOURCES_FILEPATH}
+RUN mkdir -p ${BUILD_BASE}linux-sources && \
+  tar xf ${BUILD_BASE}${LINUX_SOURCES_FILEPATH} \
+  --strip-components=1 -C ${BUILD_BASE}linux-sources && \
+  make -C ${BUILD_BASE}linux-sources headers_install INSTALL_HDR_PATH=/usr && \
+  rm ${BUILD_BASE}${LINUX_SOURCES_FILEPATH}
 
 # copy & extract rndaddentropy
 # ------------------------------------------------------------------------------

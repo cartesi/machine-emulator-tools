@@ -22,21 +22,17 @@ jobs:
       - name: Export makefile variables
         run: make env >> $GITHUB_ENV
 
-      - name: Download [linux-headers]
-        uses: Legion2/download-release-action@v2.1.0
-        with:
-          repository: ${{ github.repository_owner }}/image-kernel
-          tag: ${{ env.LINUX_HEADERS_TAG }}
-          file: linux-headers-${{ env.LINUX_HEADERS_VERSION }}.tar.xz
-          token: ${{ secrets.CI_TOKEN }}
+      - name: Download [linux-sources]
+        run: >
+          gh release download -D dep/ -R ${{ github.repository_owner }}/linux v${{ env.LINUX_SOURCES_VERSION }} --archive=tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
       - name: Build ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
-        run: |
-          mkdir -p dep && mv linux-headers-${{ env.LINUX_HEADERS_VERSION }}.tar.xz dep/
-          make ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
+        run: make ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
 
       - name: Upload ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
         uses: actions/upload-artifact@v3
