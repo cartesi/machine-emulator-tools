@@ -187,11 +187,11 @@ async fn test_write_voucher(
     let context = context_future.await;
     println!("Writing voucher");
     let test_voucher_01 = Voucher {
-        address: "0x1111111111111111111111111111111111111111".to_string(),
+        destination: "0x1111111111111111111111111111111111111111".to_string(),
         payload: "0x".to_string() + &hex::encode("voucher test payload 01"),
     };
     let test_voucher_02 = Voucher {
-        address: "0x2222222222222222222222222222222222222222".to_string(),
+        destination: "0x2222222222222222222222222222222222222222".to_string(),
         payload: "0x".to_string() + &hex::encode("voucher test payload 02"),
     };
     rollup_http_client::client::send_voucher(&context.address, test_voucher_01).await;

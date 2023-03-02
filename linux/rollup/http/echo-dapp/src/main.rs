@@ -39,7 +39,7 @@ pub async fn process_advance_request(
         for _ in 0..config.test_config.vouchers {
             let voucher_payload = request.payload.clone();
             let voucher = Voucher {
-                address: request.metadata.msg_sender.clone(),
+                destination: request.metadata.msg_sender.clone(),
                 payload: voucher_payload,
             };
 

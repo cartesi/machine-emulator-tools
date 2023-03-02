@@ -137,7 +137,7 @@ pub struct Notice {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Voucher {
-    pub address: String,
+    pub destination: String,
     pub payload: String,
 }
 
@@ -322,7 +322,7 @@ pub fn rollup_write_voucher(
         length: binary_payload.len() as u64,
     });
 
-    let mut address_c = match hex::decode(&voucher.address[2..]) {
+    let mut address_c = match hex::decode(&voucher.destination[2..]) {
         Ok(res) => res,
         Err(e) => {
             return Err(Box::new(RollupError::new(&format!(
@@ -533,8 +533,8 @@ pub fn print_notice(notice: &Notice) {
 
 pub fn print_voucher(voucher: &Voucher) {
     let mut voucher_request_printout = String::new();
-    voucher_request_printout.push_str("voucher: {{ address: ");
-    format_address_printout(&voucher.address, &mut voucher_request_printout);
+    voucher_request_printout.push_str("voucher: {{ destination: ");
+    format_address_printout(&voucher.destination, &mut voucher_request_printout);
     voucher_request_printout.push_str(&format!(
         " length: {} payload: {} }}",
         voucher.payload.len(),

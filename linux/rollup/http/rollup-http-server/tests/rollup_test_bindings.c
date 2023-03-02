@@ -114,17 +114,17 @@ int rollup_read_inspect_state_request(int fd, struct rollup_finish *finish, stru
 /* Outputs a new voucher to a file test_voucher_xx.txt in a text file
  * voucher_index is filled with new index from the driver
  * Returns 0 on success, -1 on error */
-int rollup_write_voucher(int fd, uint8_t address[CARTESI_ROLLUP_ADDRESS_SIZE], struct rollup_bytes *bytes,
+int rollup_write_voucher(int fd, uint8_t destination[CARTESI_ROLLUP_ADDRESS_SIZE], struct rollup_bytes *bytes,
                           uint64_t *voucher_index) {
     char filename[32] = {0};
-    char address_c[CARTESI_ROLLUP_ADDRESS_SIZE + 1] = {0};
+    char destination_c[CARTESI_ROLLUP_ADDRESS_SIZE + 1] = {0};
     voucher_index_counter = voucher_index_counter + 1;
     sprintf(filename, "test_voucher_%d.txt", voucher_index_counter);
     FILE *f = fopen(filename, "w");
     if (f == NULL) {
         return -1;
     }
-    memcpy(address_c, address, CARTESI_ROLLUP_ADDRESS_SIZE);
+    memcpy(destination_c, destination, CARTESI_ROLLUP_ADDRESS_SIZE);
     fprintf(f, "index: %d, payload_size: %d, payload: ", voucher_index_counter, bytes->length);
     for (int i = 0; i < bytes->length; i++) {
         fputc(bytes->data[i], f);

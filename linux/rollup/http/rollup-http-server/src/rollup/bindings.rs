@@ -254,7 +254,7 @@ fn bindgen_test_layout_rollup_finish() {
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct rollup_voucher {
-    pub address: [u8; 20usize],
+    pub destination: [u8; 20usize],
     pub payload: rollup_bytes,
     pub index: u64,
 }
@@ -271,13 +271,13 @@ fn bindgen_test_layout_rollup_voucher() {
         concat!("Alignment of ", stringify!(rollup_voucher))
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<rollup_voucher>())).address as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<rollup_voucher>())).destination as *const _ as usize },
         0usize,
         concat!(
             "Offset of field: ",
             stringify!(rollup_voucher),
             "::",
-            stringify!(address)
+            stringify!(destination)
         )
     );
     assert_eq!(
@@ -391,7 +391,7 @@ extern "C" {
 
     pub fn rollup_write_voucher(
         fd: ::std::os::raw::c_int,
-        address: *mut u8,
+        destination: *mut u8,
         bytes: *mut rollup_bytes,
         voucher_index: *mut u64,
     ) -> ::std::os::raw::c_int;

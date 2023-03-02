@@ -80,11 +80,11 @@ int rollup_read_inspect_state_request(int fd, struct rollup_finish *finish, stru
 /* Outputs a new voucher.
  * voucher_index is filled with new index from the driver
  * Returns 0 on success, -1 on error */
-int rollup_write_voucher(int fd, uint8_t address[CARTESI_ROLLUP_ADDRESS_SIZE], struct rollup_bytes *bytes,
+int rollup_write_voucher(int fd, uint8_t destination[CARTESI_ROLLUP_ADDRESS_SIZE], struct rollup_bytes *bytes,
                          uint64_t *voucher_index) {
     struct rollup_voucher v;
     memset(&v, 0, sizeof(v));
-    memcpy(v.address, address, CARTESI_ROLLUP_ADDRESS_SIZE);
+    memcpy(v.destination, destination, CARTESI_ROLLUP_ADDRESS_SIZE);
     v.payload = *bytes;
     int res = ioctl(fd, IOCTL_ROLLUP_WRITE_VOUCHER, (unsigned long) &v);
     if (res != 0) {

@@ -100,8 +100,8 @@ R"(Usage:
 
     voucher
       emit a voucher read from stdin as a JSON object in the format
-        {"address": <address>, "payload": <string>}
-      where field "address" contains a 20-byte EVM address in hex.
+        {"destination": <address>, "payload": <string>}
+      where field "destination" contains a 20-byte EVM address in hex.
       if successful, prints to stdout a JSON object in the format
         {"index": <number> }
       where field "index" is the index allocated for the voucher
@@ -234,8 +234,8 @@ static int write_voucher(void) try {
     memset(&v, 0, sizeof(v));
     v.payload.data = reinterpret_cast<unsigned char *>(payload.data());
     v.payload.length = payload.size();
-    auto address = unhex(ji["address"].get<std::string>());
-    memcpy(v.address, address.data(), std::min(address.size(), sizeof(v.address)));
+    auto destination = unhex(ji["destination"].get<std::string>());
+    memcpy(v.destination, destination.data(), std::min(destination.size(), sizeof(v.destination)));
     file_desc_ioctl(unique_open(ROLLUP_DEVICE_NAME, O_RDWR), IOCTL_ROLLUP_WRITE_VOUCHER, &v);
     nlohmann::json jo = {
         {"index", v.index},

@@ -131,11 +131,11 @@ static int write_notices(int fd, unsigned count, struct rollup_bytes *bytes, uns
     return 0;
 }
 
-static int write_vouchers(int fd, unsigned count, struct rollup_bytes *bytes, uint8_t *address, unsigned verbose) {
+static int write_vouchers(int fd, unsigned count, struct rollup_bytes *bytes, uint8_t *destination, unsigned verbose) {
     struct rollup_voucher v;
     memset(&v, 0, sizeof(v));
     v.payload = *bytes;
-    memcpy(v.address, address, sizeof(v.address));
+    memcpy(v.destination, destination, sizeof(v.destination));
     for (unsigned i = 0; i < count; i++) {
         int res = ioctl(fd, IOCTL_ROLLUP_WRITE_VOUCHER, (unsigned long) &v);
         if (res != 0) {
@@ -352,9 +352,9 @@ static void show_voucher(struct rollup_voucher *voucher) {
     printf("voucher:\n"
            "\tindex: %lu\n"
            "\tlength: %lu\n"
-           "\taddress: ",
+           "\tdestination: ",
         voucher->index, voucher->payload.length);
-    print_address(voucher->address);
+    print_address(voucher->destination);
 }
 
 static void show_notice(struct rollup_notice *notice) {
