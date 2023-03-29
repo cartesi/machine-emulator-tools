@@ -247,16 +247,17 @@ pub fn rollup_read_inspect_state_request(
         ))));
     }
     if bytes_c.length == 0 {
-        return Err(Box::new(RollupError::new(
-            "read zero size from inspect state request ",
-        )));
+        log::info!("read zero size payload from inspect state request");
     }
 
     let mut payload: Vec<u8> = Vec::with_capacity(bytes_c.length as usize);
-    unsafe {
-        std::ptr::copy(bytes_c.data, payload.as_mut_ptr(), bytes_c.length as usize);
-        payload.set_len(bytes_c.length as usize);
+    if bytes_c.length > 0 {
+        unsafe {
+            std::ptr::copy(bytes_c.data, payload.as_mut_ptr(), bytes_c.length as usize);
+            payload.set_len(bytes_c.length as usize);
+        }
     }
+
     let result = InspectRequest {
         payload: "0x".to_string() + &hex::encode(&payload),
     };
