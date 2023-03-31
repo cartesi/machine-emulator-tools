@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Fixed rollups-http-server when it receives an inspect with 0 bytes
 - Updated linux-sources to v5.15.63-ctsi-2
+- Update toolchain to 0.14.0
 
 ## [0.10.0] - 2023-02-15
 ### Changed

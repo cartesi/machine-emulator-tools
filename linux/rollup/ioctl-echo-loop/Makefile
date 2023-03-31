@@ -14,7 +14,7 @@
 UNAME:=$(shell uname)
 
 TOOLCHAIN_IMAGE ?= cartesi/toolchain
-TOOLCHAIN_TAG ?= 0.13.0
+TOOLCHAIN_TAG ?= 0.14.0
 RISCV_ARCH ?= rv64gc
 RISCV_ABI ?= lp64d
 
