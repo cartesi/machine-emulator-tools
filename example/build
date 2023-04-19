@@ -9,7 +9,7 @@ fi
 
 NAME=${1%.*}
 DOCKERFILE="$NAME.dockerfile"
-TOOLS=machine-emulator-tools-v0.10.0.tar.gz
+TOOLS=machine-emulator-tools-v0.11.0.tar.gz
 
 if [ ! -f "$DOCKERFILE" ]; then
   echo "dockerfile \"$DOCKERFILE\" not found"

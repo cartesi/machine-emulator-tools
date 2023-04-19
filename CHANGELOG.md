@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.11.0] - 2023-04-19
 ### Changed
 - Fixed rollups-http-server when it receives an inspect with 0 bytes
 - Updated linux-sources to v5.15.63-ctsi-2
@@ -89,7 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [0.2.0]
 - [0.1.0]
 
-[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.11.0
 [0.10.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.10.0
 [0.9.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.9.0
 [0.8.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.8.0
