@@ -1,5 +1,3 @@
-> :warning: The Cartesi team keeps working internally on the next version of this repository, following its regular development roadmap. Whenever there's a new version ready or important fix, these are published to the public source tree as new releases.
-
 # Cartesi Machine Emulator Tools
 
 The Cartesi Machine Emulator Tools a repository that contains a set of tools developed for the RISC-V Linux OS.
