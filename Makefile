@@ -1,5 +1,6 @@
 MACHINE_EMULATOR_TOOLS_VERSION ?= v0.11.0
 MACHINE_EMULATOR_TOOLS_TAR_GZ  := machine-emulator-tools-$(MACHINE_EMULATOR_TOOLS_VERSION).tar.gz
+MACHINE_EMULATOR_TOOLS_IMAGE   := cartesi/machine-emulator-tools:$(MACHINE_EMULATOR_TOOLS_VERSION)
 
 LINUX_SOURCES_VERSION  ?= 5.15.63-ctsi-2
 LINUX_SOURCES_FILEPATH := dep/linux-$(LINUX_SOURCES_VERSION).tar.gz
@@ -21,10 +22,12 @@ $(MACHINE_EMULATOR_TOOLS_TAR_GZ): Dockerfile checksum
 		--build-arg LINUX_SOURCES_FILEPATH=$(LINUX_SOURCES_FILEPATH) \
 		--build-arg RNDADDENTROPY_VERSION=$(RNDADDENTROPY_VERSION) \
 		--build-arg RNDADDENTROPY_FILEPATH=$(RNDADDENTROPY_FILEPATH) \
-		-t cartesi/tools:22.04 \
+		-t $(MACHINE_EMULATOR_TOOLS_IMAGE) \
 		-f $< \
 		.
-	ID=`docker create --platform=linux/riscv64 cartesi/tools:22.04` && \
+
+copy:
+	ID=`docker create --platform=linux/riscv64 $(MACHINE_EMULATOR_TOOLS_IMAGE)` && \
 	   docker cp $$ID:/opt/cartesi/$(MACHINE_EMULATOR_TOOLS_TAR_GZ) . && \
 	   docker rm $$ID
 
@@ -47,8 +50,12 @@ checksum: $(SHASUMFILES)
 	@shasum -ca 256 shasumfile
 
 env:
-	@echo LINUX_SOURCES_VERSION=$(LINUX_SOURCES_VERSION)
 	@echo MACHINE_EMULATOR_TOOLS_TAR_GZ=$(MACHINE_EMULATOR_TOOLS_TAR_GZ)
+	@echo MACHINE_EMULATOR_TOOLS_VERSION=$(MACHINE_EMULATOR_TOOLS_VERSION)
+	@echo LINUX_SOURCES_VERSION=$(LINUX_SOURCES_VERSION)
+	@echo LINUX_SOURCES_FILEPATH=$(LINUX_SOURCES_FILEPATH)
+	@echo RNDADDENTROPY_VERSION=$(RNDADDENTROPY_VERSION)
+	@echo RNDADDENTROPY_FILEPATH=$(RNDADDENTROPY_FILEPATH)
 
 setup:
 	docker run --privileged --rm  linuxkit/binfmt:bebbae0c1100ebf7bf2ad4dfb9dfd719cf0ef132
