@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Changed
 - Cache build in CI
+- Generate binary deb with tools
 
 ## [0.11.0] - 2023-04-19
 ### Changed

@@ -62,7 +62,7 @@ RUN cd ${BUILD_BASE}tools/linux/rollup/http/echo-dapp && \
 RUN cd ${BUILD_BASE}tools/linux/rollup/http/rollup-http-server && \
     cargo build --release
 
-# pack tools
+# pack tools (tar.gz)
 # ------------------------------------------------------------------------------
 ARG STAGING_BASE=/tmp/staging/
 ARG STAGING_BIN=${STAGING_BASE}opt/cartesi/bin/
@@ -78,3 +78,10 @@ RUN mkdir -p ${STAGING_BIN} && \
     cp ${BUILD_BASE}tools/linux/rollup/http/rollup-http-server/target/release/rollup-http-server ${STAGING_BIN} && \
     cp ${BUILD_BASE}tools/linux/utils/* ${STAGING_BIN} && \
     tar czf ${BUILD_BASE}${MACHINE_EMULATOR_TOOLS_TAR_GZ} -C ${STAGING_BASE} .
+
+# pack tools (deb)
+# ------------------------------------------------------------------------------
+ARG MACHINE_EMULATOR_TOOLS_DEB=machine-emulator-tools.deb
+COPY Makefile .
+COPY tools tools
+RUN make deb STAGING_BASE=${STAGING_BASE} DESTDIR=${BUILD_BASE}_install PREFIX=/ MACHINE_EMULATOR_TOOLS_DEB=${BUILD_BASE}${MACHINE_EMULATOR_TOOLS_DEB}

@@ -51,6 +51,7 @@ jobs:
           load: true
           build-args: |
             MACHINE_EMULATOR_TOOLS_TAR_GZ=${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
+            MACHINE_EMULATOR_TOOLS_DEB=${{ env.MACHINE_EMULATOR_TOOLS_DEB }}
             MACHINE_EMULATOR_TOOLS_VERSION=${{ env.MACHINE_EMULATOR_TOOLS_VERSION }}
             LINUX_SOURCES_VERSION=${{ env.LINUX_SOURCES_VERSION }}
             LINUX_SOURCES_FILEPATH=${{ env.LINUX_SOURCES_FILEPATH }}
@@ -68,12 +69,19 @@ jobs:
           name: ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
           path: ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
 
+      - name: Upload [${{ env.MACHINE_EMULATOR_TOOLS_DEB }}]
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.MACHINE_EMULATOR_TOOLS_DEB }}
+          path: ${{ env.MACHINE_EMULATOR_TOOLS_DEB }}
+
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
         with:
           prerelease: true
           files: |
             ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
+            ${{ env.MACHINE_EMULATOR_TOOLS_DEB }}
 
   build:
     runs-on: ubuntu-22.04
