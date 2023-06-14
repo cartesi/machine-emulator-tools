@@ -1,5 +1,6 @@
 *.ext2
 machine-emulator-tools-*.tar.gz
+machine-emulator-tools-*.deb
 dep/
 
 # Prerequisites
