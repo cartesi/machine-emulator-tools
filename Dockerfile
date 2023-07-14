@@ -45,18 +45,6 @@ RUN mkdir -p ${BUILD_BASE}linux-sources && \
   make -C ${BUILD_BASE}linux-sources headers_install INSTALL_HDR_PATH=/usr && \
   rm ${BUILD_BASE}${LINUX_SOURCES_FILEPATH}
 
-# copy & extract rndaddentropy
-# ------------------------------------------------------------------------------
-COPY ${RNDADDENTROPY_FILEPATH} ${BUILD_BASE}${RNDADDENTROPY_FILEPATH}
-RUN mkdir -p ${BUILD_BASE}/twuewand && \
-    tar xf ${BUILD_BASE}${RNDADDENTROPY_FILEPATH} \
-      --strip-components=1 -C ${BUILD_BASE}twuewand && \
-    rm ${BUILD_BASE}${RNDADDENTROPY_FILEPATH}
-
-RUN cd ${BUILD_BASE}twuewand/rndaddentropy/ && \
-    make all CFLAGS="-O2 -Wno-error" && \
-    strip rndaddentropy
-
 # copy tools
 COPY linux/ ${BUILD_BASE}tools/linux/
 
@@ -87,7 +75,6 @@ ARG MACHINE_EMULATOR_TOOLS_TAR_GZ=machine-emulator-tools.tar.gz
 
 COPY skel/ ${STAGING_BASE}
 RUN mkdir -p ${STAGING_BIN} && \
-    cp ${BUILD_BASE}twuewand/rndaddentropy/rndaddentropy ${STAGING_BIN} && \
     cp ${BUILD_BASE}tools/linux/xhalt/xhalt ${STAGING_BIN} && \
     cp ${BUILD_BASE}tools/linux/htif/yield ${STAGING_BIN} && \
     cp ${BUILD_BASE}tools/linux/rollup/ioctl-echo-loop/ioctl-echo-loop ${STAGING_BIN} && \

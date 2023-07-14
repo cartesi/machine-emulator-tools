@@ -16,8 +16,8 @@
 # limitations under the License.
 #
 
-for t in /dev/mtdblock*; do
-	name=$(busybox cat /sys/block/$(busybox basename $t)/device/name)
+for t in /dev/pmem*; do
+	name=$(busybox cat /run/drive-label/$(busybox basename $t))
 	if [ "$name" = $1 ]; then
 		echo $t
 		exit 0
