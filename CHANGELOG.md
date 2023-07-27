@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cache build in CI
 - Generate binary deb with tools
 - Moved sbin/init -> opt/cartesi/sbin/init
+- Updated license/copyright notice in all source code
 
 ## [0.11.0] - 2023-04-19
 ### Changed
