@@ -74,10 +74,12 @@ if [ -n "$*" ]; then
         busybox setsid \
         busybox cttyhack \
         busybox su -p $USER -c "$*"
+    RC=$?
 else
     echo "Nothing to do."
+    RC=0
 fi
 
 busybox mount -o ro,remount /
 busybox umount -af
-busybox poweroff -f
+[ $RC == 0 ] && busybox poweroff -f || xhalt "$RC"

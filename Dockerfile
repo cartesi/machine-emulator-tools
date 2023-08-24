@@ -62,6 +62,7 @@ COPY linux/ ${BUILD_BASE}tools/linux/
 
 # build C/C++ tools
 # ------------------------------------------------------------------------------
+RUN make -C ${BUILD_BASE}tools/linux/xhalt/ CROSS_COMPILE="" xhalt.toolchain
 RUN make -C ${BUILD_BASE}tools/linux/htif/ CROSS_COMPILE="" yield.toolchain
 RUN make -C ${BUILD_BASE}tools/linux/rollup/ioctl-echo-loop/ CROSS_COMPILE="" ioctl-echo-loop.toolchain
 RUN make -C ${BUILD_BASE}tools/linux/rollup/rollup/ CROSS_COMPILE="" rollup.toolchain
@@ -87,6 +88,7 @@ ARG MACHINE_EMULATOR_TOOLS_TAR_GZ=machine-emulator-tools.tar.gz
 COPY skel/ ${STAGING_BASE}
 RUN mkdir -p ${STAGING_BIN} && \
     cp ${BUILD_BASE}twuewand/rndaddentropy/rndaddentropy ${STAGING_BIN} && \
+    cp ${BUILD_BASE}tools/linux/xhalt/xhalt ${STAGING_BIN} && \
     cp ${BUILD_BASE}tools/linux/htif/yield ${STAGING_BIN} && \
     cp ${BUILD_BASE}tools/linux/rollup/ioctl-echo-loop/ioctl-echo-loop ${STAGING_BIN} && \
     cp ${BUILD_BASE}tools/linux/rollup/rollup/rollup ${STAGING_BIN} && \

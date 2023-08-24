@@ -38,7 +38,7 @@ SHASUMFILES := $(LINUX_SOURCES_FILEPATH) $(RNDADDENTROPY_FILEPATH)
 all: build copy
 
 build: Dockerfile checksum
-	docker buildx build --platform=linux/riscv64 \
+	docker buildx build --platform=linux/riscv64 --load \
 		--build-arg MACHINE_EMULATOR_TOOLS_TAR_GZ=$(MACHINE_EMULATOR_TOOLS_TAR_GZ) \
 		--build-arg MACHINE_EMULATOR_TOOLS_DEB=$(MACHINE_EMULATOR_TOOLS_DEB) \
 		--build-arg LINUX_SOURCES_VERSION=$(LINUX_SOURCES_VERSION) \
