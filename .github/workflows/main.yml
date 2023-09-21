@@ -78,13 +78,20 @@ jobs:
           name: ${{ env.MACHINE_EMULATOR_TOOLS_DEB }}
           path: ${{ env.MACHINE_EMULATOR_TOOLS_DEB }}
 
+      - name: Checksum artifacts
+        run: |
+          sha512sum ${{ env.MACHINE_EMULATOR_TOOLS_DEB }} > ${{ env.MACHINE_EMULATOR_TOOLS_DEB }}.sha512
+          sha512sum ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }} > ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}.sha512
+
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
         with:
           prerelease: true
           files: |
             ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}
+            ${{ env.MACHINE_EMULATOR_TOOLS_TAR_GZ }}.sha512
             ${{ env.MACHINE_EMULATOR_TOOLS_DEB }}
+            ${{ env.MACHINE_EMULATOR_TOOLS_DEB }}.sha512
 
   build:
     runs-on: ubuntu-22.04
