@@ -1,6 +1,6 @@
 # Example: Cartesi root filesystem with machine emulator tools
 
-The following example demonstrates how to create a bootable root filesystem for the Cartesi Machine based on a Ubuntu RISC-V 64 docker image. It requires the machine-emulator-tools v0.11.0.
+The following example demonstrates how to create a bootable root filesystem for the Cartesi Machine based on a Ubuntu RISC-V 64 docker image. It requires the machine-emulator-tools v0.13.0.
 
 ### Requirements
 
@@ -13,7 +13,7 @@ The following example demonstrates how to create a bootable root filesystem for 
 ### Building
 
 ```sh
-cp ../machine-emulator-tools-v0.11.0.tar.gz .
+cp ../machine-emulator-tools-v0.13.0.tar.gz .
 ./build ubuntu-22.04.dockerfile
 ```
 
