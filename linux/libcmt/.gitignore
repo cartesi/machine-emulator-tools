@@ -1,0 +1,8 @@
+build/
+doc/theme
+doc/html
+*.o
+*.d
+
+tools/funsel
+tools/merkle-table

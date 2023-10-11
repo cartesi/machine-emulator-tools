@@ -48,6 +48,10 @@ RUN mkdir -p ${BUILD_BASE}linux-sources && \
 # copy tools
 COPY linux/ ${BUILD_BASE}tools/linux/
 
+# build C/C++ libs
+# ------------------------------------------------------------------------------
+RUN make -C ${BUILD_BASE}tools/linux/libdriver/ CROSS_COMPILE=""
+
 # build C/C++ tools
 # ------------------------------------------------------------------------------
 RUN make -C ${BUILD_BASE}tools/linux/xhalt/ CROSS_COMPILE="" xhalt.toolchain

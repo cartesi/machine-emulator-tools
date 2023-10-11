@@ -27,7 +27,8 @@ RVCXX = $(CROSS_COMPILE)g++
 RVCOPY = $(CROSS_COMPILE)objcopy
 RVDUMP = $(CROSS_COMPILE)objdump
 STRIP = $(CROSS_COMPILE)strip
-RISCV_CFLAGS :=-march=$(RISCV_ARCH) -mabi=$(RISCV_ABI)
+CFLAGS := -O2 -Wall -pedantic -march=$(RISCV_ARCH) -mabi=$(RISCV_ABI) -I../libdriver/ioctl
+LDLIBS := -L../libdriver -ldriver
 
 CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
@@ -42,7 +43,7 @@ extra.ext2: yield
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
 yield.toolchain:
-	$(RVCC) -O2 -o yield yield.c
+	$(RVCC) $(CFLAGS) -o yield yield.c $(LDLIBS)
 	$(STRIP) yield
 
 extra.ext2.toolchain:

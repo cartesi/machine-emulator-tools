@@ -25,9 +25,9 @@ MACHINE_EMULATOR_TOOLS_TAR_GZ  := machine-emulator-tools-$(MACHINE_EMULATOR_TOOL
 MACHINE_EMULATOR_TOOLS_DEB     := machine-emulator-tools-$(MACHINE_EMULATOR_TOOLS_VERSION).deb
 MACHINE_EMULATOR_TOOLS_IMAGE   := cartesi/machine-emulator-tools:$(MACHINE_EMULATOR_TOOLS_VERSION)
 
-LINUX_SOURCES_VERSION  ?= 5.15.63-ctsi-2
-LINUX_SOURCES_FILEPATH := dep/linux-$(LINUX_SOURCES_VERSION).tar.gz
-LINUX_SOURCES_URLPATH  := https://github.com/cartesi/linux/archive/refs/tags/v$(LINUX_SOURCES_VERSION).tar.gz
+LINUX_SOURCES_VERSION  ?= rollup-rework
+LINUX_SOURCES_FILEPATH := dep/$(LINUX_SOURCES_VERSION).tar.gz
+LINUX_SOURCES_URLPATH  := https://github.com/cartesi/linux/archive/refs/heads/feature/$(LINUX_SOURCES_VERSION).tar.gz
 
 RNDADDENTROPY_VERSION  ?= 3.0.0
 RNDADDENTROPY_FILEPATH := dep/twuewand-$(RNDADDENTROPY_VERSION).tar.gz
