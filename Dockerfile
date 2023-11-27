@@ -31,7 +31,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt update && \
       git \
       protobuf-compiler \
       rsync \
-      rust-all \
+      rust-all=1.58.1+dfsg1~ubuntu1-0ubuntu2 \
       && \
     rm -rf /var/lib/apt/lists/*
 
