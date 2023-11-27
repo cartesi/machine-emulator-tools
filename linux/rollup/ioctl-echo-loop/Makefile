@@ -27,7 +27,7 @@ RVCXX = $(CROSS_COMPILE)g++
 RVCOPY = $(CROSS_COMPILE)objcopy
 RVDUMP = $(CROSS_COMPILE)objdump
 STRIP = $(CROSS_COMPILE)strip
-RISCV_CFLAGS :=-march=$(RISCV_ARCH) -mabi=$(RISCV_ABI)
+CFLAGS :=-Wall -pedantic -O2 -march=$(RISCV_ARCH) -mabi=$(RISCV_ABI)
 
 CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
@@ -42,7 +42,7 @@ extra.ext2: ioctl-echo-loop
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
 ioctl-echo-loop.toolchain:
-	$(RVCC) -O2 -o ioctl-echo-loop ioctl-echo-loop.c
+	$(RVCC) $(CFLAGS) -o ioctl-echo-loop ioctl-echo-loop.c
 	$(STRIP) ioctl-echo-loop
 
 extra.ext2.toolchain:

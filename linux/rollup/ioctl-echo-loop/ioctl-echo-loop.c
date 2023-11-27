@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
+#include <string.h>
 
 #include <linux/cartesi/rollup.h>
 
@@ -102,7 +104,8 @@ static int finish_request(int fd, struct rollup_finish *finish, bool accept) {
     finish->accept_previous_request = accept;
     res = ioctl(fd, IOCTL_ROLLUP_FINISH, (unsigned long) finish);
     if (res != 0) {
-        fprintf(stderr, "IOCTL_ROLLUP_FINISH returned error %d\n", res);
+        int code = errno;
+        fprintf(stderr, "IOCTL_ROLLUP_FINISH returned error %s [%d]\n", strerror(code), code);
     }
     return res;
 }
@@ -143,7 +146,8 @@ static int write_vouchers(int fd, unsigned count, struct rollup_bytes *bytes, ui
     for (unsigned i = 0; i < count; i++) {
         int res = ioctl(fd, IOCTL_ROLLUP_WRITE_VOUCHER, (unsigned long) &v);
         if (res != 0) {
-            fprintf(stderr, "IOCTL_ROLLUP_WRITE_VOUCHER returned error %d\n", res);
+            int code = errno;
+            fprintf(stderr, "IOCTL_ROLLUP_WRITE_VOUCHER returned error %s [%d]\n", strerror(code), code);
             return res;
         }
         if (verbose)
@@ -161,7 +165,8 @@ static int write_reports(int fd, unsigned count, struct rollup_bytes *bytes, uns
     for (unsigned i = 0; i < count; i++) {
         int res = ioctl(fd, IOCTL_ROLLUP_WRITE_REPORT, (unsigned long) &r);
         if (res != 0) {
-            fprintf(stderr, "IOCTL_ROLLUP_WRITE_REPORT returned error %d\n", res);
+            int code = errno;
+            fprintf(stderr, "IOCTL_ROLLUP_WRITE_REPORT returned error %s [%d]\n", strerror(code), code);
             return res;
         }
     }
@@ -176,7 +181,8 @@ static int write_exception(int fd, struct rollup_bytes *bytes, unsigned verbose)
         show_exception(&e);
     int res = ioctl(fd, IOCTL_ROLLUP_THROW_EXCEPTION, (unsigned long) &e);
     if (res != 0) {
-        fprintf(stderr, "IOCTL_ROLLUP_THROW_EXCEPTION returned error %d\n", res);
+        int code = errno;
+        fprintf(stderr, "IOCTL_ROLLUP_THROW_EXCEPTION returned error %s [%d]\n", strerror(code), code);
         return res;
     }
     return 0;
@@ -194,7 +200,8 @@ static int handle_advance_state_request(int fd, struct parsed_args *args, struct
     req.payload.length = finish->next_request_payload_length;
     res = ioctl(fd, IOCTL_ROLLUP_READ_ADVANCE_STATE, (unsigned long) &req);
     if (res != 0) {
-        fprintf(stderr, "IOCTL_ROLLUP_READ_ADVANCE_STATE returned error (%d)\n", res);
+        int code = errno;
+        fprintf(stderr, "IOCTL_ROLLUP_READ_ADVANCE_STATE returned error %s [%d]\n", strerror(code), code);
         return res;
     }
     *metadata = req.metadata;
@@ -227,7 +234,8 @@ static int handle_inspect_state_request(int fd, struct parsed_args *args, struct
         show_inspect(&req);
     res = ioctl(fd, IOCTL_ROLLUP_READ_INSPECT_STATE, (unsigned long) &req);
     if (res != 0) {
-        fprintf(stderr, "IOCTL_ROLLUP_READ_INSPECT_STATE returned error (%d)\n", res);
+        int code = errno;
+        fprintf(stderr, "IOCTL_ROLLUP_READ_INSPECT_STATE returned error %s [%d]\n", strerror(code), code);
         return res;
     }
     if (write_reports(fd, args->report_count, &req.payload, args->verbose) != 0) {
@@ -338,24 +346,24 @@ static void show_advance(struct rollup_advance_state *advance) {
     printf("advance:\n"
            "\tmsg_sender: ");
     print_address(advance->metadata.msg_sender);
-    printf("\tblock_number: %lu\n"
-           "\ttimestamp: %lu\n"
-           "\tepoch_index: %lu\n"
-           "\tinput_index: %lu\n",
+    printf("\tblock_number: %llu\n"
+           "\ttimestamp: %llu\n"
+           "\tepoch_index: %llu\n"
+           "\tinput_index: %llu\n",
         advance->metadata.block_number, advance->metadata.timestamp, advance->metadata.epoch_index,
         advance->metadata.input_index);
 }
 
 static void show_inspect(struct rollup_inspect_state *inspect) {
     printf("inspect:\n"
-           "\tlength: %lu\n",
+           "\tlength: %llu\n",
         inspect->payload.length);
 }
 
 static void show_voucher(struct rollup_voucher *voucher) {
     printf("voucher:\n"
-           "\tindex: %lu\n"
-           "\tlength: %lu\n"
+           "\tindex: %llu\n"
+           "\tlength: %llu\n"
            "\tdestination: ",
         voucher->index, voucher->payload.length);
     print_address(voucher->destination);
@@ -363,19 +371,19 @@ static void show_voucher(struct rollup_voucher *voucher) {
 
 static void show_notice(struct rollup_notice *notice) {
     printf("notice:\n"
-           "\tindex: %lu\n"
-           "\tlength: %lu\n",
+           "\tindex: %llu\n"
+           "\tlength: %llu\n",
         notice->index, notice->payload.length);
 }
 
 static void show_report(struct rollup_report *report) {
     printf("report:\n"
-           "\tlength: %lu\n",
+           "\tlength: %llu\n",
         report->payload.length);
 }
 
 static void show_exception(struct rollup_exception *exception) {
     printf("exception:\n"
-           "\tlength: %lu\n",
+           "\tlength: %llu\n",
         exception->payload.length);
 }
