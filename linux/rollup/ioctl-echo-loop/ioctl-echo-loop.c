@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-
-#include <sys/ioctl.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
-#include <errno.h>
-#include <string.h>
 
 #include <linux/cartesi/rollup.h>
 
@@ -188,7 +186,8 @@ static int write_exception(int fd, struct rollup_bytes *bytes, unsigned verbose)
     return 0;
 }
 
-static int handle_advance_state_request(int fd, struct parsed_args *args, struct rollup_finish *finish, struct rollup_bytes *bytes, struct rollup_input_metadata *metadata) {
+static int handle_advance_state_request(int fd, struct parsed_args *args, struct rollup_finish *finish,
+    struct rollup_bytes *bytes, struct rollup_input_metadata *metadata) {
     struct rollup_advance_state req;
     int res = 0;
     if (resize_bytes(bytes, finish->next_request_payload_length) != 0) {
@@ -244,7 +243,8 @@ static int handle_inspect_state_request(int fd, struct parsed_args *args, struct
     return 0;
 }
 
-static int handle_request(int fd, struct parsed_args *args, struct rollup_finish *finish, struct rollup_bytes *bytes, struct rollup_input_metadata *metadata) {
+static int handle_request(int fd, struct parsed_args *args, struct rollup_finish *finish, struct rollup_bytes *bytes,
+    struct rollup_input_metadata *metadata) {
     switch (finish->next_request_type) {
         case CARTESI_ROLLUP_ADVANCE_STATE:
             return handle_advance_state_request(fd, args, finish, bytes, metadata);
@@ -293,12 +293,10 @@ int main(int argc, char *argv[]) {
             break;
         }
         reject_advance =
-            (finish.next_request_type == CARTESI_ROLLUP_ADVANCE_STATE) &&
-            (args.reject == metadata.input_index);
-        reject_inspect =
-            (finish.next_request_type == CARTESI_ROLLUP_INSPECT_STATE) && args.reject_inspects;
-        throw_exception = (finish.next_request_type == CARTESI_ROLLUP_ADVANCE_STATE) &&
-            (args.exception == metadata.input_index);
+            (finish.next_request_type == CARTESI_ROLLUP_ADVANCE_STATE) && (args.reject == metadata.input_index);
+        reject_inspect = (finish.next_request_type == CARTESI_ROLLUP_INSPECT_STATE) && args.reject_inspects;
+        throw_exception =
+            (finish.next_request_type == CARTESI_ROLLUP_ADVANCE_STATE) && (args.exception == metadata.input_index);
         if (throw_exception) {
             write_exception(fd, &bytes, args.verbose);
         }

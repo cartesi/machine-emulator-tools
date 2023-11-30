@@ -17,15 +17,16 @@
 #include <cstdint>
 #include <iostream>
 #include <iterator>
+#include <memory>
+#include <sstream>
 #include <string>
 #include <string_view>
-#include <sstream>
-#include <memory>
 #include <unordered_map>
 
+#include <fcntl.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include <fcntl.h>
+
 #include <linux/cartesi/rollup.h>
 
 #include "json.hpp"
@@ -37,13 +38,24 @@
 // NullablePointer implementation for file descriptors
 class file_desc {
 public:
-    explicit file_desc(int fd): m_fd(fd) {}
-    file_desc(std::nullptr_t = nullptr): m_fd(-1) {}
-    operator int() const { return m_fd; }
-    bool operator==(const file_desc &other) const {return m_fd == other.m_fd;}
-    bool operator!=(const file_desc &other) const {return m_fd != other.m_fd;}
-    bool operator==(std::nullptr_t) const {return m_fd == -1;}
-    bool operator!=(std::nullptr_t) const {return m_fd != -1;}
+    explicit file_desc(int fd) : m_fd(fd) {}
+    file_desc(std::nullptr_t = nullptr) : m_fd(-1) {}
+    operator int() const {
+        return m_fd;
+    }
+    bool operator==(const file_desc &other) const {
+        return m_fd == other.m_fd;
+    }
+    bool operator!=(const file_desc &other) const {
+        return m_fd != other.m_fd;
+    }
+    bool operator==(std::nullptr_t) const {
+        return m_fd == -1;
+    }
+    bool operator!=(std::nullptr_t) const {
+        return m_fd != -1;
+    }
+
 private:
     int m_fd;
 };
@@ -96,7 +108,7 @@ static void file_desc_ioctl(const unique_file_desc &fd, unsigned long request, v
 // Print help message with program usage
 static void print_help(void) {
     std::cerr <<
-R"(Usage:
+        R"(Usage:
     rollup [command]
 
   where [command] is one of
@@ -186,13 +198,13 @@ static void resize_bytes(struct rollup_bytes *bytes, uint64_t size) {
 // Convert a hex character into its corresponding nibble {0..15}
 static uint8_t hexnibble(char a) {
     if (a >= 'a' && a <= 'f') {
-        return a-'a'+10;
+        return a - 'a' + 10;
     }
     if (a >= 'A' && a <= 'F') {
-        return a-'A'+10;
+        return a - 'A' + 10;
     }
     if (a >= '0' && a <= '9') {
-        return a-'0';
+        return a - '0';
     }
     throw std::invalid_argument{"invalid hex character"};
     return 0;
@@ -212,9 +224,9 @@ static std::string unhex(const std::string &s) {
         throw std::invalid_argument{"invalid character in address"};
     }
     std::string res;
-    res.reserve(20+1);
+    res.reserve(20 + 1);
     for (unsigned i = 2; i < s.size(); i += 2) {
-        res.push_back(hexbyte(s[i], s[i+1]));
+        res.push_back(hexbyte(s[i], s[i + 1]));
     }
     return res;
 }
@@ -223,7 +235,7 @@ static std::string unhex(const std::string &s) {
 static std::string hex(const uint8_t *data, uint64_t length) {
     std::stringstream ss;
     ss << "0x";
-    for (auto b: std::string_view{reinterpret_cast<const char *>(data), length}) {
+    for (auto b : std::string_view{reinterpret_cast<const char *>(data), length}) {
         ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned>(b);
     }
     return ss.str();
@@ -307,19 +319,13 @@ static void write_advance_state(const unique_file_desc &fd, const struct rollup_
     file_desc_ioctl(fd, IOCTL_ROLLUP_READ_ADVANCE_STATE, &r);
     auto payload = std::string_view{reinterpret_cast<const char *>(r.payload.data), r.payload.length};
     const auto &m = r.metadata;
-    nlohmann::json j = {
-        {"request_type", "advance_state"},
-        {"data", {
-            {"payload", payload},
-            {"metadata", {
-                {"msg_sender", hex(m.msg_sender, sizeof(m.msg_sender))},
-                {"epoch_index", m.epoch_index},
-                {"input_index", m.input_index},
-                {"block_number", m.block_number},
-                {"timestamp", m.timestamp}
-            }}
-        }}
-    };
+    nlohmann::json j = {{"request_type", "advance_state"},
+        {"data",
+            {{"payload", payload},
+                {"metadata",
+                    {{"msg_sender", hex(m.msg_sender, sizeof(m.msg_sender))}, {"epoch_index", m.epoch_index},
+                        {"input_index", m.input_index}, {"block_number", m.block_number},
+                        {"timestamp", m.timestamp}}}}}};
     std::cout << j.dump(2) << '\n';
 }
 
@@ -330,12 +336,11 @@ static void write_inspect_state(const unique_file_desc &fd, const struct rollup_
     resize_bytes(&r.payload, f->next_request_payload_length);
     file_desc_ioctl(fd, IOCTL_ROLLUP_READ_INSPECT_STATE, &r);
     auto payload = std::string_view{reinterpret_cast<const char *>(r.payload.data), r.payload.length};
-    nlohmann::json j = {
-        {"request_type", "inspect_state"},
-        {"data", {
-            {"payload", payload},
-        }}
-    };
+    nlohmann::json j = {{"request_type", "inspect_state"},
+        {"data",
+            {
+                {"payload", payload},
+            }}};
     std::cout << j.dump(2) << '\n';
 }
 

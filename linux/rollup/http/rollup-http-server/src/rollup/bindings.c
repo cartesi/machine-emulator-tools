@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-
-#include <errno.h>
 #include "bindings.h"
+#include <errno.h>
 
 static int resize_bytes(struct rollup_bytes *bytes, uint64_t size) {
     if (bytes->length < size) {
@@ -43,8 +42,8 @@ int rollup_finish_request(int fd, struct rollup_finish *finish, bool accept) {
 /* Obtains arguments to advance state
  * Outputs metadata and payload in structs
  * Returns 0 on success, -1 on error */
-int rollup_read_advance_state_request(int fd, struct rollup_finish *finish,
-                                      struct rollup_bytes *bytes, struct rollup_input_metadata *metadata) {
+int rollup_read_advance_state_request(int fd, struct rollup_finish *finish, struct rollup_bytes *bytes,
+    struct rollup_input_metadata *metadata) {
     struct rollup_advance_state req;
     int res = 0;
     if (resize_bytes(bytes, finish->next_request_payload_length) != 0) {
@@ -60,7 +59,6 @@ int rollup_read_advance_state_request(int fd, struct rollup_finish *finish,
     *metadata = req.metadata;
     return res;
 }
-
 
 /* Obtains query of inspect state request
  * Returns 0 on success, -1 on error */
@@ -85,7 +83,7 @@ int rollup_read_inspect_state_request(int fd, struct rollup_finish *finish, stru
  * voucher_index is filled with new index from the driver
  * Returns 0 on success, -1 on error */
 int rollup_write_voucher(int fd, uint8_t destination[CARTESI_ROLLUP_ADDRESS_SIZE], struct rollup_bytes *bytes,
-                         uint64_t *voucher_index) {
+    uint64_t *voucher_index) {
     struct rollup_voucher v;
     memset(&v, 0, sizeof(v));
     memcpy(v.destination, destination, CARTESI_ROLLUP_ADDRESS_SIZE);
@@ -115,7 +113,6 @@ int rollup_write_notice(int fd, struct rollup_bytes *bytes, uint64_t *notice_ind
     return 0;
 }
 
-
 /* Outputs a new report.
  * Returns 0 on success, -1 on error */
 int rollup_write_report(int fd, struct rollup_bytes *bytes) {
@@ -144,4 +141,3 @@ int rollup_throw_exception(int fd, struct rollup_bytes *bytes) {
     }
     return 0;
 }
-
