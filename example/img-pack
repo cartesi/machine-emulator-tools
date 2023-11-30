@@ -8,7 +8,7 @@ bcargs="$(cat <<- EOF
 )"
 blocks=$(echo "$bcargs" | bc)
 
-genext2fs \
+xgenext2fs \
 	-fzB $blocksize \
 	-b   $blocks \
 	-i   $blocksize \

@@ -17,7 +17,7 @@
 UNAME:=$(shell uname)
 
 TOOLCHAIN_IMAGE ?= cartesi/toolchain
-TOOLCHAIN_TAG ?= 0.15.0
+TOOLCHAIN_TAG ?= 0.16.0
 RISCV_ARCH ?= rv64gc
 RISCV_ABI ?= lp64d
 
@@ -48,7 +48,7 @@ ioctl-echo-loop.toolchain:
 extra.ext2.toolchain:
 	mkdir -m 0755 ./extra
 	cp ./ioctl-echo-loop ./extra/ioctl-echo-loop
-	genext2fs -i 512 -b 8192 -d extra $(basename $@)
+	xgenext2fs -i 512 -b 8192 -d extra $(basename $@)
 	rm -rf ./extra
 
 toolchain-exec:

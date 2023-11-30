@@ -26,7 +26,7 @@ Utility script `rollup-init`  is used to start simultaneously DApp application a
 After build copy Dapp and http dispatcher application to the new directory. Create ext2 filesystem image from that directory.
 
 ```shell
-$ genext2fs -b 14k -d echo/ echo.ext2
+$ xgenext2fs -b 14k -d echo/ echo.ext2
 ```
 
 Run application with `cartesi-machine` emulator:

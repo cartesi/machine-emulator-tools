@@ -2,7 +2,7 @@ name: Build
 on: [push]
 env:
   TOOLCHAIN_IMAGE: ${{ github.repository_owner }}/toolchain
-  TOOLCHAIN_TAG: 0.15.0
+  TOOLCHAIN_TAG: 0.16.0
 jobs:
   tools:
     runs-on: ubuntu-22.04
