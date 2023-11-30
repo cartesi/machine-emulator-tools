@@ -24,6 +24,7 @@
 #include <unordered_map>
 
 #include <fcntl.h>
+#include <stdbool.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 

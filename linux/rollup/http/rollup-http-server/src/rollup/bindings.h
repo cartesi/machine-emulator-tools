@@ -25,6 +25,7 @@
  --target=riscv64-cartesi-linux-gnu -march=rv64gc -mabi=lp64d
 */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
