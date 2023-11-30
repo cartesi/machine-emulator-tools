@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.13.0] - 2023-10-10
 ### Changed
 - Updated tools version in example
+- Update toolchain to 0.16.0
 
 ### Added
 - Added new init system using init and entrypoint from device tree
