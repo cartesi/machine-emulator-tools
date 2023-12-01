@@ -14,12 +14,10 @@
 # limitations under the License.
 #
 
-FROM --platform=linux/riscv64 riscv64/ubuntu:22.04 as sdk
-ARG LINUX_SOURCES_VERSION=5.15.63-ctsi-2
-ARG LINUX_SOURCES_FILEPATH=dep/linux-sources-${LINUX_SOURCES_VERSION}.tar.gz
-ARG RNDADDENTROPY_VERSION=3.0.0
-ARG RNDADDENTROPY_FILEPATH=dep/twuewand-$(RNDADDENTROPY_VERSION).tar.gz
-ARG BUILD_BASE=/opt/cartesi/
+FROM --platform=linux/riscv64 riscv64/ubuntu:22.04 as tools-env
+ARG LINUX_SOURCES_VERSION=6.5.9-ctsi-1
+ARG LINUX_SOURCES_URLPATH=https://github.com/cartesi/linux/archive/refs/tags/v${LINUX_SOURCES_VERSION}.tar.gz
+ARG BUILD_BASE=/opt/cartesi
 
 # apt
 # ------------------------------------------------------------------------------
@@ -31,62 +29,65 @@ RUN DEBIAN_FRONTEND=noninteractive apt update && \
       git \
       protobuf-compiler \
       rsync \
+      wget \
       rust-all=1.58.1+dfsg1~ubuntu1-0ubuntu2 \
       && \
+    mkdir -p ${BUILD_BASE} && \
     rm -rf /var/lib/apt/lists/*
 
 # copy & extract kernel headers
 # TODO: Fix apt database entry for linux-headers (it is satisfied here)
 # ------------------------------------------------------------------------------
-COPY ${LINUX_SOURCES_FILEPATH} ${BUILD_BASE}${LINUX_SOURCES_FILEPATH}
-RUN mkdir -p ${BUILD_BASE}linux-sources && \
-  tar xf ${BUILD_BASE}${LINUX_SOURCES_FILEPATH} \
-  --strip-components=1 -C ${BUILD_BASE}linux-sources && \
-  make -C ${BUILD_BASE}linux-sources headers_install INSTALL_HDR_PATH=/usr && \
-  rm ${BUILD_BASE}${LINUX_SOURCES_FILEPATH}
+ENV LINUX_SOURCES_FILEPATH=/tmp/linux-${LINUX_SOURCES_VERSION}.tar.gz
+RUN wget -O ${LINUX_SOURCES_FILEPATH} ${LINUX_SOURCES_URLPATH} && \
+  echo "bfc4d196b90592a2a6bef83ead9e196da6ab6d5978b48ee5e8ccf02913355bc2  ${LINUX_SOURCES_FILEPATH}" | sha256sum --check && \
+  tar xzf ${LINUX_SOURCES_FILEPATH} -C ${BUILD_BASE}/ && \
+  make -C ${BUILD_BASE}/linux-${LINUX_SOURCES_VERSION} headers_install INSTALL_HDR_PATH=/usr && \
+  rm -f {LINUX_SOURCES_FILEPATH}
 
-# copy tools
-COPY linux/ ${BUILD_BASE}tools/linux/
+FROM tools-env as builder
+COPY linux/ ${BUILD_BASE}/tools/linux/
 
 # build C/C++ tools
 # ------------------------------------------------------------------------------
-RUN make -C ${BUILD_BASE}tools/linux/xhalt/ CROSS_COMPILE="" xhalt.toolchain
-RUN make -C ${BUILD_BASE}tools/linux/htif/ CROSS_COMPILE="" yield.toolchain
-RUN make -C ${BUILD_BASE}tools/linux/rollup/ioctl-echo-loop/ CROSS_COMPILE="" ioctl-echo-loop.toolchain
-RUN make -C ${BUILD_BASE}tools/linux/rollup/rollup/ CROSS_COMPILE="" rollup.toolchain
+FROM builder as c-builder
+RUN make -C ${BUILD_BASE}/tools/linux/xhalt/ CROSS_COMPILE="" xhalt.toolchain
+RUN make -C ${BUILD_BASE}/tools/linux/htif/ CROSS_COMPILE="" yield.toolchain
+RUN make -C ${BUILD_BASE}/tools/linux/rollup/ioctl-echo-loop/ CROSS_COMPILE="" ioctl-echo-loop.toolchain
+RUN make -C ${BUILD_BASE}/tools/linux/rollup/rollup/ CROSS_COMPILE="" rollup.toolchain
 
 # build rust tools
 # ------------------------------------------------------------------------------
+FROM builder as rust-builder
+
 # NOTE: cargo update RAM usage keeps going up without this
 RUN mkdir -p $HOME/.cargo && \
     echo "[net]" >> $HOME/.cargo/config && \
     echo "git-fetch-with-cli = true" >> $HOME/.cargo/config
 
-RUN cd ${BUILD_BASE}tools/linux/rollup/http/echo-dapp && \
+RUN cd ${BUILD_BASE}/tools/linux/rollup/http/echo-dapp && \
     cargo build --release
-RUN cd ${BUILD_BASE}tools/linux/rollup/http/rollup-http-server && \
+RUN cd ${BUILD_BASE}/tools/linux/rollup/http/rollup-http-server && \
     cargo build --release
-
-# pack tools (tar.gz)
-# ------------------------------------------------------------------------------
-ARG STAGING_BASE=/tmp/staging/
-ARG STAGING_BIN=${STAGING_BASE}opt/cartesi/bin/
-ARG MACHINE_EMULATOR_TOOLS_TAR_GZ=machine-emulator-tools.tar.gz
-
-COPY skel/ ${STAGING_BASE}
-RUN mkdir -p ${STAGING_BIN} && \
-    cp ${BUILD_BASE}tools/linux/xhalt/xhalt ${STAGING_BIN} && \
-    cp ${BUILD_BASE}tools/linux/htif/yield ${STAGING_BIN} && \
-    cp ${BUILD_BASE}tools/linux/rollup/ioctl-echo-loop/ioctl-echo-loop ${STAGING_BIN} && \
-    cp ${BUILD_BASE}tools/linux/rollup/rollup/rollup ${STAGING_BIN} && \
-    cp ${BUILD_BASE}tools/linux/rollup/http/echo-dapp/target/release/echo-dapp ${STAGING_BIN} && \
-    cp ${BUILD_BASE}tools/linux/rollup/http/rollup-http-server/target/release/rollup-http-server ${STAGING_BIN} && \
-    cp ${BUILD_BASE}tools/linux/utils/* ${STAGING_BIN} && \
-    tar czf ${BUILD_BASE}${MACHINE_EMULATOR_TOOLS_TAR_GZ} -C ${STAGING_BASE} .
 
 # pack tools (deb)
 # ------------------------------------------------------------------------------
+FROM c-builder as packer
 ARG MACHINE_EMULATOR_TOOLS_DEB=machine-emulator-tools.deb
-COPY Makefile .
-COPY tools tools
-RUN make deb STAGING_BASE=${STAGING_BASE} DESTDIR=${BUILD_BASE}_install PREFIX=/ MACHINE_EMULATOR_TOOLS_DEB=${BUILD_BASE}${MACHINE_EMULATOR_TOOLS_DEB}
+ARG STAGING_BASE=${BUILD_BASE}/_install
+ARG STAGING_DEBIAN=${STAGING_BASE}/DEBIAN
+ARG STAGING_BIN=${STAGING_BASE}/opt/cartesi/bin
+
+RUN mkdir -p ${STAGING_DEBIAN} ${STAGING_BIN} && \
+    cp ${BUILD_BASE}/tools/linux/xhalt/xhalt ${STAGING_BIN} && \
+    cp ${BUILD_BASE}/tools/linux/htif/yield ${STAGING_BIN} && \
+    cp ${BUILD_BASE}/tools/linux/rollup/ioctl-echo-loop/ioctl-echo-loop ${STAGING_BIN} && \
+    cp ${BUILD_BASE}/tools/linux/rollup/rollup/rollup ${STAGING_BIN} && \
+    cp ${BUILD_BASE}/tools/linux/utils/* ${STAGING_BIN}
+
+COPY --from=rust-builder ${BUILD_BASE}/tools/linux/rollup/http/echo-dapp/target/release/echo-dapp ${STAGING_BIN}
+COPY --from=rust-builder ${BUILD_BASE}/tools/linux/rollup/http/rollup-http-server/target/release/rollup-http-server ${STAGING_BIN}
+COPY skel/ ${STAGING_BASE}/
+COPY control ${STAGING_DEBIAN}/control
+
+RUN dpkg-deb -Zxz --root-owner-group --build ${STAGING_BASE} ${BUILD_BASE}/${MACHINE_EMULATOR_TOOLS_DEB}

@@ -15,78 +15,46 @@
 #
 
 MAJOR := 0
-MINOR := 13
+MINOR := 14
 PATCH := 0
 LABEL :=
 VERSION := $(MAJOR).$(MINOR).$(PATCH)$(LABEL)
 
 MACHINE_EMULATOR_TOOLS_VERSION ?= v$(VERSION)
-MACHINE_EMULATOR_TOOLS_TAR_GZ  := machine-emulator-tools-$(MACHINE_EMULATOR_TOOLS_VERSION).tar.gz
 MACHINE_EMULATOR_TOOLS_DEB     := machine-emulator-tools-$(MACHINE_EMULATOR_TOOLS_VERSION).deb
 MACHINE_EMULATOR_TOOLS_IMAGE   := cartesi/machine-emulator-tools:$(MACHINE_EMULATOR_TOOLS_VERSION)
 
-LINUX_SOURCES_VERSION  ?= 5.15.63-ctsi-2
-LINUX_SOURCES_FILEPATH := dep/linux-$(LINUX_SOURCES_VERSION).tar.gz
+LINUX_SOURCES_VERSION  ?= 6.5.9-ctsi-1
 LINUX_SOURCES_URLPATH  := https://github.com/cartesi/linux/archive/refs/tags/v$(LINUX_SOURCES_VERSION).tar.gz
 
-RNDADDENTROPY_VERSION  ?= 3.0.0
-RNDADDENTROPY_FILEPATH := dep/twuewand-$(RNDADDENTROPY_VERSION).tar.gz
-RNDADDENTROPY_URLPATH  := https://www.finnie.org/software/twuewand/twuewand-$(RNDADDENTROPY_VERSION).tar.gz
+all: $(MACHINE_EMULATOR_TOOLS_DEB)
 
-SHASUMFILES := $(LINUX_SOURCES_FILEPATH) $(RNDADDENTROPY_FILEPATH)
-
-all: build copy
-
-build: Dockerfile checksum
+build: Dockerfile control
 	docker buildx build --platform=linux/riscv64 --load \
-		--build-arg MACHINE_EMULATOR_TOOLS_TAR_GZ=$(MACHINE_EMULATOR_TOOLS_TAR_GZ) \
 		--build-arg MACHINE_EMULATOR_TOOLS_DEB=$(MACHINE_EMULATOR_TOOLS_DEB) \
 		--build-arg LINUX_SOURCES_VERSION=$(LINUX_SOURCES_VERSION) \
-		--build-arg LINUX_SOURCES_FILEPATH=$(LINUX_SOURCES_FILEPATH) \
-		--build-arg RNDADDENTROPY_VERSION=$(RNDADDENTROPY_VERSION) \
-		--build-arg RNDADDENTROPY_FILEPATH=$(RNDADDENTROPY_FILEPATH) \
+		--build-arg LINUX_SOURCES_URLPATH=$(LINUX_SOURCES_URLPATH) \
 		-t $(MACHINE_EMULATOR_TOOLS_IMAGE) \
 		-f $< \
 		.
 
 copy:
 	ID=`docker create --platform=linux/riscv64 $(MACHINE_EMULATOR_TOOLS_IMAGE)` && \
-	   docker cp $$ID:/opt/cartesi/$(MACHINE_EMULATOR_TOOLS_TAR_GZ) . && \
 	   docker cp $$ID:/opt/cartesi/$(MACHINE_EMULATOR_TOOLS_DEB)    . && \
 	   docker rm $$ID
 
-deb:
-	mkdir -p $(DESTDIR)/DEBIAN
-	cat tools/template/control.template | sed 's|ARG_VERSION|$(VERSION)|g' > $(DESTDIR)/DEBIAN/control
-	cp -R $(STAGING_BASE)* $(DESTDIR)$(PREFIX)
-	dpkg-deb -Zxz --root-owner-group --build $(DESTDIR) $(MACHINE_EMULATOR_TOOLS_DEB)
+control: Makefile control.template
+	sed 's|ARG_VERSION|$(VERSION)|g' control.template > control
 
-$(LINUX_SOURCES_FILEPATH):
-	T=`mktemp` && \
-	    mkdir -p `dirname $@` &&  \
-	    wget $(LINUX_SOURCES_URLPATH) -O $$T && \
-	    mv $$T $@ || (rm $$T && false)
+$(MACHINE_EMULATOR_TOOLS_DEB): build copy
 
-$(RNDADDENTROPY_FILEPATH):
-	T=`mktemp` && \
-	    mkdir -p `dirname $@` &&  \
-	    wget $(RNDADDENTROPY_URLPATH) -O $$T && \
-	    mv $$T $@ || (rm $$T && false)
-
-shasumfile: $(SHASUMFILES)
-	shasum -a 256 $^ > $@
-
-checksum: $(SHASUMFILES)
-	@shasum -ca 256 shasumfile
+fs: $(MACHINE_EMULATOR_TOOLS_DEB)
 
 env:
-	@echo MACHINE_EMULATOR_TOOLS_TAR_GZ=$(MACHINE_EMULATOR_TOOLS_TAR_GZ)
 	@echo MACHINE_EMULATOR_TOOLS_DEB=$(MACHINE_EMULATOR_TOOLS_DEB)
 	@echo MACHINE_EMULATOR_TOOLS_VERSION=$(MACHINE_EMULATOR_TOOLS_VERSION)
 	@echo LINUX_SOURCES_VERSION=$(LINUX_SOURCES_VERSION)
-	@echo LINUX_SOURCES_FILEPATH=$(LINUX_SOURCES_FILEPATH)
-	@echo RNDADDENTROPY_VERSION=$(RNDADDENTROPY_VERSION)
-	@echo RNDADDENTROPY_FILEPATH=$(RNDADDENTROPY_FILEPATH)
+	@echo LINUX_SOURCES_URLPATH=$(LINUX_SOURCES_URLPATH)
 
 setup:
 	docker run --privileged --rm  linuxkit/binfmt:bebbae0c1100ebf7bf2ad4dfb9dfd719cf0ef132
@@ -98,18 +66,12 @@ help:
 	@echo 'available commands:'
 	@echo '  setup           - setup riscv64 buildx'
 	@echo '  setup-required  - check if riscv64 buildx setup is required'
-	@echo '+ tgz             - create "$(MACHINE_EMULATOR_TOOLS_TAR_GZ)" (default)'
 	@echo '  help            - list makefile commands'
-	@echo '  checksum        - verify downloaded files'
-	@echo '  shasumfile      - recreate shasumfile of downloaded files'
 	@echo '  env             - print useful Makefile variables as a KEY=VALUE list'
 	@echo '  clean           - remove the generated artifacts'
 	@echo '  distclean       - clean and remove dependencies'
 
 clean:
-	rm -f $(MACHINE_EMULATOR_TOOLS_TAR_GZ) $(MACHINE_EMULATOR_TOOLS_DEB)
+	rm -f $(MACHINE_EMULATOR_TOOLS_DEB) control
 
-distclean: clean
-	rm -rf dep
-
-.PHONY: checksum env setup help
+.PHONY: build copy fs env setup setup-required help distclean
