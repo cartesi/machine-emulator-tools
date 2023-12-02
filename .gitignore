@@ -2,7 +2,7 @@
 control
 machine-emulator-tools-*.tar.gz
 machine-emulator-tools-*.deb
-dep/
+rootfs.*
 
 # Prerequisites
 *.d

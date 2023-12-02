@@ -1,2 +1,6 @@
 machine-emulator-tools-*.ext2
-example/
+rootfs*
+.clang-format
+.github
+.git
+*.md

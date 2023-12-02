@@ -21,9 +21,9 @@ ARG BUILD_BASE=/opt/cartesi
 
 # apt
 # ------------------------------------------------------------------------------
-RUN DEBIAN_FRONTEND=noninteractive apt update && \
-    apt upgrade -y && \
-    apt install -y --no-install-recommends \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
       build-essential \
       ca-certificates \
       git \
@@ -73,7 +73,7 @@ RUN cd ${BUILD_BASE}/tools/linux/rollup/http/rollup-http-server && \
 # pack tools (deb)
 # ------------------------------------------------------------------------------
 FROM c-builder as packer
-ARG MACHINE_EMULATOR_TOOLS_DEB=machine-emulator-tools.deb
+ARG TOOLS_DEB=machine-emulator-tools.deb
 ARG STAGING_BASE=${BUILD_BASE}/_install
 ARG STAGING_DEBIAN=${STAGING_BASE}/DEBIAN
 ARG STAGING_BIN=${STAGING_BASE}/opt/cartesi/bin
@@ -90,4 +90,4 @@ COPY --from=rust-builder ${BUILD_BASE}/tools/linux/rollup/http/rollup-http-serve
 COPY skel/ ${STAGING_BASE}/
 COPY control ${STAGING_DEBIAN}/control
 
-RUN dpkg-deb -Zxz --root-owner-group --build ${STAGING_BASE} ${BUILD_BASE}/${MACHINE_EMULATOR_TOOLS_DEB}
+RUN dpkg-deb -Zxz --root-owner-group --build ${STAGING_BASE} ${BUILD_BASE}/${TOOLS_DEB}
