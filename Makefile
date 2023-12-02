@@ -24,8 +24,9 @@ TOOLS_DEB     := machine-emulator-tools-v$(VERSION).deb
 TOOLS_IMAGE   := cartesi/machine-emulator-tools:$(VERSION)
 TOOLS_ROOTFS  := rootfs-tools-v$(VERSION).ext2
 
-LINUX_SOURCES_VERSION  ?= 6.5.9-ctsi-1
-LINUX_SOURCES_URLPATH  := https://github.com/cartesi/linux/archive/refs/tags/v$(LINUX_SOURCES_VERSION).tar.gz
+IMAGE_KERNEL_VERSION ?= v0.19.1
+LINUX_VERSION ?= 6.5.9-ctsi-1
+LINUX_HEADERS_URLPATH := https://github.com/cartesi/image-kernel/releases/download/${IMAGE_KERNEL_VERSION}/linux-libc-dev-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
 
 all: $(TOOLS_DEB)
 
@@ -33,10 +34,11 @@ build: control
 	@if ! (docker image inspect "$(TOOLS_IMAGE)" >/dev/null 2>&1) || [[ "$(force)" == "true" ]]; then \
 		docker buildx build --platform=linux/riscv64 --load \
 			--build-arg TOOLS_DEB=$(TOOLS_DEB) \
-			--build-arg LINUX_SOURCES_VERSION=$(LINUX_SOURCES_VERSION) \
-			--build-arg LINUX_SOURCES_URLPATH=$(LINUX_SOURCES_URLPATH) \
+			--build-arg IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION) \
+			--build-arg LINUX_VERSION=$(LINUX_VERSION) \
+			--build-arg LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH) \
 			-t $(TOOLS_IMAGE) \
-			-f $< \
+			-f Dockerfile \
 			. ; \
 	fi
 	@$(MAKE) copy
@@ -66,8 +68,9 @@ env:
 	@echo TOOLS_DEB=$(TOOLS_DEB)
 	@echo TOOLS_ROOTFS=$(TOOLS_ROOTFS)
 	@echo TOOLS_IMAGE=$(TOOLS_IMAGE)
-	@echo LINUX_SOURCES_VERSION=$(LINUX_SOURCES_VERSION)
-	@echo LINUX_SOURCES_URLPATH=$(LINUX_SOURCES_URLPATH)
+	@echo IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION)
+	@echo LINUX_VERSION=$(LINUX_VERSION)
+	@echo LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH)
 
 setup:
 	@docker run --privileged --rm  linuxkit/binfmt:bebbae0c1100ebf7bf2ad4dfb9dfd719cf0ef132

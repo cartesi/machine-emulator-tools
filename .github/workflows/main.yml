@@ -63,8 +63,9 @@ jobs:
           load: true
           build-args: |
             TOOLS_DEB=${{ env.TOOLS_DEB }}
-            LINUX_SOURCES_VERSION=${{ env.LINUX_SOURCES_VERSION }}
-            LINUX_SOURCES_URLPATH=${{ env.LINUX_SOURCES_URLPATH }}
+            IMAGE_KERNEL_VERSION=${{ env.IMAGE_KERNEL_VERSION }}
+            LINUX_VERSION=${{ env.LINUX_VERSION }}
+            LINUX_HEADERS_URLPATH=${{ env.LINUX_HEADERS_URLPATH }}
           cache-from: type=gha,scope=regular,mode=max
           cache-to: type=gha,scope=regular
 
@@ -85,6 +86,7 @@ jobs:
           path: ${{ env.TOOLS_ROOTFS }}
 
       - name: Checksum artifacts
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           sha512sum ${{ env.TOOLS_DEB }} > ${{ env.TOOLS_DEB }}.sha512
           sha512sum ${{ env.TOOLS_ROOTFS }} > ${{ env.TOOLS_ROOTFS }}.sha512

@@ -15,12 +15,15 @@
 #
 
 FROM --platform=linux/riscv64 riscv64/ubuntu:22.04 as tools-env
-ARG LINUX_SOURCES_VERSION=6.5.9-ctsi-1
-ARG LINUX_SOURCES_URLPATH=https://github.com/cartesi/linux/archive/refs/tags/v${LINUX_SOURCES_VERSION}.tar.gz
+ARG IMAGE_KERNEL_VERSION=v0.19.1
+ARG LINUX_VERSION=6.5.9-ctsi-1
+ARG LINUX_HEADERS_URLPATH=https://github.com/cartesi/image-kernel/releases/download/${IMAGE_KERNEL_VERSION}/linux-libc-dev-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
 ARG BUILD_BASE=/opt/cartesi
 
-# apt
+# Install dependencies
 # ------------------------------------------------------------------------------
+ENV LINUX_HEADERS_FILEPATH=/tmp/linux-libc-dev-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
+
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
@@ -32,18 +35,11 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
       wget \
       rust-all=1.58.1+dfsg1~ubuntu1-0ubuntu2 \
       && \
+    wget -O ${LINUX_HEADERS_FILEPATH} ${LINUX_HEADERS_URLPATH} && \
+    echo "aace918b830ee2d682c329b3361a3458ebc42ba5193ccb821fd0b2071ac821b3  ${LINUX_HEADERS_FILEPATH}" | sha256sum --check && \
+    apt-get install -y --no-install-recommends ${LINUX_HEADERS_FILEPATH} && \
     mkdir -p ${BUILD_BASE} && \
-    rm -rf /var/lib/apt/lists/*
-
-# copy & extract kernel headers
-# TODO: Fix apt database entry for linux-headers (it is satisfied here)
-# ------------------------------------------------------------------------------
-ENV LINUX_SOURCES_FILEPATH=/tmp/linux-${LINUX_SOURCES_VERSION}.tar.gz
-RUN wget -O ${LINUX_SOURCES_FILEPATH} ${LINUX_SOURCES_URLPATH} && \
-  echo "bfc4d196b90592a2a6bef83ead9e196da6ab6d5978b48ee5e8ccf02913355bc2  ${LINUX_SOURCES_FILEPATH}" | sha256sum --check && \
-  tar xzf ${LINUX_SOURCES_FILEPATH} -C ${BUILD_BASE}/ && \
-  make -C ${BUILD_BASE}/linux-${LINUX_SOURCES_VERSION} headers_install INSTALL_HDR_PATH=/usr && \
-  rm -f {LINUX_SOURCES_FILEPATH}
+    rm -rf /var/lib/apt/lists/* ${LINUX_HEADERS_FILEPATH}
 
 FROM tools-env as builder
 COPY linux/ ${BUILD_BASE}/tools/linux/
