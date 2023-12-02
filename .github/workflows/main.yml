@@ -5,7 +5,7 @@ env:
   TOOLCHAIN_TAG: 0.16.0
 jobs:
   tools:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest-8-cores
     steps:
       - name: Install libarchive-tools
         run: |
