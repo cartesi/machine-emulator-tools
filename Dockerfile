@@ -65,8 +65,11 @@ RUN mkdir -p $HOME/.cargo && \
     echo "[net]" >> $HOME/.cargo/config && \
     echo "git-fetch-with-cli = true" >> $HOME/.cargo/config
 
+FROM rust-builder as echo-dapp-builder
 RUN cd ${BUILD_BASE}/tools/linux/rollup/http/echo-dapp && \
     cargo build --release
+
+FROM rust-builder as http-server-builder
 RUN cd ${BUILD_BASE}/tools/linux/rollup/http/rollup-http-server && \
     cargo build --release
 
@@ -85,9 +88,10 @@ RUN mkdir -p ${STAGING_DEBIAN} ${STAGING_BIN} && \
     cp ${BUILD_BASE}/tools/linux/rollup/rollup/rollup ${STAGING_BIN} && \
     cp ${BUILD_BASE}/tools/linux/utils/* ${STAGING_BIN}
 
-COPY --from=rust-builder ${BUILD_BASE}/tools/linux/rollup/http/echo-dapp/target/release/echo-dapp ${STAGING_BIN}
-COPY --from=rust-builder ${BUILD_BASE}/tools/linux/rollup/http/rollup-http-server/target/release/rollup-http-server ${STAGING_BIN}
 COPY skel/ ${STAGING_BASE}/
 COPY control ${STAGING_DEBIAN}/control
+
+COPY --from=echo-dapp-builder ${BUILD_BASE}/tools/linux/rollup/http/echo-dapp/target/release/echo-dapp ${STAGING_BIN}
+COPY --from=http-server-builder ${BUILD_BASE}/tools/linux/rollup/http/rollup-http-server/target/release/rollup-http-server ${STAGING_BIN}
 
 RUN dpkg-deb -Zxz --root-owner-group --build ${STAGING_BASE} ${BUILD_BASE}/${TOOLS_DEB}
