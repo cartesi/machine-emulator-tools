@@ -28,7 +28,7 @@ IMAGE_KERNEL_VERSION ?= v0.19.1
 LINUX_VERSION ?= 6.5.9-ctsi-1
 LINUX_HEADERS_URLPATH := https://github.com/cartesi/image-kernel/releases/download/${IMAGE_KERNEL_VERSION}/linux-libc-dev-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
 
-all: $(TOOLS_DEB)
+all: fs
 
 build: control
 	@if ! (docker image inspect "$(TOOLS_IMAGE)" >/dev/null 2>&1) || [[ "$(force)" == "true" ]]; then \
@@ -87,9 +87,11 @@ help:
 	@echo '  help            - list makefile commands'
 	@echo '  env             - print useful Makefile variables as a KEY=VALUE list'
 	@echo '  clean           - remove the generated artifacts'
-	@echo '  distclean       - clean and remove dependencies'
 
-clean:
+clean-image:
+	@(docker rmi $(TOOLS_IMAGE) > /dev/null 2>&1 || true)
+
+distclean clean: clean-image
 	rm -f $(TOOLS_DEB) control rootfs*
 
 .PHONY: build fs deb env setup setup-required help distclean
