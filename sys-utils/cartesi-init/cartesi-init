@@ -58,8 +58,8 @@ RC=$?
 # shutdown
 busybox mount -o ro,remount /
 busybox umount -af
-if [ $RC != 0 ] && [ -x /opt/cartesi/bin/xhalt ]; then
-    /opt/cartesi/bin/xhalt "$RC"
+if [ $RC != 0 ] && [ -x /usr/sbin/xhalt ]; then
+    /usr/sbin/xhalt "$RC"
 fi
 busybox poweroff -f
 

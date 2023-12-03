@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-busybox sh -c "/opt/cartesi/bin/rollup-http-server $*"
+busybox sh -c "/usr/bin/rollup-http-server $*"
 MESSAGE="rollup-http-server exited with $? status"
 echo "$MESSAGE"
 echo "{\"payload\": \"$MESSAGE\"}" | rollup exception

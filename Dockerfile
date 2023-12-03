@@ -42,15 +42,15 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     rm -rf /var/lib/apt/lists/* ${LINUX_HEADERS_FILEPATH}
 
 FROM tools-env as builder
-COPY linux/ ${BUILD_BASE}/tools/linux/
+COPY sys-utils/ ${BUILD_BASE}/tools/sys-utils/
 
 # build C/C++ tools
 # ------------------------------------------------------------------------------
 FROM builder as c-builder
-RUN make -C ${BUILD_BASE}/tools/linux/xhalt/ CROSS_COMPILE="" xhalt.toolchain
-RUN make -C ${BUILD_BASE}/tools/linux/htif/ CROSS_COMPILE="" yield.toolchain
-RUN make -C ${BUILD_BASE}/tools/linux/rollup/ioctl-echo-loop/ CROSS_COMPILE="" ioctl-echo-loop.toolchain
-RUN make -C ${BUILD_BASE}/tools/linux/rollup/rollup/ CROSS_COMPILE="" rollup.toolchain
+RUN make -C ${BUILD_BASE}/tools/sys-utils/xhalt/ CROSS_COMPILE="" xhalt.toolchain
+RUN make -C ${BUILD_BASE}/tools/sys-utils/yield/ CROSS_COMPILE="" yield.toolchain
+RUN make -C ${BUILD_BASE}/tools/sys-utils/ioctl-echo-loop/ CROSS_COMPILE="" ioctl-echo-loop.toolchain
+RUN make -C ${BUILD_BASE}/tools/sys-utils/rollup/ CROSS_COMPILE="" rollup.toolchain
 
 # build rust tools
 # ------------------------------------------------------------------------------
@@ -61,12 +61,14 @@ RUN mkdir -p $HOME/.cargo && \
     echo "[net]" >> $HOME/.cargo/config && \
     echo "git-fetch-with-cli = true" >> $HOME/.cargo/config
 
-FROM rust-builder as echo-dapp-builder
-RUN cd ${BUILD_BASE}/tools/linux/rollup/http/echo-dapp && \
-    cargo build --release
+COPY rollup-http/ ${BUILD_BASE}/tools/rollup-http/
 
 FROM rust-builder as http-server-builder
-RUN cd ${BUILD_BASE}/tools/linux/rollup/http/rollup-http-server && \
+RUN cd ${BUILD_BASE}/tools/rollup-http/rollup-http-server && \
+    cargo build --release
+
+FROM rust-builder as echo-dapp-builder
+RUN cd ${BUILD_BASE}/tools/rollup-http/echo-dapp && \
     cargo build --release
 
 # pack tools (deb)
@@ -75,19 +77,22 @@ FROM c-builder as packer
 ARG TOOLS_DEB=machine-emulator-tools.deb
 ARG STAGING_BASE=${BUILD_BASE}/_install
 ARG STAGING_DEBIAN=${STAGING_BASE}/DEBIAN
-ARG STAGING_BIN=${STAGING_BASE}/opt/cartesi/bin
+ARG STAGING_SBIN=${STAGING_BASE}/usr/sbin
+ARG STAGING_BIN=${STAGING_BASE}/usr/bin
 
-RUN mkdir -p ${STAGING_DEBIAN} ${STAGING_BIN} && \
-    cp ${BUILD_BASE}/tools/linux/xhalt/xhalt ${STAGING_BIN} && \
-    cp ${BUILD_BASE}/tools/linux/htif/yield ${STAGING_BIN} && \
-    cp ${BUILD_BASE}/tools/linux/rollup/ioctl-echo-loop/ioctl-echo-loop ${STAGING_BIN} && \
-    cp ${BUILD_BASE}/tools/linux/rollup/rollup/rollup ${STAGING_BIN} && \
-    cp ${BUILD_BASE}/tools/linux/utils/* ${STAGING_BIN}
+RUN mkdir -p ${STAGING_DEBIAN} ${STAGING_SBIN} ${STAGING_BIN} ${STAGING_BASE}/etc && \
+    echo "cartesi-machine" > ${staging_base}/etc/hostname && \
+    cp ${BUILD_BASE}/tools/sys-utils/system-init/system-init ${STAGING_SBIN} && \
+    cp ${BUILD_BASE}/tools/sys-utils/xhalt/xhalt ${STAGING_SBIN} && \
+    cp ${BUILD_BASE}/tools/sys-utils/yield/yield ${STAGING_SBIN} && \
+    cp ${BUILD_BASE}/tools/sys-utils/rollup/rollup ${STAGING_SBIN} && \
+    cp ${BUILD_BASE}/tools/sys-utils/ioctl-echo-loop/ioctl-echo-loop ${STAGING_BIN} && \
+    cp ${BUILD_BASE}/tools/sys-utils/misc/* ${STAGING_BIN}
 
-COPY skel/ ${STAGING_BASE}/
 COPY control ${STAGING_DEBIAN}/control
 
-COPY --from=echo-dapp-builder ${BUILD_BASE}/tools/linux/rollup/http/echo-dapp/target/release/echo-dapp ${STAGING_BIN}
-COPY --from=http-server-builder ${BUILD_BASE}/tools/linux/rollup/http/rollup-http-server/target/release/rollup-http-server ${STAGING_BIN}
+COPY --from=rust-builder ${BUILD_BASE}/tools/rollup-http/rollup-init/rollup-init ${STAGING_SBIN}
+COPY --from=http-server-builder ${BUILD_BASE}/tools/rollup-http/rollup-http-server/target/release/rollup-http-server ${STAGING_BIN}
+COPY --from=echo-dapp-builder ${BUILD_BASE}/tools/rollup-http/echo-dapp/target/release/echo-dapp ${STAGING_BIN}
 
 RUN dpkg-deb -Zxz --root-owner-group --build ${STAGING_BASE} ${BUILD_BASE}/${TOOLS_DEB}
