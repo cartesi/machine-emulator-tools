@@ -61,13 +61,35 @@ RUN mkdir -p $HOME/.cargo && \
     echo "[net]" >> $HOME/.cargo/config && \
     echo "git-fetch-with-cli = true" >> $HOME/.cargo/config
 
-COPY rollup-http/ ${BUILD_BASE}/tools/rollup-http/
+COPY rollup-http/rollup-init ${BUILD_BASE}/tools/rollup-http/rollup-init
+COPY rollup-http/rollup-http-client ${BUILD_BASE}/tools/rollup-http/rollup-http-client
 
-FROM rust-builder as http-server-builder
+# build rollup-http-server dependencies
+FROM rust-builder as http-server-dep-builder
+COPY rollup-http/rollup-http-server/Cargo.toml rollup-http/rollup-http-server/Cargo.lock ${BUILD_BASE}/tools/rollup-http/rollup-http-server/
+RUN cd ${BUILD_BASE}/tools/rollup-http/rollup-http-server && \
+    mkdir src/ && \
+    echo "fn main() {}" > src/main.rs && \
+    echo "pub fn dummy() {}" > src/lib.rs && \
+    cargo build --release
+
+# build rollup-http-server
+FROM http-server-dep-builder as http-server-builder
+COPY rollup-http/rollup-http-server/build.rs ${BUILD_BASE}/tools/rollup-http/rollup-http-server/
+COPY rollup-http/rollup-http-server/src ${BUILD_BASE}/tools/rollup-http/rollup-http-server/src
 RUN cd ${BUILD_BASE}/tools/rollup-http/rollup-http-server && \
     cargo build --release
 
-FROM rust-builder as echo-dapp-builder
+# build echo-dapp dependencies
+FROM rust-builder as echo-dapp-dep-builder
+COPY rollup-http/echo-dapp/Cargo.toml rollup-http/echo-dapp/Cargo.lock ${BUILD_BASE}/tools/rollup-http/echo-dapp/
+RUN cd ${BUILD_BASE}/tools/rollup-http/echo-dapp && \
+    mkdir src/ && echo "fn main() {}" > src/main.rs && \
+    cargo build --release
+
+# build echo-dapp
+FROM echo-dapp-dep-builder as echo-dapp-builder
+COPY rollup-http/echo-dapp/src ${BUILD_BASE}/tools/rollup-http/echo-dapp/src
 RUN cd ${BUILD_BASE}/tools/rollup-http/echo-dapp && \
     cargo build --release
 
