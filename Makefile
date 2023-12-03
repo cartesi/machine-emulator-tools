@@ -56,7 +56,7 @@ control: Makefile control.template
 
 $(TOOLS_ROOTFS) fs: $(TOOLS_DEB)
 	@docker buildx build --platform=linux/riscv64 \
-	  --build-arg TOOLS=$(TOOLS_DEB) \
+	  --build-arg TOOLS_DEB=$(TOOLS_DEB) \
 	  --output type=tar,dest=rootfs.tar \
 	  --file fs/Dockerfile \
 	  . && \
