@@ -20,9 +20,9 @@ PATCH := 0
 LABEL :=
 VERSION := $(MAJOR).$(MINOR).$(PATCH)$(LABEL)
 
-TOOLS_DEB     := machine-emulator-tools-v$(VERSION).deb
-TOOLS_IMAGE   := cartesi/machine-emulator-tools:$(VERSION)
-TOOLS_ROOTFS  := rootfs-tools-v$(VERSION).ext2
+TOOLS_DEB    := machine-emulator-tools-v$(VERSION).deb
+TOOLS_IMAGE  := cartesi/machine-emulator-tools:$(VERSION)
+TOOLS_ROOTFS := rootfs-tools-v$(VERSION).ext2
 
 IMAGE_KERNEL_VERSION ?= v0.19.1
 LINUX_VERSION ?= 6.5.9-ctsi-1
@@ -31,17 +31,15 @@ LINUX_HEADERS_URLPATH := https://github.com/cartesi/image-kernel/releases/downlo
 all: fs
 
 build: control
-	@if ! (docker image inspect "$(TOOLS_IMAGE)" >/dev/null 2>&1) || [[ "$(force)" == "true" ]]; then \
-		docker buildx build --platform=linux/riscv64 --load \
-			--build-arg TOOLS_DEB=$(TOOLS_DEB) \
-			--build-arg IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION) \
-			--build-arg LINUX_VERSION=$(LINUX_VERSION) \
-			--build-arg LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH) \
-			-t $(TOOLS_IMAGE) \
-			-f Dockerfile \
-			. ; \
-	fi
-	@$(MAKE) copy
+	@docker buildx build --platform=linux/riscv64 --load \
+		--build-arg TOOLS_DEB=$(TOOLS_DEB) \
+		--build-arg IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION) \
+		--build-arg LINUX_VERSION=$(LINUX_VERSION) \
+		--build-arg LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH) \
+		-t $(TOOLS_IMAGE) \
+		-f Dockerfile \
+		. ; \
+	$(MAKE) copy
 
 copy:
 	@ID=`docker create --platform=linux/riscv64 $(TOOLS_IMAGE)` && \
@@ -78,6 +76,20 @@ setup:
 setup-required:
 	@echo 'riscv64 buildx setup required:' `docker buildx ls | grep -q riscv64 && echo no || echo yes`
 
+build-rust-builder-env:
+	docker build --target rust-builder -t $(TOOLS_IMAGE)-rust-builder -f Dockerfile .
+
+rust-builder-env:
+	@docker run --hostname rust-builder -it --rm \
+		-e USER=$$(id -u -n) \
+		-e GROUP=$$(id -g -n) \
+		-e UID=$$(id -u) \
+		-e GID=$$(id -g) \
+		-v `pwd`:/opt/cartesi/machine-emulator-tools \
+		-w /opt/cartesi/machine-emulator-tools \
+		$(TOOLS_IMAGE)-rust-builder /bin/bash
+
+
 help:
 	@echo 'available commands:'
 	@echo '  deb             - build machine-emulator-tools .deb package'
@@ -91,7 +103,9 @@ help:
 clean-image:
 	@(docker rmi $(TOOLS_IMAGE) > /dev/null 2>&1 || true)
 
-distclean clean: clean-image
-	rm -f $(TOOLS_DEB) control rootfs*
+clean:
+	@rm -f $(TOOLS_DEB) control rootfs*
+
+distclean: clean clean-image
 
 .PHONY: build fs deb env setup setup-required help distclean
