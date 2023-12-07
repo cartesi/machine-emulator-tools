@@ -21,12 +21,14 @@ TOOLCHAIN_TAG ?= 0.16.0
 RISCV_ARCH ?= rv64gc
 RISCV_ABI ?= lp64d
 
-CROSS_COMPILE = riscv64-cartesi-linux-gnu-
-RVCC  = $(CROSS_COMPILE)gcc
-RVCXX = $(CROSS_COMPILE)g++
-RVCOPY = $(CROSS_COMPILE)objcopy
-RVDUMP = $(CROSS_COMPILE)objdump
-STRIP = $(CROSS_COMPILE)strip
+TOOLCHAIN_PREFIX ?= riscv64-cartesi-linux-gnu-
+TOOLCHAIN_SUFFIX ?=
+
+RVCC  = $(TOOLCHAIN_PREFIX)gcc$(TOOLCHAIN_SUFFIX)
+RVCXX = $(TOOLCHAIN_PREFIX)g++$(TOOLCHAIN_SUFFIX)
+RVCOPY = $(TOOLCHAIN_PREFIX)objcopy$(TOOLCHAIN_SUFFIX)
+RVDUMP = $(TOOLCHAIN_PREFIX)objdump$(TOOLCHAIN_SUFFIX)
+STRIP = $(TOOLCHAIN_PREFIX)strip
 RISCV_CFLAGS :=-march=$(RISCV_ARCH) -mabi=$(RISCV_ABI)
 
 CONTAINER_MAKE := /usr/bin/make
@@ -35,17 +37,17 @@ KERNEL_HEADERS_PATH := /opt/riscv/usr/include
 
 all: xhalt
 
+xhalt.with-toolchain with-toolchain:
+	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
+
+extra.ext2.with-toolchain:
+	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
+
 xhalt: xhalt.c
-	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
-
-extra.ext2: xhalt
-	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
-
-xhalt.toolchain:
 	$(RVCC) -O2 -o xhalt xhalt.c
 	$(STRIP) xhalt
 
-extra.ext2.toolchain:
+extra.ext2: xhalt
 	mkdir -m 0755 ./extra
 	cp ./xhalt ./extra/xhalt
 	xgenext2fs -i 512 -b 8192 -d extra $(basename $@)
@@ -72,6 +74,6 @@ toolchain-env:
 		$(TOOLCHAIN_IMAGE):$(TOOLCHAIN_TAG)
 
 clean:
-	\rm -rf xhalt extra.ext2 extra
+	@rm -rf xhalt extra.ext2 extra
 
 .PHONY: toolchain-exec toolchain-env

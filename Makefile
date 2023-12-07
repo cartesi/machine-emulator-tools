@@ -26,24 +26,24 @@ TOOLS_ROOTFS := rootfs-tools-v$(VERSION).ext2
 
 IMAGE_KERNEL_VERSION ?= v0.19.1
 LINUX_VERSION ?= 6.5.9-ctsi-1
-LINUX_HEADERS_URLPATH := https://github.com/cartesi/image-kernel/releases/download/${IMAGE_KERNEL_VERSION}/linux-libc-dev-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
+LINUX_HEADERS_URLPATH := https://github.com/cartesi/image-kernel/releases/download/${IMAGE_KERNEL_VERSION}/linux-libc-dev-riscv64-cross-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
 
 all: fs
 
 build: control
-	@docker buildx build --platform=linux/riscv64 --load \
+	@docker buildx build --load \
 		--build-arg TOOLS_DEB=$(TOOLS_DEB) \
 		--build-arg IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION) \
 		--build-arg LINUX_VERSION=$(LINUX_VERSION) \
 		--build-arg LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH) \
 		-t $(TOOLS_IMAGE) \
 		-f Dockerfile \
-		. ; \
+		. ;
 	$(MAKE) copy
 
 copy:
-	@ID=`docker create --platform=linux/riscv64 $(TOOLS_IMAGE)` && \
-	   docker cp $$ID:/opt/cartesi/$(TOOLS_DEB)    . && \
+	@ID=`docker create $(TOOLS_IMAGE)` && \
+	   docker cp $$ID:/opt/cartesi/$(TOOLS_DEB) . && \
 	   docker rm $$ID
 
 $(TOOLS_DEB) deb: build
@@ -76,8 +76,22 @@ setup:
 setup-required:
 	@echo 'riscv64 buildx setup required:' `docker buildx ls | grep -q riscv64 && echo no || echo yes`
 
+build-tools-env:
+	docker build --target tools-env -t $(TOOLS_IMAGE)-tools-env -f Dockerfile .
+
 build-rust-builder-env:
 	docker build --target rust-builder -t $(TOOLS_IMAGE)-rust-builder -f Dockerfile .
+
+tools-env:
+	@docker run --hostname rust-builder -it --rm \
+		-e USER=$$(id -u -n) \
+		-e GROUP=$$(id -g -n) \
+		-e UID=$$(id -u) \
+		-e GID=$$(id -g) \
+		-v `pwd`:/opt/cartesi/machine-emulator-tools \
+		-w /opt/cartesi/machine-emulator-tools \
+		$(TOOLS_IMAGE)-tools-env /bin/bash
+
 
 rust-builder-env:
 	@docker run --hostname rust-builder -it --rm \
@@ -89,6 +103,17 @@ rust-builder-env:
 		-w /opt/cartesi/machine-emulator-tools \
 		$(TOOLS_IMAGE)-rust-builder /bin/bash
 
+clean-image:
+	@(docker rmi $(TOOLS_IMAGE) > /dev/null 2>&1 || true)
+
+clean:
+	@rm -f $(TOOLS_DEB) control rootfs*
+	@$(MAKE) -C sys-utils clean
+
+distclean: clean clean-image
+
+sys-utils:
+	@$(MAKE) -C sys-utils
 
 help:
 	@echo 'available commands:'
@@ -99,13 +124,5 @@ help:
 	@echo '  help            - list makefile commands'
 	@echo '  env             - print useful Makefile variables as a KEY=VALUE list'
 	@echo '  clean           - remove the generated artifacts'
-
-clean-image:
-	@(docker rmi $(TOOLS_IMAGE) > /dev/null 2>&1 || true)
-
-clean:
-	@rm -f $(TOOLS_DEB) control rootfs*
-
-distclean: clean clean-image
 
 .PHONY: build fs deb env setup setup-required help distclean
