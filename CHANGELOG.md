@@ -6,10 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2023-12-13
+### Changed
+- Make rootfs the default target
+- Reorganized repository structure
+- Use image-kernel Linux headers package
+- Cross-compiled sys-utils
+- Built rust binaries dependencies in a separate stage
+- Cleaned up Dockerfile and Makefile
+- Update toolchain to 0.16.0
+
+### Added
+- Added support for building rootfs.ext2 (breaking change)
+- Added dhrystone and whetstone benchmarks on fs
+- Added extra packages to rootfs
+- Cross-compiled rust application binaries
+
+### Removed
+- Removed example directory
+
 ## [0.13.0] - 2023-10-10
 ### Changed
 - Updated tools version in example
-- Update toolchain to 0.16.0
 
 ### Added
 - Added new init system using init and entrypoint from device tree
@@ -109,7 +127,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [0.2.0]
 - [0.1.0]
 
-[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.14.0
 [0.13.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.13.0
 [0.12.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.12.0
 [0.11.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.11.0
