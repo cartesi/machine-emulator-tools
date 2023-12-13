@@ -27,14 +27,14 @@ ENV LINUX_HEADERS_FILEPATH=/tmp/linux-libc-dev-riscv64-cross-${LINUX_VERSION}-${
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
-      build-essential \
-      ca-certificates \
-      git \
-      wget \
-      crossbuild-essential-riscv64 \
-      gcc-12-riscv64-linux-gnu \
-      g++-12-riscv64-linux-gnu \
-      && \
+        build-essential \
+        ca-certificates \
+        git \
+        wget \
+        crossbuild-essential-riscv64 \
+        gcc-12-riscv64-linux-gnu \
+        g++-12-riscv64-linux-gnu \
+        && \
     wget -O ${LINUX_HEADERS_FILEPATH} ${LINUX_HEADERS_URLPATH} && \
     echo "efdb2243d9b6828e90c826be0f178110f0cc590cb00e8fa588cb20723126c2a4  ${LINUX_HEADERS_FILEPATH}" | sha256sum --check && \
     apt-get install -y --no-install-recommends ${LINUX_HEADERS_FILEPATH} && \
@@ -42,8 +42,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     mkdir -p ${BUILD_BASE}/tools && chown -R developer:developer ${BUILD_BASE}/tools && \
     rm -rf /var/lib/apt/lists/* ${LINUX_HEADERS_FILEPATH}
 
-#ENV CC="riscv64-linux-gnu-gcc-12"
-#ENV CXX="riscv64-linux-gnu-g++-12"
 ENV RISCV_ARCH="rv64gc"
 ENV RISCV_ABI="lp64d"
 ENV CFLAGS="-march=$RISCV_ARCH -mabi=$RISCV_ABI"
