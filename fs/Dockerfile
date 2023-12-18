@@ -30,7 +30,7 @@ RUN mkdir benchmarks && cd benchmarks && \
 
 # Final image
 FROM --platform=linux/riscv64 riscv64/ubuntu:22.04
-ARG TOOLS_DEB=machine-emulator-tools-v0.14.0.deb
+ARG TOOLS_DEB=machine-emulator-tools-v0.14.1-dev.deb
 ADD ${TOOLS_DEB} /tmp/
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

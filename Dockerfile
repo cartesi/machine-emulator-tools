@@ -42,11 +42,22 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     mkdir -p ${BUILD_BASE}/tools && chown -R developer:developer ${BUILD_BASE}/tools && \
     rm -rf /var/lib/apt/lists/* ${LINUX_HEADERS_FILEPATH}
 
+# Setup latest cross compiler as default
+# ------------------------------------------------------------------------------
+RUN <<EOF
+for tool in cpp g++ gcc gcc-ar gcc-nm gcc-ranlib gcov gcov-dump gcov-tool; do
+    for version in 12; do
+        update-alternatives --install \
+            /usr/bin/riscv64-linux-gnu-$tool riscv64-linux-gnu-$tool \
+            /usr/bin/riscv64-linux-gnu-$tool-$version $version
+        done
+done
+EOF
+
 ENV RISCV_ARCH="rv64gc"
 ENV RISCV_ABI="lp64d"
 ENV CFLAGS="-march=$RISCV_ARCH -mabi=$RISCV_ABI"
 ENV TOOLCHAIN_PREFIX="riscv64-linux-gnu-"
-ENV TOOLCHAIN_SUFFIX="-12"
 
 FROM tools-env as builder
 COPY --chown=developer:developer sys-utils/ ${BUILD_BASE}/tools/sys-utils/
@@ -54,6 +65,18 @@ COPY --chown=developer:developer sys-utils/ ${BUILD_BASE}/tools/sys-utils/
 # build C/C++ tools
 # ------------------------------------------------------------------------------
 FROM builder as c-builder
+ARG CMT_BASE=${BUILD_BASE}/tools/sys-utils/libcmt
+ARG CMT_TAR_GZ=libcmt-v0.14.1-dev.tar.gz
+ARG BUILD_BASE=/opt/cartesi
+
+USER developer
+RUN make -C ${CMT_BASE} -j$(nproc) ioctl.build mock.build
+USER root
+RUN make -C ${CMT_BASE} -j$(nproc) ioctl.install \
+	TARGET_PREFIX=${CMT_BASE}/install && \
+    tar czf ${BUILD_BASE}/${CMT_TAR_GZ} -C ${CMT_BASE}/install .
+RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt/ -j$(nproc) ioctl.install mock.install \
+	PREFIX=/usr/x86_64-linux-gnu TARGET_PREFIX=/usr/riscv64-linux-gnu
 USER developer
 RUN make -C ${BUILD_BASE}/tools/sys-utils/ -j$(nproc) all
 
@@ -117,6 +140,7 @@ ARG STAGING_BASE=${BUILD_BASE}/_install
 ARG STAGING_DEBIAN=${STAGING_BASE}/DEBIAN
 ARG STAGING_SBIN=${STAGING_BASE}/usr/sbin
 ARG STAGING_BIN=${STAGING_BASE}/usr/bin
+ARG CMT_TAR_GZ=libcmt-v0.14.1-dev.tar.gz
 
 RUN mkdir -p ${STAGING_DEBIAN} ${STAGING_SBIN} ${STAGING_BIN} ${STAGING_BASE}/etc && \
     echo "cartesi-machine" > ${staging_base}/etc/hostname
@@ -128,9 +152,11 @@ COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/xhalt/xhalt ${STAGING_SBIN}
 COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/yield/yield ${STAGING_SBIN}
 COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/rollup/rollup ${STAGING_SBIN}
 COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/ioctl-echo-loop/ioctl-echo-loop ${STAGING_BIN}
+COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/yield/yield ${STAGING_SBIN}
 COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/misc/* ${STAGING_BIN}
 COPY --from=rust-builder ${BUILD_BASE}/tools/rollup-http/rollup-init/rollup-init ${STAGING_SBIN}
 COPY --from=http-server-builder ${BUILD_BASE}/tools/rollup-http/rollup-http-server/target/riscv64gc-unknown-linux-gnu/release/rollup-http-server ${STAGING_BIN}
 COPY --from=echo-dapp-builder ${BUILD_BASE}/tools/rollup-http/echo-dapp/target/riscv64gc-unknown-linux-gnu/release/echo-dapp ${STAGING_BIN}
 
 RUN dpkg-deb -Zxz --root-owner-group --build ${STAGING_BASE} ${BUILD_BASE}/${TOOLS_DEB}
+COPY --from=c-builder ${BUILD_BASE}/${CMT_TAR_GZ} ${BUILD_BASE}/${CMT_TAR_GZ}

@@ -23,8 +23,8 @@ all: $(UTILITIES)
 $(UTILITIES):
 	@$(MAKE) -C $@
 
-with-toolchain: 
-	@$(MAKE) $(UTILITIES_WITH_TOOLCHAIN) 
+with-toolchain:
+	@$(MAKE) $(UTILITIES_WITH_TOOLCHAIN)
 
 $(UTILITIES_WITH_TOOLCHAIN):
 	@$(MAKE) -C $@ with-toolchain
