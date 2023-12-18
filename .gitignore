@@ -3,6 +3,7 @@ control
 machine-emulator-tools-*.tar.gz
 machine-emulator-tools-*.deb
 rootfs.*
+libcmt*
 
 # Prerequisites
 *.d
@@ -37,7 +38,7 @@ rootfs.*
 *.out
 *.app
 
-#Rust 
+#Rust
 *target
 
 #VS Code
