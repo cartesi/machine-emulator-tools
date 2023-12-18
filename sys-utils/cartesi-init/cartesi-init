@@ -39,13 +39,10 @@ if [ -n "$ENTRYPOINT" ]; then
     HOME=$(eval echo ~$USER)
     WORKDIR=${WORKDIR:-"$HOME"}
 
-    # give user group access to rollup and yield devices
-    [ -c /dev/rollup ] && \
-        busybox chown :$(busybox id -g $USER) /dev/rollup && \
-        busybox chmod g+rw /dev/rollup
-    [ -c /dev/yield ] &&
-        busybox chown :$(busybox id -g $USER) /dev/yield && \
-        busybox chmod g+rw /dev/yield
+    # give user group access to cmio device
+    [ -c /dev/cmio ] && \
+        busybox chown :$(busybox id -g $USER) /dev/cmio && \
+        busybox chmod g+rw /dev/cmio
 
     # execute entrypoint
     (cd $WORKDIR &&
