@@ -44,7 +44,7 @@ RUN apt-get update && \
         jq=1.6-2.1ubuntu3 \
         lua5.4=5.4.4-1 \
         lua-socket=3.0~rc1+git+ac3201d-6 \
-        xxd=2:8.2.3995-1ubuntu2.13 \
+        xxd=2:8.2.3995-1ubuntu2.15 \
         file=1:5.41-3ubuntu0.1 \
         /tmp/${TOOLS_DEB} \
         && \

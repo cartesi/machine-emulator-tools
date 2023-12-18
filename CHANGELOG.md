@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1] - 2023-12-18
+### Fixed
+- Fix rootfs.ext2 build, xxd pinned version was not available in the repository
+
 ## [0.14.0] - 2023-12-13
 ### Changed
 - Make rootfs the default target
@@ -127,7 +131,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [0.2.0]
 - [0.1.0]
 
-[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.14.1...HEAD
+[0.14.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.14.1
 [0.14.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.14.0
 [0.13.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.13.0
 [0.12.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.12.0
