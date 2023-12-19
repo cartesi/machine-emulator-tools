@@ -28,7 +28,10 @@ RVCXX = $(TOOLCHAIN_PREFIX)g++
 RVCOPY = $(TOOLCHAIN_PREFIX)objcopy
 RVDUMP = $(TOOLCHAIN_PREFIX)objdump
 STRIP = $(TOOLCHAIN_PREFIX)strip
-CFLAGS :=-Wall -pedantic -O2 -march=$(RISCV_ARCH) -mabi=$(RISCV_ABI)
+CFLAGS :=-Wall -Wextra -pedantic -O2 \
+	 `PKG_CONFIG_PATH=$(HOME)/.local/libcmt/lib/pkgconfig pkg-config --cflags libcmt_mock`
+LDLIBS := \
+	 `PKG_CONFIG_PATH=$(HOME)/.local/libcmt/lib/pkgconfig pkg-config --libs libcmt_mock`
 
 CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
@@ -43,7 +46,7 @@ extra.ext2.with-toolchain:
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
 ioctl-echo-loop: ioctl-echo-loop.c
-	$(RVCC) $(CFLAGS) -o ioctl-echo-loop ioctl-echo-loop.c
+	$(RVCC) $(CFLAGS) -o ioctl-echo-loop ioctl-echo-loop.c $(LDLIBS)
 	$(STRIP) ioctl-echo-loop
 
 extra.ext2: ioctl-echo-loop

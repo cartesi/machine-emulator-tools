@@ -24,17 +24,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#include <linux/cartesi/rollup.h>
-
-#define ROLLUP_DEVICE_NAME "/dev/rollup"
-
-static void show_finish(struct rollup_finish *finish);
-static void show_advance(struct rollup_advance_state *advance);
-static void show_inspect(struct rollup_inspect_state *inspect);
-static void show_voucher(struct rollup_voucher *voucher);
-static void show_notice(struct rollup_notice *notice);
-static void show_report(struct rollup_report *report);
-static void show_exception(struct rollup_exception *exception);
+#include "libcmt/rollup.h"
 
 static void help(const char *progname) {
     fprintf(stderr,
@@ -97,160 +87,70 @@ static void parse_args(int argc, char *argv[], struct parsed_args *args) {
     }
 }
 
-static int finish_request(int fd, struct rollup_finish *finish, bool accept) {
-    int res = 0;
-    memset(finish, 0, sizeof(*finish));
+static int finish_request(cmt_rollup_t *me, cmt_rollup_finish_t *finish, bool accept) {
     finish->accept_previous_request = accept;
-    res = ioctl(fd, IOCTL_ROLLUP_FINISH, (unsigned long) finish);
-    if (res != 0) {
-        int code = errno;
-        fprintf(stderr, "IOCTL_ROLLUP_FINISH returned error %s [%d]\n", strerror(code), code);
-    }
-    return res;
+    return cmt_rollup_finish(me, finish);
 }
 
-static int resize_bytes(struct rollup_bytes *bytes, uint64_t size) {
-    if (bytes->length < size) {
-        uint8_t *new_data = (uint8_t *) realloc(bytes->data, size);
-        if (!new_data) {
-            return -1;
-        }
-        bytes->length = size;
-        bytes->data = new_data;
-    }
-    return 0;
-}
-
-static int write_notices(int fd, unsigned count, struct rollup_bytes *bytes, unsigned verbose) {
-    struct rollup_notice n;
-    memset(&n, 0, sizeof(n));
-    n.payload = *bytes;
+static int write_notices(cmt_rollup_t *me, unsigned count, uint32_t length, const void *data) {
     for (unsigned i = 0; i < count; i++) {
-        int res = ioctl(fd, IOCTL_ROLLUP_WRITE_NOTICE, (unsigned long) &n);
-        if (res != 0) {
-            fprintf(stderr, "IOCTL_ROLLUP_WRITE_NOTICE returned error %d\n", res);
-            return res;
-        }
-        if (verbose)
-            show_notice(&n);
+        int rc = cmt_rollup_emit_notice(me, length, data);
+        if (rc) return rc;
     }
     return 0;
 }
 
-static int write_vouchers(int fd, unsigned count, struct rollup_bytes *bytes, uint8_t *destination, unsigned verbose) {
-    struct rollup_voucher v;
-    memset(&v, 0, sizeof(v));
-    v.payload = *bytes;
-    memcpy(v.destination, destination, sizeof(v.destination));
+static int write_vouchers(cmt_rollup_t *me, unsigned count, uint8_t destination[CMT_ADDRESS_LENGTH]
+                         ,uint32_t length, const void *data) {
     for (unsigned i = 0; i < count; i++) {
-        int res = ioctl(fd, IOCTL_ROLLUP_WRITE_VOUCHER, (unsigned long) &v);
-        if (res != 0) {
-            int code = errno;
-            fprintf(stderr, "IOCTL_ROLLUP_WRITE_VOUCHER returned error %s [%d]\n", strerror(code), code);
-            return res;
-        }
-        if (verbose)
-            show_voucher(&v);
+        int rc = cmt_rollup_emit_voucher(me, destination, length, data);
+        if (rc) return rc;
     }
     return 0;
 }
 
-static int write_reports(int fd, unsigned count, struct rollup_bytes *bytes, unsigned verbose) {
-    struct rollup_report r;
-    memset(&r, 0, sizeof(r));
-    r.payload = *bytes;
-    if (verbose)
-        show_report(&r);
+static int write_reports(cmt_rollup_t *me, unsigned count, uint32_t length, const void *data) {
     for (unsigned i = 0; i < count; i++) {
-        int res = ioctl(fd, IOCTL_ROLLUP_WRITE_REPORT, (unsigned long) &r);
-        if (res != 0) {
-            int code = errno;
-            fprintf(stderr, "IOCTL_ROLLUP_WRITE_REPORT returned error %s [%d]\n", strerror(code), code);
-            return res;
-        }
+        int rc = cmt_rollup_emit_report(me, length, data);
+        if (rc) return rc;
     }
     return 0;
 }
 
-static int write_exception(int fd, struct rollup_bytes *bytes, unsigned verbose) {
-    struct rollup_exception e;
-    memset(&e, 0, sizeof(e));
-    e.payload = *bytes;
-    if (verbose)
-        show_exception(&e);
-    int res = ioctl(fd, IOCTL_ROLLUP_THROW_EXCEPTION, (unsigned long) &e);
-    if (res != 0) {
-        int code = errno;
-        fprintf(stderr, "IOCTL_ROLLUP_THROW_EXCEPTION returned error %s [%d]\n", strerror(code), code);
-        return res;
-    }
-    return 0;
-}
+static int handle_advance_state_request(cmt_rollup_t *me, struct parsed_args *args) {
+    cmt_rollup_advance_t advance;
+    int rc = cmt_rollup_read_advance_state(me, &advance);
+    if (rc) return rc;
 
-static int handle_advance_state_request(int fd, struct parsed_args *args, struct rollup_finish *finish,
-    struct rollup_bytes *bytes, struct rollup_input_metadata *metadata) {
-    struct rollup_advance_state req;
-    int res = 0;
-    if (resize_bytes(bytes, finish->next_request_payload_length) != 0) {
-        fprintf(stderr, "Failed growing payload buffer\n");
+    if (write_vouchers(me, args->voucher_count, advance.sender, advance.length, advance.data) != 0) {
         return -1;
     }
-    memset(&req, 0, sizeof(req));
-    req.payload.data = bytes->data;
-    req.payload.length = finish->next_request_payload_length;
-    res = ioctl(fd, IOCTL_ROLLUP_READ_ADVANCE_STATE, (unsigned long) &req);
-    if (res != 0) {
-        int code = errno;
-        fprintf(stderr, "IOCTL_ROLLUP_READ_ADVANCE_STATE returned error %s [%d]\n", strerror(code), code);
-        return res;
-    }
-    *metadata = req.metadata;
-    if (args->verbose)
-        show_advance(&req);
-    if (write_vouchers(fd, args->voucher_count, &req.payload, req.metadata.msg_sender, args->verbose) != 0) {
+    if (write_notices(me, args->notice_count, advance.length, advance.data) != 0) {
         return -1;
     }
-    if (write_notices(fd, args->notice_count, &req.payload, args->verbose) != 0) {
-        return -1;
-    }
-    if (write_reports(fd, args->report_count, &req.payload, args->verbose) != 0) {
+    if (write_reports(me, args->report_count, advance.length, advance.data) != 0) {
         return -1;
     }
     return 0;
 }
 
-static int handle_inspect_state_request(int fd, struct parsed_args *args, struct rollup_finish *finish,
-    struct rollup_bytes *bytes) {
-    struct rollup_inspect_state req;
-    int res = 0;
-    if (resize_bytes(bytes, finish->next_request_payload_length) != 0) {
-        fprintf(stderr, "Failed growing payload buffer\n");
-        return -1;
-    }
-    memset(&req, 0, sizeof(req));
-    req.payload.data = bytes->data;
-    req.payload.length = finish->next_request_payload_length;
-    if (args->verbose)
-        show_inspect(&req);
-    res = ioctl(fd, IOCTL_ROLLUP_READ_INSPECT_STATE, (unsigned long) &req);
-    if (res != 0) {
-        int code = errno;
-        fprintf(stderr, "IOCTL_ROLLUP_READ_INSPECT_STATE returned error %s [%d]\n", strerror(code), code);
-        return res;
-    }
-    if (write_reports(fd, args->report_count, &req.payload, args->verbose) != 0) {
+static int handle_inspect_state_request(cmt_rollup_t *me, struct parsed_args *args) {
+    cmt_rollup_inspect_t inspect;
+    int rc = cmt_rollup_read_inspect_state(me, &inspect);
+    if (rc) return rc;
+
+    if (write_reports(me, args->report_count, inspect.length, inspect.data) != 0) {
         return -1;
     }
     return 0;
 }
 
-static int handle_request(int fd, struct parsed_args *args, struct rollup_finish *finish, struct rollup_bytes *bytes,
-    struct rollup_input_metadata *metadata) {
+static int handle_request(cmt_rollup_t *me, struct parsed_args *args, cmt_rollup_finish_t *finish) {
     switch (finish->next_request_type) {
-        case CARTESI_ROLLUP_ADVANCE_STATE:
-            return handle_advance_state_request(fd, args, finish, bytes, metadata);
-        case CARTESI_ROLLUP_INSPECT_STATE:
-            return handle_inspect_state_request(fd, args, finish, bytes);
+        case CMT_IO_REASON_ADVANCE:
+            return handle_advance_state_request(me, args);
+        case CMT_IO_REASON_INSPECT:
+            return handle_inspect_state_request(me, args);
         default:
             /* unknown request type */
             fprintf(stderr, "Unknown request type %d\n", finish->next_request_type);
@@ -260,129 +160,44 @@ static int handle_request(int fd, struct parsed_args *args, struct rollup_finish
 }
 
 int main(int argc, char *argv[]) {
-    struct rollup_input_metadata metadata;
-    struct rollup_finish finish;
+    unsigned input_index = 0;
+    cmt_rollup_t rollup;
+    if (cmt_rollup_init(&rollup))
+        return EXIT_FAILURE;
+
     struct parsed_args args;
-    struct rollup_bytes bytes;
-    int fd;
-
-    memset(&metadata, 0, sizeof(metadata));
     parse_args(argc, argv, &args);
-
-    fd = open(ROLLUP_DEVICE_NAME, O_RDWR);
-    if (fd < 0) {
-        fprintf(stderr, "Error opening device " ROLLUP_DEVICE_NAME "\n");
-        return fd;
-    }
 
     fprintf(stderr, "Echoing as %d voucher copies, %d notice copies, and %d report copies\n", args.voucher_count,
         args.notice_count, args.report_count);
 
-    memset(&bytes, 0, sizeof(bytes));
-
     /* Accept the initial request */
-    if (finish_request(fd, &finish, true) != 0) {
+    cmt_rollup_finish_t finish;
+    if (finish_request(&rollup, &finish, true) != 0) {
         exit(1);
-    } else if (args.verbose) {
-        show_finish(&finish);
     }
 
     /* handle a request, then wait for next */
     for (;;) {
         bool reject_advance, reject_inspect, throw_exception;
-        if (handle_request(fd, &args, &finish, &bytes, &metadata) != 0) {
+        if (handle_request(&rollup, &args, &finish) != 0) {
             break;
         }
         reject_advance =
-            (finish.next_request_type == CARTESI_ROLLUP_ADVANCE_STATE) && (args.reject == metadata.input_index);
-        reject_inspect = (finish.next_request_type == CARTESI_ROLLUP_INSPECT_STATE) && args.reject_inspects;
+            (finish.next_request_type == CMT_IO_REASON_ADVANCE) && (args.reject == input_index);
+        reject_inspect = (finish.next_request_type == CMT_IO_REASON_INSPECT) && args.reject_inspects;
         throw_exception =
-            (finish.next_request_type == CARTESI_ROLLUP_ADVANCE_STATE) && (args.exception == metadata.input_index);
+            (finish.next_request_type == CMT_IO_REASON_ADVANCE) && (args.exception == input_index);
         if (throw_exception) {
-            write_exception(fd, &bytes, args.verbose);
+            const char message[] = "exception";
+            cmt_rollup_emit_exception(&rollup, sizeof message -1, message);
         }
-        if (finish_request(fd, &finish, !(reject_advance || reject_inspect)) != 0) {
+        if (finish_request(&rollup, &finish, !(reject_advance || reject_inspect)) != 0) {
             break;
-        } else if (args.verbose) {
-            show_finish(&finish);
         }
     }
 
-    close(fd);
-
+    cmt_rollup_fini(&rollup);
     fprintf(stderr, "Exiting...\n");
-
     return 0;
-}
-
-static void print_address(uint8_t *address) {
-    for (int i = 0; i < CARTESI_ROLLUP_ADDRESS_SIZE; i += 4) {
-        for (int j = 0; j < 4; ++j) {
-            printf("%02x", address[i + j]);
-        }
-        printf("%s", i == CARTESI_ROLLUP_ADDRESS_SIZE - 4 ? "\n" : " ");
-    }
-}
-
-static void show_finish(struct rollup_finish *finish) {
-    const char *type = "unknown";
-    switch (finish->next_request_type) {
-        case CARTESI_ROLLUP_ADVANCE_STATE:
-            type = "advance";
-            break;
-        case CARTESI_ROLLUP_INSPECT_STATE:
-            type = "inspect";
-            break;
-    }
-    printf("finish:\n"
-           "\taccept: %s\n"
-           "\ttype:   %s\n"
-           "\tlength: %d\n",
-        finish->accept_previous_request ? "yes" : "no", type, finish->next_request_payload_length);
-}
-
-static void show_advance(struct rollup_advance_state *advance) {
-    printf("advance:\n"
-           "\tmsg_sender: ");
-    print_address(advance->metadata.msg_sender);
-    printf("\tblock_number: %llu\n"
-           "\ttimestamp: %llu\n"
-           "\tepoch_index: %llu\n"
-           "\tinput_index: %llu\n",
-        advance->metadata.block_number, advance->metadata.timestamp, advance->metadata.epoch_index,
-        advance->metadata.input_index);
-}
-
-static void show_inspect(struct rollup_inspect_state *inspect) {
-    printf("inspect:\n"
-           "\tlength: %llu\n",
-        inspect->payload.length);
-}
-
-static void show_voucher(struct rollup_voucher *voucher) {
-    printf("voucher:\n"
-           "\tindex: %llu\n"
-           "\tlength: %llu\n"
-           "\tdestination: ",
-        voucher->index, voucher->payload.length);
-    print_address(voucher->destination);
-}
-
-static void show_notice(struct rollup_notice *notice) {
-    printf("notice:\n"
-           "\tindex: %llu\n"
-           "\tlength: %llu\n",
-        notice->index, notice->payload.length);
-}
-
-static void show_report(struct rollup_report *report) {
-    printf("report:\n"
-           "\tlength: %llu\n",
-        report->payload.length);
-}
-
-static void show_exception(struct rollup_exception *exception) {
-    printf("exception:\n"
-           "\tlength: %llu\n",
-        exception->payload.length);
 }
