@@ -28,83 +28,32 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#include <linux/cartesi/rollup.h>
+extern "C" {
+#include "libcmt/rollup.h"
+};
 
 #include "json.hpp"
 
-#define ROLLUP_DEVICE_NAME "/dev/rollup"
-
 // RAII file descriptor implementation
-
-// NullablePointer implementation for file descriptors
-class file_desc {
+class rollup {
 public:
-    explicit file_desc(int fd) : m_fd(fd) {}
-    file_desc(std::nullptr_t = nullptr) : m_fd(-1) {}
-    operator int() const {
-        return m_fd;
+    rollup(bool load_merkle = true) {
+        if (cmt_rollup_init(&m_rollup))
+            throw std::system_error(errno, std::generic_category(),
+                                    "Unable to initialize. Try runnning again with CMT_DEBUG=yes'");
+        if (load_merkle)
+            cmt_rollup_load_merkle(&m_rollup, "/tmp/merkle.dat");
     }
-    bool operator==(const file_desc &other) const {
-        return m_fd == other.m_fd;
+    ~rollup() {
+        cmt_rollup_save_merkle(&m_rollup, "/tmp/merkle.dat");
+        cmt_rollup_fini(&m_rollup);
     }
-    bool operator!=(const file_desc &other) const {
-        return m_fd != other.m_fd;
+    operator cmt_rollup_t *(void) {
+        return &m_rollup;
     }
-    bool operator==(std::nullptr_t) const {
-        return m_fd == -1;
-    }
-    bool operator!=(std::nullptr_t) const {
-        return m_fd != -1;
-    }
-
 private:
-    int m_fd;
+    cmt_rollup_t m_rollup;
 };
-
-// Deleter for unique_ptr representing a file descriptor
-struct file_desc_deleter {
-    using pointer = file_desc;
-    void operator()(file_desc fp) const {
-        close(fp);
-    }
-};
-
-// unique_ptr representing a file descriptor
-using unique_file_desc = std::unique_ptr<file_desc, file_desc_deleter>;
-
-// maker for unique_file_desc
-static unique_file_desc unique_open(const char *filename, int flags) {
-    int fd = open(filename, flags);
-    if (fd < 0) {
-        throw std::system_error(errno, std::generic_category(), "unable to open '" + std::string{filename} + "'");
-    }
-    return unique_file_desc(file_desc(fd));
-}
-
-// Convert ioctl request name to string
-static std::string get_ioctl_name(int ioctl) {
-    const static std::unordered_map<int, std::string> ioctl_names = {
-        {IOCTL_ROLLUP_WRITE_VOUCHER, "write voucher"},
-        {IOCTL_ROLLUP_WRITE_NOTICE, "write notice"},
-        {IOCTL_ROLLUP_WRITE_REPORT, "write report"},
-        {IOCTL_ROLLUP_FINISH, "finish"},
-        {IOCTL_ROLLUP_READ_ADVANCE_STATE, "advance state"},
-        {IOCTL_ROLLUP_READ_INSPECT_STATE, "inspect state"},
-        {IOCTL_ROLLUP_THROW_EXCEPTION, "throw exception"},
-    };
-    auto got = ioctl_names.find(ioctl);
-    if (got == ioctl_names.end()) {
-        return "unknown";
-    }
-    return got->second;
-}
-
-// ioctl for unique_file_desc
-static void file_desc_ioctl(const unique_file_desc &fd, unsigned long request, void *data) {
-    if (ioctl(fd.get(), request, (unsigned long) data) < 0) {
-        throw std::runtime_error{get_ioctl_name(request) + " ioctl returned error '" + strerror(errno) + "'"};
-    }
-}
 
 // Print help message with program usage
 static void print_help(void) {
@@ -184,18 +133,6 @@ static std::string read_input(void) {
     return std::string(begin, end);
 }
 
-// Try to grow a bytes structure to contain size bytes
-static void resize_bytes(struct rollup_bytes *bytes, uint64_t size) {
-    if (bytes->length < size) {
-        uint8_t *new_data = (uint8_t *) realloc(bytes->data, size);
-        if (!new_data) {
-            throw std::bad_alloc{};
-        }
-        bytes->length = size;
-        bytes->data = new_data;
-    }
-}
-
 // Convert a hex character into its corresponding nibble {0..15}
 static uint8_t hexnibble(char a) {
     if (a >= 'a' && a <= 'f') {
@@ -234,30 +171,29 @@ static std::string unhex(const std::string &s) {
 
 // Convert binary data into hex string
 static std::string hex(const uint8_t *data, uint64_t length) {
+    static const char t[] = "0123456789abcdef";
     std::stringstream ss;
     ss << "0x";
-    for (auto b : std::string_view{reinterpret_cast<const char *>(data), length}) {
-        ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned>(b);
+    for (uint64_t i=0; i<length; ++i) {
+        char hi = t[(data[i] >> 4) & 0x0f];
+        char lo = t[(data[i] >> 0) & 0x0f];
+        ss << std::hex << hi << lo;
     }
     return ss.str();
 }
 
 // Read input for voucher data, issue voucher, write result to output
 static int write_voucher(void) try {
+    rollup r;
     auto ji = nlohmann::json::parse(read_input());
     auto payload = ji["payload"].get<std::string>();
-    struct rollup_voucher v;
-    memset(&v, 0, sizeof(v));
-    v.payload.data = reinterpret_cast<unsigned char *>(payload.data());
-    v.payload.length = payload.size();
     auto destination = unhex(ji["destination"].get<std::string>());
-    memcpy(v.destination, destination.data(), std::min(destination.size(), sizeof(v.destination)));
-    file_desc_ioctl(unique_open(ROLLUP_DEVICE_NAME, O_RDWR), IOCTL_ROLLUP_WRITE_VOUCHER, &v);
-    nlohmann::json jo = {
-        {"index", v.index},
-    };
-    std::cout << jo.dump(2) << '\n';
-    return 0;
+    if (destination.size() < CMT_ADDRESS_LENGTH)
+        return 1;
+    return cmt_rollup_emit_voucher(r,
+                                   reinterpret_cast<unsigned char *>(destination.data()),
+                                   payload.size(),
+                                   reinterpret_cast<unsigned char *>(payload.data()));
 } catch (std::exception &x) {
     std::cerr << x.what() << '\n';
     return 1;
@@ -265,18 +201,11 @@ static int write_voucher(void) try {
 
 // Read input for notice data, issue notice, write result to output
 static int write_notice(void) try {
+    rollup r;
     auto ji = nlohmann::json::parse(read_input());
     auto payload = ji["payload"].get<std::string>();
-    struct rollup_notice n;
-    memset(&n, 0, sizeof(n));
-    n.payload.data = reinterpret_cast<unsigned char *>(payload.data());
-    n.payload.length = payload.size();
-    file_desc_ioctl(unique_open(ROLLUP_DEVICE_NAME, O_RDWR), IOCTL_ROLLUP_WRITE_NOTICE, &n);
-    nlohmann::json jo = {
-        {"index", n.index},
-    };
-    std::cout << jo.dump(2) << '\n';
-    return 0;
+    return cmt_rollup_emit_notice(r, payload.size(),
+                                  reinterpret_cast<uint8_t *>(payload.data()));
 } catch (std::exception &x) {
     std::cerr << x.what() << '\n';
     return 1;
@@ -284,14 +213,11 @@ static int write_notice(void) try {
 
 // Read input for report data, issue report
 static int write_report(void) try {
+    rollup r;
     auto ji = nlohmann::json::parse(read_input());
     auto payload = ji["payload"].get<std::string>();
-    struct rollup_report r;
-    memset(&r, 0, sizeof(r));
-    r.payload.data = reinterpret_cast<unsigned char *>(payload.data());
-    r.payload.length = payload.size();
-    file_desc_ioctl(unique_open(ROLLUP_DEVICE_NAME, O_RDWR), IOCTL_ROLLUP_WRITE_REPORT, &r);
-    return 0;
+    return cmt_rollup_emit_report(r, payload.size(),
+                                  reinterpret_cast<uint8_t *>(payload.data()));
 } catch (std::exception &x) {
     std::cerr << x.what() << '\n';
     return 1;
@@ -299,63 +225,64 @@ static int write_report(void) try {
 
 // Read input for exception data, throw exception
 static int throw_exception(void) try {
+    rollup r;
     auto ji = nlohmann::json::parse(read_input());
     auto payload = ji["payload"].get<std::string>();
-    struct rollup_exception e;
-    memset(&e, 0, sizeof(e));
-    e.payload.data = reinterpret_cast<unsigned char *>(payload.data());
-    e.payload.length = payload.size();
-    file_desc_ioctl(unique_open(ROLLUP_DEVICE_NAME, O_RDWR), IOCTL_ROLLUP_THROW_EXCEPTION, &e);
-    return 0;
+    return cmt_rollup_emit_exception(r, payload.size(),
+                                     reinterpret_cast<uint8_t *>(payload.data()));
 } catch (std::exception &x) {
     std::cerr << x.what() << '\n';
     return 1;
 }
 
 // Read advance state data from driver, write to output
-static void write_advance_state(const unique_file_desc &fd, const struct rollup_finish *f) {
-    struct rollup_advance_state r;
-    memset(&r, 0, sizeof(r));
-    resize_bytes(&r.payload, f->next_request_payload_length);
-    file_desc_ioctl(fd, IOCTL_ROLLUP_READ_ADVANCE_STATE, &r);
-    auto payload = std::string_view{reinterpret_cast<const char *>(r.payload.data), r.payload.length};
-    const auto &m = r.metadata;
-    nlohmann::json j = {{"request_type", "advance_state"},
-        {"data",
-            {{"payload", payload},
-                {"metadata",
-                    {{"msg_sender", hex(m.msg_sender, sizeof(m.msg_sender))}, {"epoch_index", m.epoch_index},
-                        {"input_index", m.input_index}, {"block_number", m.block_number},
-                        {"timestamp", m.timestamp}}}}}};
+static void write_advance_state(rollup &r, cmt_rollup_finish_t *f) {
+    (void)f;
+    cmt_rollup_advance_t advance;
+    if (cmt_rollup_read_advance_state(r, &advance))
+        return;
+
+    nlohmann::json j = {
+        {"request_type", "advance_state"},
+        {"data", {
+            {"payload", hex(reinterpret_cast<const uint8_t *>(advance.data), advance.length)},
+            {"msg_sender", hex(advance.sender, sizeof(advance.sender))},
+            {"block_number", advance.block_number},
+            {"block_timestamp", advance.block_timestamp},
+            {"index", advance.index},
+        }}
+    };
     std::cout << j.dump(2) << '\n';
 }
 
 // Read inspect state data from driver, write to output
-static void write_inspect_state(const unique_file_desc &fd, const struct rollup_finish *f) {
-    struct rollup_inspect_state r;
-    memset(&r, 0, sizeof(r));
-    resize_bytes(&r.payload, f->next_request_payload_length);
-    file_desc_ioctl(fd, IOCTL_ROLLUP_READ_INSPECT_STATE, &r);
-    auto payload = std::string_view{reinterpret_cast<const char *>(r.payload.data), r.payload.length};
-    nlohmann::json j = {{"request_type", "inspect_state"},
-        {"data",
-            {
-                {"payload", payload},
-            }}};
+static void write_inspect_state(rollup &r, cmt_rollup_finish_t *f) {
+    (void)f;
+    cmt_rollup_inspect_t inspect;
+    if (cmt_rollup_read_inspect_state(r, &inspect))
+        return;
+
+    nlohmann::json j = {
+        {"request_type", "advance_state"},
+        {"data", {
+            {"payload", hex(reinterpret_cast<const uint8_t *>(inspect.data), inspect.length)},
+        }}
+    };
     std::cout << j.dump(2) << '\n';
 }
 
 // Finish current request and get next
 static int finish_request_and_get_next(bool accept) try {
-    struct rollup_finish f;
-    memset(&f, 0, sizeof(f));
+    rollup r;
+    cmt_rollup_finish_t f;
     f.accept_previous_request = accept;
-    auto fd = unique_open(ROLLUP_DEVICE_NAME, O_RDWR);
-    file_desc_ioctl(fd, IOCTL_ROLLUP_FINISH, &f);
-    if (f.next_request_type == CARTESI_ROLLUP_ADVANCE_STATE) {
-        write_advance_state(fd, &f);
-    } else if (f.next_request_type == CARTESI_ROLLUP_INSPECT_STATE) {
-        write_inspect_state(fd, &f);
+    if (cmt_rollup_finish(r, &f))
+        return 1;
+
+    if (f.next_request_type == CMT_IO_REASON_ADVANCE) {
+        write_advance_state(r, &f);
+    } else if (f.next_request_type == CMT_IO_REASON_INSPECT) {
+        write_inspect_state(r, &f);
     }
     return 0;
 } catch (std::exception &x) {
