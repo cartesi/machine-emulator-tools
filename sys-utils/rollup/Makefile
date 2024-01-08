@@ -29,9 +29,9 @@ RVCOPY = $(TOOLCHAIN_PREFIX)objcopy
 RVDUMP = $(TOOLCHAIN_PREFIX)objdump
 STRIP = $(TOOLCHAIN_PREFIX)strip
 CXXFLAGS :=-Wall -Wextra -pedantic -O2 -std=c++17 \
-	 `PKG_CONFIG_PATH=$(HOME)/dev/libcmt/lib/pkgconfig pkg-config --cflags libcmt_mock`
+	 `PKG_CONFIG_PATH=/usr/riscv64-linux-gnu/lib/pkgconfig pkg-config --cflags libcmt`
 LDLIBS := \
-	 `PKG_CONFIG_PATH=$(HOME)/dev/libcmt/lib/pkgconfig pkg-config --libs libcmt_mock`
+	 `PKG_CONFIG_PATH=/usr/riscv64-linux-gnu/lib/pkgconfig pkg-config --libs libcmt`
 
 CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
