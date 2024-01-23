@@ -15,7 +15,7 @@
 #
 
 
-UTILITIES := xhalt rollup ioctl-echo-loop
+UTILITIES := xhalt yield rollup ioctl-echo-loop
 UTILITIES_WITH_TOOLCHAIN := $(addsuffix -with-toolchain,$(UTILITIES))
 
 all: $(UTILITIES)
