@@ -65,7 +65,7 @@ static void print_help(void) {
 
     voucher
       emit a voucher read from stdin as a JSON object in the format
-        {"destination": <address>, "payload": <string>}
+        {"destination": <address>, "value": <string>, "payload": <string>}
       where field "destination" contains a 20-byte EVM address in hex.
       if successful, prints to stdout a JSON object in the format
         {"index": <number> }
@@ -155,9 +155,6 @@ static uint8_t hexbyte(char a, char b) {
 
 // Convert an hex string into the corresponding bytes
 static std::string unhex(const std::string &s) {
-    if (s.size() != 42) {
-        throw std::invalid_argument{"incorrect address size"};
-    }
     if (s.find_first_not_of("abcdefABCDEF0123456789", 2) != std::string::npos) {
         throw std::invalid_argument{"invalid character in address"};
     }
@@ -167,6 +164,20 @@ static std::string unhex(const std::string &s) {
         res.push_back(hexbyte(s[i], s[i + 1]));
     }
     return res;
+}
+
+static std::string unhex20(const std::string &s) {
+    if (s.size() != 2+40) {
+        throw std::invalid_argument{"incorrect address size"};
+    }
+    return unhex(s);
+}
+
+static std::string unhex32(const std::string &s) {
+    if (s.size() > 2+64) {
+        throw std::invalid_argument{"incorrect value size"};
+    }
+    return unhex(s);
 }
 
 // Convert binary data into hex string
@@ -187,11 +198,13 @@ static int write_voucher(void) try {
     rollup r;
     auto ji = nlohmann::json::parse(read_input());
     auto payload = ji["payload"].get<std::string>();
-    auto destination = unhex(ji["destination"].get<std::string>());
-    if (destination.size() < CMT_ADDRESS_LENGTH)
-        return 1;
+    auto destination = unhex20(ji["destination"].get<std::string>());
+    auto value = unhex32(ji["value"].get<std::string>());
     return cmt_rollup_emit_voucher(r,
+                                   destination.length(),
                                    reinterpret_cast<unsigned char *>(destination.data()),
+                                   value.length(),
+                                   reinterpret_cast<unsigned char *>(value.data()),
                                    payload.size(),
                                    reinterpret_cast<unsigned char *>(payload.data()));
 } catch (std::exception &x) {

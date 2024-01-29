@@ -109,6 +109,17 @@ int cmt_abi_put_uint(cmt_buf_t *me, size_t n, const void *data) {
     return cmt_abi_encode_uint(n, data, x->begin);
 }
 
+int cmt_abi_put_uint_be(cmt_buf_t *me, size_t n, const void *data) {
+    cmt_buf_t x[1];
+
+    if (n > CMT_WORD_LENGTH)
+        return -EDOM;
+    if (cmt_buf_split(me, CMT_WORD_LENGTH, x, me))
+        return -ENOBUFS;
+
+    return cmt_abi_encode_uint_nn(n, data, x->begin);
+}
+
 int cmt_abi_put_bool(cmt_buf_t *me, bool value) {
     uint8_t boolean = !!value;
     return cmt_abi_put_uint(me, sizeof(boolean), &boolean);
@@ -186,6 +197,18 @@ int cmt_abi_get_uint(cmt_buf_t *me, size_t n, void *data) {
         return rc;
 
     return cmt_abi_decode_uint(x->begin, n, data);
+}
+
+int cmt_abi_get_uint_be(cmt_buf_t *me, size_t n, void *data) {
+    cmt_buf_t x[1];
+
+    if (n > CMT_WORD_LENGTH)
+        return -EDOM;
+    int rc = cmt_buf_split(me, CMT_WORD_LENGTH, x, me);
+    if (rc)
+        return rc;
+
+    return cmt_abi_decode_uint_nn(x->begin, n, data);
 }
 
 int cmt_abi_get_bool(cmt_buf_t *me, bool *value) {

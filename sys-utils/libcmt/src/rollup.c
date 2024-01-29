@@ -23,8 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Voucher(address,bytes)
-#define VOUCHER CMT_ABI_FUNSEL(0xef, 0x61, 0x5e, 0x2f)
+// Voucher(address,uint256,bytes)
+#define VOUCHER  CMT_ABI_FUNSEL(0x23, 0x7a, 0x81, 0x6f)
 
 // Notice(bytes)
 #define NOTICE CMT_ABI_FUNSEL(0xc2, 0x58, 0xd6, 0xe5)
@@ -71,7 +71,10 @@ void cmt_rollup_fini(cmt_rollup_t *me) {
     cmt_merkle_fini(me->merkle);
 }
 
-int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint8_t address[20], size_t length, const void *data) {
+int cmt_rollup_emit_voucher(cmt_rollup_t *me,
+                            uint32_t address_length, const void *address_data,
+                            uint32_t value_length, const void *value_data,
+                            uint32_t length, const void *data) {
     if (!me)
         return -EINVAL;
     if (!data && length)
@@ -82,8 +85,11 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint8_t address[20], size_t length
     cmt_buf_t of[1];
     void *params_base = tx->begin + 4; // after funsel
 
-    if (DBG(cmt_abi_put_funsel(wr, VOUCHER)) || DBG(cmt_abi_put_address(wr, address)) ||
-        DBG(cmt_abi_put_bytes_s(wr, of)) || DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base)))
+    if (DBG(cmt_abi_put_funsel(wr, VOUCHER))
+    ||  DBG(cmt_abi_put_uint_be(wr, address_length, address_data))
+    ||  DBG(cmt_abi_put_uint_be(wr, value_length, value_data))
+    ||  DBG(cmt_abi_put_bytes_s(wr, of))
+    ||  DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base)))
         return -ENOBUFS;
 
     size_t m = wr->begin - tx->begin;
@@ -99,7 +105,7 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint8_t address[20], size_t length
     return cmt_merkle_push_back_data(me->merkle, m, tx->begin);
 }
 
-int cmt_rollup_emit_notice(cmt_rollup_t *me, size_t length, const void *data) {
+int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data) {
     if (!me)
         return -EINVAL;
     if (!data && length)
@@ -127,7 +133,7 @@ int cmt_rollup_emit_notice(cmt_rollup_t *me, size_t length, const void *data) {
     return cmt_merkle_push_back_data(me->merkle, m, tx->begin);
 }
 
-int cmt_rollup_emit_report(cmt_rollup_t *me, size_t length, const void *data) {
+int cmt_rollup_emit_report(cmt_rollup_t *me, uint32_t length, const void *data) {
     if (!me)
         return -EINVAL;
     if (!data && length)
@@ -148,7 +154,7 @@ int cmt_rollup_emit_report(cmt_rollup_t *me, size_t length, const void *data) {
     return DBG(cmt_io_yield(me->io, req));
 }
 
-int cmt_rollup_emit_exception(cmt_rollup_t *me, size_t length, const void *data) {
+int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t length, const void *data) {
     if (!me)
         return -EINVAL;
     if (!data && length)

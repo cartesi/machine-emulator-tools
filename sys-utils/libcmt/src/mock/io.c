@@ -86,7 +86,6 @@ static int load_next_input(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
     rr->reason = me->input_type;
     rr->data = file_length;
 
-    me->input_seq = 0;
     me->output_seq = 0;
     me->report_seq = 0;
     me->exception_seq = 0;
@@ -97,12 +96,12 @@ static int load_next_input(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
     return 0;
 }
 
-static int store_next_output(cmt_io_driver_mock_t *me, char *ns, int *seq, struct cmt_io_yield *rr) {
+static int store_output(cmt_io_driver_mock_t *me, const char *filepath, struct cmt_io_yield *rr) {
     if (rr->data > cmt_buf_length(me->tx))
         return -ENOBUFS;
 
-    char filepath[128 + 1 + 8 + 16];
-    snprintf(filepath, sizeof filepath, "%s.%s%d%s", me->input_filename, ns, *seq, me->input_fileext);
+    //char filepath[128 + 1 + 8 + 16];
+    //snprintf(filepath, sizeof filepath, "%s.%s%d%s", me->input_filename, ns, *seq, me->input_fileext);
 
     int rc = write_whole_file(filepath, rr->data, me->tx->begin);
     if (rc) {
@@ -113,8 +112,14 @@ static int store_next_output(cmt_io_driver_mock_t *me, char *ns, int *seq, struc
         fprintf(stderr, "wrote filename: \"%s\" (%u)\n", filepath, rr->data);
     }
 
-    seq[0] += 1;
+    //seq[0] += 1;
     return 0;
+}
+
+static int store_next_output(cmt_io_driver_mock_t *me, char *ns, int *seq, struct cmt_io_yield *rr) {
+    char filepath[128 + 32 + 8 + 16];
+    snprintf(filepath, sizeof filepath, "%s.%s%d%s", me->input_filename, ns, *seq++, me->input_fileext);
+    return store_output(me, filepath, rr);
 }
 
 static int mock_progress(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
@@ -133,7 +138,11 @@ static int mock_rx_accepted(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
         return -EINVAL;
     }
     if (me->input_seq++) { // skip the first
-        store_next_output(me, "o", &me->input_seq, rr);
+        char filepath[128 + 32 + 8 + 16];
+        snprintf(filepath, sizeof filepath,
+                 "%s.outputs_root_hash%s", me->input_filename, me->input_fileext);
+        int rc = store_output(me, filepath, rr);
+        if (rc) return rc;
     }
     if (load_next_input(me, rr))
         return -ENODATA;
@@ -156,7 +165,7 @@ static int mock_tx_output(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
         fprintf(stderr, "Expected cmd to be AUTOMATIC\n");
         return -EINVAL;
     }
-    return store_next_output(me, "o", &me->output_seq, rr);
+    return store_next_output(me, "output-", &me->output_seq, rr);
 }
 
 static int mock_tx_report(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
@@ -164,7 +173,7 @@ static int mock_tx_report(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
         fprintf(stderr, "Expected cmd to be AUTOMATIC\n");
         return -EINVAL;
     }
-    return store_next_output(me, "r", &me->report_seq, rr);
+    return store_next_output(me, "report-", &me->report_seq, rr);
 }
 
 static int mock_tx_exception(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
@@ -172,7 +181,7 @@ static int mock_tx_exception(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) 
         fprintf(stderr, "Expected cmd to be MANUAL\n");
         return -EINVAL;
     }
-    return store_next_output(me, "e", &me->exception_seq, rr);
+    return store_next_output(me, "exception-", &me->exception_seq, rr);
 }
 
 /* These behaviours are defined by the cartesi-machine emulator */
