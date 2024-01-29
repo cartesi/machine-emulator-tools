@@ -28,10 +28,8 @@ RVCXX = $(TOOLCHAIN_PREFIX)g++
 RVCOPY = $(TOOLCHAIN_PREFIX)objcopy
 RVDUMP = $(TOOLCHAIN_PREFIX)objdump
 STRIP = $(TOOLCHAIN_PREFIX)strip
-CXXFLAGS :=-Wall -Wextra -pedantic -O2 -std=c++17 \
-	 `PKG_CONFIG_PATH=$(HOME)/dev/libcmt/lib/pkgconfig pkg-config --cflags libcmt_mock`
-LDLIBS := \
-	 `PKG_CONFIG_PATH=$(HOME)/dev/libcmt/lib/pkgconfig pkg-config --libs libcmt_mock`
+CXXFLAGS := -Wall -Wextra -pedantic -O2 -std=c++17 `pkg-config --cflags libcmt`
+LDLIBS := `pkg-config --libs libcmt`
 
 CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
@@ -45,6 +43,7 @@ rollup.with-toolchain with-toolchain:
 extra.ext2.with-toolchain:
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
+rollup: export PKG_CONFIG_PATH ?= /usr/riscv64-linux-gnu/lib/pkgconfig
 rollup: rollup.cpp
 	$(RVCXX) $(CXXFLAGS) -O2 -o rollup rollup.cpp $(LDLIBS)
 	$(STRIP) rollup

@@ -28,10 +28,8 @@ RVCXX = $(TOOLCHAIN_PREFIX)g++
 RVCOPY = $(TOOLCHAIN_PREFIX)objcopy
 RVDUMP = $(TOOLCHAIN_PREFIX)objdump
 STRIP = $(TOOLCHAIN_PREFIX)strip
-CFLAGS :=-Wall -Wextra -pedantic -O2 \
-	 `PKG_CONFIG_PATH=$(HOME)/.local/libcmt/lib/pkgconfig pkg-config --cflags libcmt_mock`
-LDLIBS := \
-	 `PKG_CONFIG_PATH=$(HOME)/.local/libcmt/lib/pkgconfig pkg-config --libs libcmt_mock`
+CFLAGS +=-Wall -Wextra -pedantic -O2 `pkg-config --cflags libcmt`
+LDLIBS += `pkg-config --libs libcmt`
 
 CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
@@ -45,6 +43,7 @@ ioctl-echo-loop.with-toolchain with-toolchain:
 extra.ext2.with-toolchain:
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
+ioctl-echo-loop: export PKG_CONFIG_PATH ?= /usr/riscv64-linux-gnu/lib/pkgconfig
 ioctl-echo-loop: ioctl-echo-loop.c
 	$(RVCC) $(CFLAGS) -o ioctl-echo-loop ioctl-echo-loop.c $(LDLIBS)
 	$(STRIP) ioctl-echo-loop
