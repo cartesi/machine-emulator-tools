@@ -18,7 +18,7 @@
  * Rollup abstraction layer
  *
  * Takes care of @ref libcmt_io_driver interactions, @ref libcmt_abi
- * encoding/decoding and @ref libcmt_merkle tree interactions.
+ * encoding/decoding and @ref libcmt_merkle tree handling.
  *
  * Mocked version has support for simulating I/O via environment variables:
  * @p CMT_INPUTS="0:input.bin,..." and verbose ouput with @p CMT_DEBUG=yes.
@@ -89,7 +89,10 @@ void cmt_rollup_fini(cmt_rollup_t *me);
  * @return
  * - 0 success
  * - -ENOBUFS no space left in @p me */
-int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint8_t address[CMT_ADDRESS_LENGTH], size_t n, const void *data);
+int cmt_rollup_emit_voucher(cmt_rollup_t *me,
+                            uint32_t address_length, const void *address_data,
+                            uint32_t value_length, const void *value_data,
+                            uint32_t length, const void *data);
 
 /** Emit a notice
  *
@@ -99,7 +102,7 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint8_t address[CMT_ADDRESS_LENGTH
  * @return
  * - 0 success
  * - -ENOBUFS no space left in @p me */
-int cmt_rollup_emit_notice(cmt_rollup_t *me, size_t n, const void *data);
+int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data);
 
 /** Emit a report
  * @param [in,out] me      initialized cmt_rollup_t instance
@@ -108,7 +111,7 @@ int cmt_rollup_emit_notice(cmt_rollup_t *me, size_t n, const void *data);
  * @return
  * - 0 success
  * - -ENOBUFS no space left in @p me */
-int cmt_rollup_emit_report(cmt_rollup_t *me, size_t n, const void *data);
+int cmt_rollup_emit_report(cmt_rollup_t *me, uint32_t length, const void *data);
 
 /** Emit a exception
  * @param [in,out] me      initialized cmt_rollup_t instance
@@ -117,7 +120,7 @@ int cmt_rollup_emit_report(cmt_rollup_t *me, size_t n, const void *data);
  * @return
  * - 0 success
  * - -ENOBUFS no space left in @p me */
-int cmt_rollup_emit_exception(cmt_rollup_t *me, size_t n, const void *data);
+int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t length, const void *data);
 
 /** Read advance state
  *
