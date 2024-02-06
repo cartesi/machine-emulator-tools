@@ -17,10 +17,5 @@
 extern crate cc;
 
 fn main() {
-    println!("cargo:rerun-if-changed=src/rollup/bindings.c,src/rollup/bindings.h,tests/rollup_test_bindings.c,tests/rollup_test.h");
-
-    let test = std::env::var("USE_ROLLUP_BINDINGS_MOCK").unwrap_or("0".to_string());
-
-    
     println!("cargo:rustc-link-lib=cmt");
 }
