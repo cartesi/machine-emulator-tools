@@ -98,10 +98,12 @@
  *
  * Lets look at some code on how to tie everything together. We'll build a @b
  * echo of sorts that decodes the contents of @p rd and re-encodes it into @p
- * wr. First we'll take two of the previous encode/decode examples as a
- * starting point. We'll add the suffix 000 and 001 to disambiguate them. We'll
- * use the @ref cmt_abi_peek_funsel in our new @p decode function to decide
- * which of the two message types we got and how to handle it.
+ * wr. We'll use previous examples as a starting point to implement encode_echo
+ * and decode_echo. With the entrypoint being @p f. We'll use @ref
+ * cmt_abi_peek_funsel to switch on the message function selector, only one
+ * valid case in this example. Decode and if we succeed, encode it back. If the
+ * caller needs the encoded size, we can compute it by storing @p wr at the
+ * start and compute the difference.
  *
  * @includelineno "examples/abi_multi.c"
  *
@@ -141,8 +143,10 @@ uint32_t cmt_abi_funsel(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
  * @param [in]     funsel function selector
  *
  * @return
- * - 0 success
- * - ENOBUFS no space left in @p me
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value |
  *
  * @note A function selector can be compute it with: @ref cmt_keccak_funsel.
  * It is always represented in big endian. */
@@ -155,9 +159,12 @@ int cmt_abi_put_funsel(cmt_buf_t *me, uint32_t funsel);
  * @param [in]     data poiter to a integer
  *
  * @return
- * - 0 success
- * - ENOBUFS no space left in @p me
- * - EDOM requested @p n is too large
+ * |        |                                          |
+ * |-------:|------------------------------------------|
+ * |       0| success                                  |
+ * |-ENOBUFS| no space left in @p me                   |
+ * |   -EDOM| integer not representable in @p 32 bytes |
+ *
  *
  * @code
  * ...
@@ -167,7 +174,42 @@ int cmt_abi_put_funsel(cmt_buf_t *me, uint32_t funsel);
  * ...
  * @endcode
  * @note This function takes care of endianess conversions */
-int cmt_abi_put_uint(cmt_buf_t *me, size_t n, const void *data);
+int cmt_abi_put_uint(cmt_buf_t *me, size_t data_length, const void *data);
+
+/** Encode a big-endian value of up to 32bytes of data into the buffer
+ *
+ * @param [in,out] me     a initialized buffer working as iterator
+ * @param [in]     length size of @p data in bytes
+ * @param [in]     data   poiter to a integer
+ *
+ * @return
+ * |        |                                                   |
+ * |-------:|---------------------------------------------------|
+ * |       0| success                                           |
+ * |-ENOBUFS| no space left in @p me                            |
+ * |   -EDOM| integer not representable in @p data_length bytes |
+ *
+ * @code
+ * ...
+ * cmt_buf_t it = ...;
+ * uint8_t small[] = {
+ *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+ * };
+ * cmt_abi_put_uint(&it, sizeof small, &small);
+ * ...
+ * uint8_t big[] = {
+ *     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ * };
+ * cmt_abi_put_uint(&it, sizeof big, &big);
+ * @endcode
+ * @note This function takes care of endianess conversions */
+int cmt_abi_put_uint_be(cmt_buf_t *me, size_t data_length, const void *data);
 
 /** Encode a big-endian value of up to 32bytes of data into the buffer
  *
@@ -208,8 +250,10 @@ int cmt_abi_put_uint_be(cmt_buf_t *me, size_t n, const void *data);
  * @param [in]     value boolean value
  *
  * @return
- * - 0 success
- * - ENOBUFS no space left in @p me
+ * |        |                        |
+ * |-------:|------------------------|
+ * |       0| success                |
+ * |-ENOBUFS| no space left in @p me |
  *
  * @code
  * ...
@@ -226,8 +270,10 @@ int cmt_abi_put_bool(cmt_buf_t *me, bool value);
  * @param [in]     address exactly @ref CMT_ADDRESS_LENGTH bytes
  *
  * @return
- * - 0 success
- * - ENOBUFS no space left in @p me */
+ * |        |                        |
+ * |-------:|------------------------|
+ * |       0| success                |
+ * |-ENOBUFS| no space left in @p me | */
 int cmt_abi_put_address(cmt_buf_t *me, const uint8_t address[CMT_ADDRESS_LENGTH]);
 
 /** Encode the static part of @b bytes into the message,
@@ -235,9 +281,12 @@ int cmt_abi_put_address(cmt_buf_t *me, const uint8_t address[CMT_ADDRESS_LENGTH]
  *
  * @param [in,out] me     initialized buffer
  * @param [out]    offset initialize for @ref cmt_abi_put_bytes_d
+ *
  * @return
- * - 0 success
- * - ENOBUFS no space left in @p me */
+ * |        |                        |
+ * |-------:|------------------------|
+ * |       0| success                |
+ * |-ENOBUFS| no space left in @p me | */
 int cmt_abi_put_bytes_s(cmt_buf_t *me, cmt_buf_t *offset);
 
 /** Encode the dynamic part of @b bytes into the message,
@@ -248,9 +297,12 @@ int cmt_abi_put_bytes_s(cmt_buf_t *me, cmt_buf_t *offset);
  * @param [in]     n      size of @b data
  * @param [in]     data   array of bytes
  * @param [in]     start  starting point for offset calculation (first byte after funsel)
+ *
  * @return
- * - 0 success
- * - ENOBUFS no space left in @p me */
+ * |        |                        |
+ * |-------:|------------------------|
+ * |       0| success                |
+ * |-ENOBUFS| no space left in @p me | */
 int cmt_abi_put_bytes_d(cmt_buf_t *me, cmt_buf_t *offset, size_t n, const void *data, const void *start);
 
 /** Reserve @b n bytes of data from the buffer into @b res to be filled by the
@@ -260,9 +312,12 @@ int cmt_abi_put_bytes_d(cmt_buf_t *me, cmt_buf_t *offset, size_t n, const void *
  * @param [in]     n      amount of bytes to reserve
  * @param [out]    res    slice of bytes extracted from @p me
  * @param [in]     start  starting point for offset calculation (first byte after funsel)
+ *
  * @return
- * - 0 success
- * - ENOBUFS no space left in @p me
+ * |        |                        |
+ * |-------:|------------------------|
+ * |       0| success                |
+ * |-ENOBUFS| no space left in @p me |
  *
  * @note @p me must outlive @p res.
  * Create a duplicate otherwise */
@@ -270,11 +325,14 @@ int cmt_abi_reserve_bytes_d(cmt_buf_t *me, cmt_buf_t *of, size_t n, cmt_buf_t *o
 
 // get section ---------------------------------------------------------------
 
-/** Read the funsel without consuming it from the buffer @p me
+/** Read the funsel without consuming it from the buffer @p me, 0 is returned
+ * if there are less than 4 bytes in the buffer.
  *
- * @param [in]     me     initialized buffer
  * @return
- * - The function selector
+ * |        |                         |
+ * |-------:|-------------------------|
+ * |    != 0| function selector value |
+ * |       0| failure                 |
  *
  * @code
  * ...
@@ -286,10 +344,7 @@ int cmt_abi_reserve_bytes_d(cmt_buf_t *me, cmt_buf_t *of, size_t n, cmt_buf_t *o
  * default:
  * 	return EXIT_FAILURE;
  * }
- * @endcode
- *
- * @note user must ensure there are at least 4 bytes in the buffer.
- * This function will fail and return 0 if that is not the case. */
+ * @endcode */
 uint32_t cmt_abi_peek_funsel(cmt_buf_t *me);
 
 /** Consume funsel from the buffer @p me and ensure it matches @p expected_funsel
@@ -298,9 +353,11 @@ uint32_t cmt_abi_peek_funsel(cmt_buf_t *me);
  * @param [in]     expected expected function selector
  *
  * @return
- * - 0 success
- * - ENOBUFS no space left in @p me
- * - EBADMSG in case of a missmatch */
+ * |        |                        |
+ * |-------:|------------------------|
+ * |       0| success                |
+ * |-ENOBUFS| no space left in @p me |
+ * |-EBADMSG| funsel missmatch       | */
 int cmt_abi_check_funsel(cmt_buf_t *me, uint32_t expected);
 
 /** Decode a unsigned integer of up to 32bytes from the buffer
@@ -310,9 +367,11 @@ int cmt_abi_check_funsel(cmt_buf_t *me, uint32_t expected);
  * @param [out]    data   pointer to a integer
  *
  * @return
- * - 0 success
- * - ENOBUFS no space left in @p me
- * - EDOM    value won't fit into @p n bytes. */
+ * |        |                                                   |
+ * |-------:|---------------------------------------------------|
+ * |       0| success                                           |
+ * |-ENOBUFS| no space left in @p me                            |
+ * |   -EDOM| integer not representable in @p data_length bytes | */
 int cmt_abi_get_uint(cmt_buf_t *me, size_t n, void *data);
 
 /** Decode @p length big-endian bytes, up to 32, from the buffer into @p data
@@ -322,9 +381,11 @@ int cmt_abi_get_uint(cmt_buf_t *me, size_t n, void *data);
  * @param [out]    data   pointer to a integer
  *
  * @return
- * - 0 success
- * - ENOBUFS no space left in @p me
- * - EDOM    value won't fit into @p n bytes. */
+ * |        |                                                   |
+ * |-------:|---------------------------------------------------|
+ * |       0| success                                           |
+ * |-ENOBUFS| no space left in @p me                            |
+ * |   -EDOM| integer not representable in @p data_length bytes | */
 int cmt_abi_get_uint_be(cmt_buf_t *me, size_t n, void *data);
 
 /** Consume and decode @b address from the buffer
@@ -333,17 +394,22 @@ int cmt_abi_get_uint_be(cmt_buf_t *me, size_t n, void *data);
  * @param [out]    address exactly 20 bytes
  *
  * @return
- * - 0 success
- * - ENOBUFS requested size @b n is not available */
+ * |        |                        |
+ * |-------:|------------------------|
+ * |       0| success                |
+ * |-ENOBUFS| no space left in @p me | */
 int cmt_abi_get_address(cmt_buf_t *me, uint8_t address[CMT_ADDRESS_LENGTH]);
 
 /** Consume and decode the offset @p of
  *
  * @param [in,out] me initialized buffer
  * @param [out]    of offset to @p bytes data, for use in conjunction with @ref cmt_abi_get_bytes_d
+ *
  * @return
- * - 0 success
- * - ENOBUFS no space left in @p me */
+ * |        |                        |
+ * |-------:|------------------------|
+ * |       0| success                |
+ * |-ENOBUFS| no space left in @p me | */
 int cmt_abi_get_bytes_s(cmt_buf_t *me, cmt_buf_t of[1]);
 
 /** Decode @b bytes from the buffer by taking a pointer to its contents.
@@ -352,9 +418,13 @@ int cmt_abi_get_bytes_s(cmt_buf_t *me, cmt_buf_t of[1]);
  * @param [out]    of    offset to @p bytes data
  * @param [out]    n     amount of data available in @b bytes
  * @param [out]    bytes memory range with contents
+ *
  * @return
- * - 0 success
- * - ENOBUFS no space left in @p me
+ * |        |                        |
+ * |-------:|------------------------|
+ * |       0| success                |
+ * |-ENOBUFS| no space left in @p me |
+ *
  * @note @p of can be initialized by calling @ref cmt_abi_get_bytes_s */
 int cmt_abi_get_bytes_d(const cmt_buf_t *start, cmt_buf_t of[1], size_t *n, void **bytes);
 
@@ -364,9 +434,13 @@ int cmt_abi_get_bytes_d(const cmt_buf_t *start, cmt_buf_t of[1], size_t *n, void
  * @param [out] of    offset to @p bytes data
  * @param [out] n     amount of data available in @b bytes
  * @param [out] bytes memory range with contents
+ *
  * @return
- * - 0 success
- * - ENOBUFS no space left in @p me
+ * |        |                        |
+ * |-------:|------------------------|
+ * |       0| success                |
+ * |-ENOBUFS| no space left in @p me |
+ *
  * @note @p of can be initialized by calling @ref cmt_abi_get_bytes_s */
 int cmt_abi_peek_bytes_d(const cmt_buf_t *start, cmt_buf_t of[1], cmt_buf_t *bytes);
 
@@ -377,9 +451,12 @@ int cmt_abi_peek_bytes_d(const cmt_buf_t *start, cmt_buf_t of[1], cmt_buf_t *byt
  * @param [in]  n    size of @p data in bytes
  * @param [in]  data integer value to encode into @p out
  * @param [out] out  encoded result
+ *
  * @return
- * - 0    success
- * - EDOM @p n is too large. */
+ * |        |                                                   |
+ * |-------:|---------------------------------------------------|
+ * |       0| success                                           |
+ * |   -EDOM| integer not representable in @p data_length bytes | */
 int cmt_abi_encode_uint(size_t n, const void *data, uint8_t out[CMT_WORD_LENGTH]);
 
 /** Encode @p n bytes of @p data into @p out (up to 32) in reverse order.
@@ -387,9 +464,13 @@ int cmt_abi_encode_uint(size_t n, const void *data, uint8_t out[CMT_WORD_LENGTH]
  * @param [in]  n    size of @p data in bytes
  * @param [in]  data integer value to encode into @p out
  * @param [out] out  encoded result
+ *
  * @return
- * - 0    success
- * - EDOM @p n is too large.
+ * |        |                                                   |
+ * |-------:|---------------------------------------------------|
+ * |       0| success                                           |
+ * |   -EDOM| integer not representable in @p data_length bytes |
+ *
  * @note use @ref cmt_abi_encode_uint instead */
 int cmt_abi_encode_uint_nr(size_t n, const uint8_t *data, uint8_t out[CMT_WORD_LENGTH]);
 
@@ -398,9 +479,13 @@ int cmt_abi_encode_uint_nr(size_t n, const uint8_t *data, uint8_t out[CMT_WORD_L
  * @param [in]  n    size of @p data in bytes
  * @param [in]  data integer value to encode into @p out
  * @param [out] out  encoded result
+ *
  * @return
- * - 0    success
- * - EDOM @p n is too large.
+ * |        |                                                   |
+ * |-------:|---------------------------------------------------|
+ * |       0| success                                           |
+ * |   -EDOM| integer not representable in @p data_length bytes |
+ *
  * @note use @ref cmt_abi_encode_uint instead */
 int cmt_abi_encode_uint_nn(size_t n, const uint8_t *data, uint8_t out[CMT_WORD_LENGTH]);
 
@@ -408,7 +493,13 @@ int cmt_abi_encode_uint_nn(size_t n, const uint8_t *data, uint8_t out[CMT_WORD_L
  *
  * @param [in]  data integer value to decode into @p out
  * @param [in]  n    size of @p data in bytes
- * @param [out] out  decoded output */
+ * @param [out] out  decoded output
+ *
+ * @return
+ * |        |                                                   |
+ * |-------:|---------------------------------------------------|
+ * |       0| success                                           |
+ * |   -EDOM| integer not representable in @p data_length bytes | */
 int cmt_abi_decode_uint(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_t *out);
 
 /** Decode @p n bytes of @p data into @p out (up to 32) in reverse order.
@@ -416,6 +507,13 @@ int cmt_abi_decode_uint(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_t *
  * @param [in]  data integer value to decode into @p out
  * @param [in]  n    size of @p data in bytes
  * @param [out] out  decoded output
+ *
+ * @return
+ * |        |                                                   |
+ * |-------:|---------------------------------------------------|
+ * |       0| success                                           |
+ * |   -EDOM| integer not representable in @p data_length bytes |
+ *
  * @note if in doubt, use @ref cmt_abi_decode_uint */
 int cmt_abi_decode_uint_nr(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_t *out);
 
@@ -424,6 +522,13 @@ int cmt_abi_decode_uint_nr(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_
  * @param [in]  data integer value to decode into @p out
  * @param [in]  n    size of @p data in bytes
  * @param [out] out  decoded output
+ *
+ * @return
+ * |        |                                                   |
+ * |-------:|---------------------------------------------------|
+ * |       0| success                                           |
+ * |   -EDOM| integer not representable in @p data_length bytes |
+ *
  * @note if in doubt, use @ref cmt_abi_decode_uint */
 int cmt_abi_decode_uint_nn(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_t *out);
 

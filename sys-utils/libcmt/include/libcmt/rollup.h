@@ -66,10 +66,13 @@ typedef struct cmt_rollup_finish {
 
 /** Initialize a @ref cmt_rollup_t state.
  *
- * @param [in] me    uninitialized state
+ * @param [in] me uninitialized state
  *
- * - 0 success
- * - negative value on error. values from: @ref cmt_rollup_driver_init */
+ * @return
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
 int cmt_rollup_init(cmt_rollup_t *me);
 
 /** Finalize a @ref cmt_rollup_t statate previously initialized with @ref
@@ -82,13 +85,21 @@ void cmt_rollup_fini(cmt_rollup_t *me);
 
 /** Emit a voucher
  *
- * @param [in,out] me      initialized cmt_rollup_t instance
- * @param [in]     address destination
- * @param [in]     n       sizeof @p data in bytes
- * @param [in]     data    message contents
+ * Equivalent to the `Voucher(address,uint256,bytes)` solidity call.
+ *
+ * @param [in,out] me             initialized @ref cmt_rollup_t instance
+ * @param [in]     address_length destination length in bytes
+ * @param [in]     address        destination data
+ * @param [in]     value_length   value length in bytes
+ * @param [in]     value          value data
+ * @param [in]     data_length    data length in bytes
+ * @param [in]     data           message contents
+ *
  * @return
- * - 0 success
- * - -ENOBUFS no space left in @p me */
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
 int cmt_rollup_emit_voucher(cmt_rollup_t *me,
                             uint32_t address_length, const void *address_data,
                             uint32_t value_length, const void *value_data,
@@ -96,44 +107,66 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me,
 
 /** Emit a notice
  *
- * @param [in,out] me      initialized cmt_rollup_t instance
- * @param [in]     n       sizeof @p data in bytes
- * @param [in]     data    message contents
+ * @param [in,out] me          initialized cmt_rollup_t instance
+ * @param [in]     data_length data length in bytes
+ * @param [in]     data        message contents
+ *
  * @return
- * - 0 success
- * - -ENOBUFS no space left in @p me */
-int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data);
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
+int cmt_rollup_emit_notice(cmt_rollup_t *me,
+                           uint32_t data_length, const void *data);
 
 /** Emit a report
  * @param [in,out] me      initialized cmt_rollup_t instance
  * @param [in]     n       sizeof @p data in bytes
  * @param [in]     data    message contents
+ *
  * @return
- * - 0 success
- * - -ENOBUFS no space left in @p me */
-int cmt_rollup_emit_report(cmt_rollup_t *me, uint32_t length, const void *data);
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
+int cmt_rollup_emit_report(cmt_rollup_t *me,
+                           uint32_t data_length, const void *data);
 
 /** Emit a exception
- * @param [in,out] me      initialized cmt_rollup_t instance
- * @param [in]     n       sizeof @p data in bytes
- * @param [in]     data    message contents
+ * @param [in,out] me          initialized cmt_rollup_t instance
+ * @param [in]     data_length data length in bytes
+ * @param [in]     data        message contents
+ *
  * @return
- * - 0 success
- * - -ENOBUFS no space left in @p me */
-int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t length, const void *data);
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
+int cmt_rollup_emit_exception(cmt_rollup_t *me,
+                              uint32_t data_length, const void *data);
 
 /** Read advance state
  *
+ * @param [in,out] me      initialized cmt_rollup_t instance
+ * @param [in,out] advance cmt_rollup_advance_t instance (maybe uninitialized)
+ *
  * @return
- * - 0 success
- * - negative value on error. */
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
 int cmt_rollup_read_advance_state(cmt_rollup_t *me, cmt_rollup_advance_t *advance);
 
 /** Read inspect state
  *
+ * @param [in,out] me      initialized cmt_rollup_t instance
+ * @param [in,out] inspect cmt_rollup_inspect_t instance (maybe uninitialized)
+ *
  * @return
- * - 0 success
- * - negative value on error. */
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
 int cmt_rollup_read_inspect_state(cmt_rollup_t *me, cmt_rollup_inspect_t *inspect);
 
 /** Finish processing of current advance or inspect.
@@ -143,20 +176,33 @@ int cmt_rollup_read_inspect_state(cmt_rollup_t *me, cmt_rollup_inspect_t *inspec
  * @param [in,out] finish  initialized cmt_rollup_finish_t instance
  *
  * @return
- * - 0 success
- * - negative value on error
- */
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
 int cmt_rollup_finish(cmt_rollup_t *me, cmt_rollup_finish_t *finish);
 
 /** Retrieve the merkle tree and intermediate state from a file @p path
  * @param [in,out] me      initialized cmt_rollup_t instance
- * @param [in]     file    path to file (parent directories must exist) */
+ * @param [in]     file    path to file (parent directories must exist)
+ *
+ * @return
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
 int cmt_rollup_load_merkle(cmt_rollup_t *me, const char *path);
 
 /** Store the merkle tree and intermediate state to a file @p path
  *
  * @param [in,out] me      initialized cmt_rollup_t instance
- * @param [in]     file    path to file (parent directories must exist) */
+ * @param [in]     file    path to file (parent directories must exist)
+ *
+ * @return
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
 int cmt_rollup_save_merkle(cmt_rollup_t *me, const char *path);
 
 #endif /* CMT_ROLLUP_H */

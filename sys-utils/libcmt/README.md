@@ -73,7 +73,7 @@ CMT_DEBUG=yes ./application
 
 Inputs and Outputs are expected to be EVM-ABI encoded. Encoding and decoding
 can be acheived multiple ways, including writing tools with this library. A
-simple way for testing is to use the @p cast tool from
+simple way to generate testing data is to use the @p cast tool from
 [foundry](http://book.getfoundry.sh/reference/cast/cast.html) and `xxd`.
 
 Encoding an @p EvmAdvance:
