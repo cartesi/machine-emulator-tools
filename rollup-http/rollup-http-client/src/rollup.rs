@@ -51,6 +51,7 @@ pub struct Notice {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Voucher {
     pub destination: String,
+    pub data: String,
     pub payload: String,
 }
 
