@@ -29,7 +29,6 @@ impl RollupFd {
         unsafe {
             let zeroed = Box::leak(Box::new(std::mem::zeroed::<cmt_rollup_t>()));
             let result = bindings::cmt_rollup_init(zeroed);
-
             if result != 0 {
                 Err(result)
             } else {
@@ -195,7 +194,7 @@ pub fn rollup_finish_request(
 
     let res = unsafe { bindings::cmt_rollup_finish(fd.0, finish_c.as_mut()) };
 
-    if res != 0 {
+    if res < 0 {
         log::error!("failed to write finish request, IOCTL error {}", res);
         return Err(Box::new(RollupError::new(&format!(
             "IOCTL_ROLLUP_FINISH returned error {}",
@@ -471,6 +470,7 @@ pub async fn perform_rollup_finish_request(
 ) -> std::io::Result<RollupFinish> {
     let mut finish_request = RollupFinish::default();
     finish_request.accept_previous_request = true;
+
     match rollup_finish_request(fd, &mut finish_request) {
         Ok(_) => Ok(finish_request),
         Err(e) => {
@@ -489,7 +489,7 @@ pub async fn handle_rollup_requests(
     let next_request_type = finish_request.next_request_type as u32;
 
     match next_request_type {
-        CARTESI_ROLLUP_ADVANCE_STATE => {
+        0 => {
             log::debug!("handle advance state request...");
             let advance_request = {
                 // Read advance request from rollup device
@@ -506,7 +506,7 @@ pub async fn handle_rollup_requests(
             // Send newly read advance request to http service
             Ok(RollupRequest::Advance(advance_request))
         }
-        CARTESI_ROLLUP_INSPECT_STATE => {
+        1 => {
             log::debug!("handle inspect state request...");
             // Read inspect request from rollup device
             let inspect_request = {

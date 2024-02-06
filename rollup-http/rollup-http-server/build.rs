@@ -21,11 +21,6 @@ fn main() {
 
     let test = std::env::var("USE_ROLLUP_BINDINGS_MOCK").unwrap_or("0".to_string());
 
-    if test == "1" {
-        println!("cargo:rustc-link-lib=asan");
-        println!("cargo:rustc-link-lib=ubsan");
-        println!("cargo:rustc-link-lib=cmt_mock");
-    } else {
-        println!("cargo:rustc-link-lib=cmt");
-    }
+    
+    println!("cargo:rustc-link-lib=cmt");
 }
