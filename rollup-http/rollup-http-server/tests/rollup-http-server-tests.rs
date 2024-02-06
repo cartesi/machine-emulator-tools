@@ -23,16 +23,17 @@ use rollup_http_client::rollup::{
     Exception, Notice, Report, RollupRequest, RollupResponse, Voucher,
 };
 use rollup_http_server::config::Config;
+use rollup_http_server::rollup::RollupFd;
 use rollup_http_server::*;
 use rstest::*;
-use std::fs::File;
 use std::future::Future;
-use std::os::unix::io::{IntoRawFd, RawFd};
 use std::sync::Arc;
+use rand::Rng;
+use std::env;
+use std::fs::File;
+use std::io::Write;
 
-const PORT: u16 = 10010;
 const HOST: &str = "127.0.0.1";
-const TEST_ROLLUP_DEVICE: &str = "rollup_driver.bin";
 
 #[allow(dead_code)]
 struct Context {
@@ -51,17 +52,7 @@ fn run_test_http_service(
     host: &str,
     port: u16,
 ) -> std::io::Result<Option<actix_server::ServerHandle>> {
-    println!("Opening rollup device");
-    // Open test rollup device
-    let rollup_file = match File::create(TEST_ROLLUP_DEVICE) {
-        Ok(file) => file,
-        Err(e) => {
-            log::error!("error opening rollup device {}", e.to_string());
-            return Err(e);
-        }
-    };
-
-    let rollup_fd: Arc<Mutex<RawFd>> = Arc::new(Mutex::new(rollup_file.into_raw_fd()));
+    let rollup_fd: Arc<Mutex<RollupFd>> = Arc::new(Mutex::new(RollupFd::create().unwrap()));
     let rollup_fd = rollup_fd.clone();
     let http_config = Config {
         http_address: host.to_string(),
@@ -80,8 +71,11 @@ fn run_test_http_service(
 async fn context_future() -> Context {
     let mut server_handle: Option<ServerHandle> = None;
     let mut count = 5;
+    let mut port;
     loop {
-        match run_test_http_service(HOST, PORT) {
+        port = rand::thread_rng().gen_range(49152..65535);
+
+        match run_test_http_service(HOST, port) {
             Ok(handle) => {
                 server_handle = handle;
                 break;
@@ -100,7 +94,7 @@ async fn context_future() -> Context {
     }
 
     Context {
-        address: format!("http://{}:{}", HOST, PORT),
+        address: format!("http://{}:{}", HOST, port),
         server_handle: server_handle.unwrap(),
     }
 }
@@ -125,9 +119,42 @@ async fn test_server_instance_creation(
 async fn test_finish_request(
     context_future: impl Future<Output = Context>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    /*
+     * cast calldata 'EvmAdvance(uint256,address,address,uint256,uint256,uint256,bytes)' \
+     *      0 $(cast address-zero) $(printf 0x%040x 1) 0 0 0 0xdeadbeef | xxd -r -p
+     */
+    let advance_payload_data = "cc7dee1f00000000000000000000000000000000000000000000000000000000000\
+                                0000000000000000000000000000000000000000000000000000000000000000000\
+                                0000000000000000000000000000000000000000000000000000000000000000010\
+                                0000000000000000000000000000000000000000000000000000000000000000000\
+                                0000000000000000000000000000000000000000000000000000000000000000000\
+                                0000000000000000000000000000000000000000000000000000000000000000000\
+                                0000000000000000000000000000000000000000000000000000e00000000000000\
+                                000000000000000000000000000000000000000000000000004deadbeef00000000\
+                                000000000000000000000000000000000000000000000000";
+
+    /*
+     * inspect requests are not evm encoded
+     */
+    let inspect_payload_data = "deadbeef";
+
+    let advance_binary_data = hex::decode(advance_payload_data).unwrap();
+    let advance_path = "advance_payload.bin";
+    let mut advance_file = File::create(advance_path)?;
+    advance_file.write_all(&advance_binary_data)?;
+
+    let inspect_binary_data = hex::decode(inspect_payload_data).unwrap();
+    let inspect_path = "inspect_payload.bin";
+    let mut inspect_file = File::create(inspect_path)?;
+    inspect_file.write_all(&inspect_binary_data)?;
+
+    env::set_var("CMT_INPUTS", format!("0:{0},1:{1}", advance_path, inspect_path));
+    env::set_var("CMT_DEBUG", "yes");
+
     let context = context_future.await;
     println!("Sending finish request");
     let request_response = RollupResponse::Finish(true);
+
     match rollup_http_client::client::send_finish_request(&context.address, &request_response).await
     {
         Ok(request) => match request {
@@ -137,15 +164,14 @@ async fn test_finish_request(
             }
             RollupRequest::Advance(advance_request) => {
                 println!("Got new advance request: {:?}", advance_request);
-                assert_eq!(advance_request.payload.len(), 42);
+                assert_eq!(advance_request.payload.len(), 10);
                 assert_eq!(
                     advance_request.metadata.msg_sender,
-                    "0x1111111111111111111111111111111111111111"
+                    "0x0000000000000000000000000000000000000001"
                 );
                 assert_eq!(
-                    std::str::from_utf8(&hex::decode(&advance_request.payload[2..]).unwrap())
-                        .unwrap(),
-                    "test advance request"
+                    &advance_request.payload[2..],
+                    "deadbeef"
                 );
             }
         },
@@ -160,11 +186,10 @@ async fn test_finish_request(
             RollupRequest::Inspect(inspect_request) => {
                 println!("Got new inspect request: {:?}", inspect_request);
                 context.server_handle.stop(true).await;
-                assert_eq!(inspect_request.payload.len(), 42);
+                assert_eq!(inspect_request.payload.len(), 10);
                 assert_eq!(
-                    std::str::from_utf8(&hex::decode(&inspect_request.payload[2..]).unwrap())
-                        .unwrap(),
-                    "test inspect request"
+                    &inspect_request.payload[2..],
+                    "deadbeef"
                 );
             }
             RollupRequest::Advance(_advance_request) => {
@@ -178,7 +203,38 @@ async fn test_finish_request(
         }
     }
     context.server_handle.stop(true).await;
+
+    std::fs::remove_file(advance_path)?;
+    std::fs::remove_file(inspect_path)?;
+
     Ok(())
+}
+
+fn check_voucher_or_fail(
+    original_voucher: Voucher,
+    output_filename: &str,
+) {
+    // we try to decode the produced voucher with a third-party lib to see if it matches
+    // the expected values
+    let data =
+         std::fs::read(output_filename).expect("error reading voucher file");
+    let decoded_voucher = ethabi::decode(
+        &[ethabi::ParamType::Address, ethabi::ParamType::Uint(256), ethabi::ParamType::Bytes],
+        &data[4..], // skip the first 4 bytes that are the function signature
+    ).ok().unwrap();
+
+    assert_eq!(
+        "0x".to_string() + &decoded_voucher[0].to_string(),
+        original_voucher.destination,
+    );
+    assert_eq!(
+        "0x".to_string() + &decoded_voucher[1].to_string(),
+        original_voucher.value,
+    );
+    assert_eq!(
+        "0x".to_string() + &decoded_voucher[2].to_string(),
+        original_voucher.payload,
+    );
 }
 
 #[rstest]
@@ -190,33 +246,27 @@ async fn test_write_voucher(
     println!("Writing voucher");
     let test_voucher_01 = Voucher {
         destination: "0x1111111111111111111111111111111111111111".to_string(),
+        value: "0xdeadbeef".to_string(),
         payload: "0x".to_string() + &hex::encode("voucher test payload 01"),
     };
     let test_voucher_02 = Voucher {
         destination: "0x2222222222222222222222222222222222222222".to_string(),
+        value: "0xdeadbeef".to_string(),
         payload: "0x".to_string() + &hex::encode("voucher test payload 02"),
     };
-    rollup_http_client::client::send_voucher(&context.address, test_voucher_01).await;
+    rollup_http_client::client::send_voucher(&context.address, test_voucher_01.clone()).await;
+
+    check_voucher_or_fail(test_voucher_01, "none.output-0.bin");
+    std::fs::remove_file("none.output-0.bin")?;
+
     println!("Writing second voucher!");
-    rollup_http_client::client::send_voucher(&context.address, test_voucher_02).await;
+
+    rollup_http_client::client::send_voucher(&context.address, test_voucher_02.clone()).await;
     context.server_handle.stop(true).await;
 
-    //Read text file with results
-    let voucher1 =
-        std::fs::read_to_string("test_voucher_1.txt").expect("error reading voucher 1 file");
-    assert_eq!(
-        voucher1,
-        "index: 1, payload_size: 23, payload: voucher test payload 01"
-    );
-    std::fs::remove_file("test_voucher_1.txt")?;
+    check_voucher_or_fail(test_voucher_02, "none.output-0.bin");
+    std::fs::remove_file("none.output-0.bin")?;
 
-    let voucher2 =
-        std::fs::read_to_string("test_voucher_2.txt").expect("error reading voucher 2 file");
-    assert_eq!(
-        voucher2,
-        "index: 2, payload_size: 23, payload: voucher test payload 02"
-    );
-    std::fs::remove_file("test_voucher_2.txt")?;
     Ok(())
 }
 
@@ -231,16 +281,24 @@ async fn test_write_notice(
     let test_notice = Notice {
         payload: "0x".to_string() + &hex::encode("notice test payload 01"),
     };
-    rollup_http_client::client::send_notice(&context.address, test_notice).await;
+    rollup_http_client::client::send_notice(&context.address, test_notice.clone()).await;
     context.server_handle.stop(true).await;
-    //Read text file with results
-    let notice1 =
-        std::fs::read_to_string("test_notice_1.txt").expect("error reading test notice file");
+
+    // we try to decode the produced voucher with a third-party lib to see if it matches
+    // the expected values
+    let data =
+        std::fs::read("none.output-0.bin").expect("error reading test notice file");
+    let decoded_notice = ethabi::decode(
+        &[ethabi::ParamType::Bytes],
+        &data[4..], // skip the first 4 bytes that are the function signature
+    ).ok().unwrap();
+
     assert_eq!(
-        notice1,
-        "index: 1, payload_size: 22, payload: notice test payload 01"
+        "0x".to_string() + &decoded_notice[0].to_string(),
+        test_notice.payload,
     );
-    std::fs::remove_file("test_notice_1.txt")?;
+    std::fs::remove_file("none.output-0.bin")?;
+
     Ok(())
 }
 
@@ -259,12 +317,12 @@ async fn test_write_report(
     context.server_handle.stop(true).await;
     //Read text file with results
     let report1 =
-        std::fs::read_to_string("test_report_1.txt").expect("error reading test report file");
+        std::fs::read_to_string("none.report-0.bin").expect("error reading test report file");
     assert_eq!(
         report1,
-        "index: 1, payload_size: 22, payload: report test payload 01"
+        "report test payload 01"
     );
-    std::fs::remove_file("test_report_1.txt")?;
+    std::fs::remove_file("none.report-0.bin")?;
 
     Ok(())
 }
@@ -286,12 +344,12 @@ async fn test_exception_throw(
     println!("Server closed");
     //Read text file with results
     let exception =
-        std::fs::read_to_string("test_exception_1.txt").expect("error reading test exception file");
+        std::fs::read("none.exception-0.bin").expect("error reading test exception file");
     assert_eq!(
         exception,
-        "index: 1, payload_size: 25, payload: exception test payload 01"
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     );
     println!("Removing exception text file");
-    std::fs::remove_file("test_exception_1.txt")?;
+    std::fs::remove_file("none.exception-0.bin")?;
     Ok(())
 }

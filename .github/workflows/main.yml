@@ -107,5 +107,7 @@ jobs:
 
       - name: Test rollup-http-server and echo-dapp client
         run: |
+          mkdir -p /opt/mock
+          make -C sys-utils/libcmt/ -j$(nproc) install-mock PREFIX=/opt/mock
           cd rollup-http/rollup-http-server
-          USE_ROLLUP_BINDINGS_MOCK=1 cargo test -- --show-output --test-threads=1
+          CPATH="/opt/mock/include:$CPATH" RUSTFLAGS="-L /opt/mock/lib" cargo test -- --show-output --test-threads=1

@@ -38,6 +38,7 @@ apt-get install -y --no-install-recommends \
         wget \
         pkg-config \
         dpkg-cross \
+        libclang-dev \
         gcc-12-riscv64-linux-gnu \
         g++-12-riscv64-linux-gnu
 
@@ -45,6 +46,8 @@ for tool in cpp g++ gcc gcc-ar gcc-nm gcc-ranlib gcov gcov-dump gcov-tool; do
     update-alternatives --install /usr/bin/riscv64-linux-gnu-$tool riscv64-linux-gnu-$tool /usr/bin/riscv64-linux-gnu-$tool-12 12
     update-alternatives --install /usr/bin/$tool $tool /usr/bin/$tool-12 12
 done
+
+ln -s gcc /usr/bin/cc
 
 wget -O ${LINUX_HEADERS_FILEPATH} ${LINUX_HEADERS_URLPATH}
 echo "7d0238324661a3850fe2e07e5c4485a94da5d5162dbb67def0f1541ed1dc3b45  ${LINUX_HEADERS_FILEPATH}" | sha256sum --check
@@ -76,10 +79,11 @@ RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt/ -j$(nproc) install install-moc
     PREFIX=/usr/x86_64-linux-gnu TARGET_PREFIX=/usr/riscv64-linux-gnu
 USER developer
 RUN make -C ${BUILD_BASE}/tools/sys-utils/ -j$(nproc) all
+ENV CPATH="/usr/riscv64-linux-gnu/include/:${CPATH}"
 
 # build rust tools
 # ------------------------------------------------------------------------------
-FROM tools-env as rust-env
+FROM c-builder as rust-env
 ENV PATH="/home/developer/.cargo/bin:${PATH}"
 
 USER developer
@@ -137,7 +141,6 @@ ARG STAGING_BASE=${BUILD_BASE}/_install
 ARG STAGING_DEBIAN=${STAGING_BASE}/DEBIAN
 ARG STAGING_SBIN=${STAGING_BASE}/usr/sbin
 ARG STAGING_BIN=${STAGING_BASE}/usr/bin
-ARG CMT_TAR_GZ=libcmt-v0.15.0.tar.gz
 
 RUN mkdir -p ${STAGING_DEBIAN} ${STAGING_SBIN} ${STAGING_BIN} ${STAGING_BASE}/etc && \
     echo "cartesi-machine" > ${staging_base}/etc/hostname

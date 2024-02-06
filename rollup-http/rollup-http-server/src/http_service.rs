@@ -14,18 +14,18 @@
 // limitations under the License.
 //
 
-use std::os::unix::io::RawFd;
 use std::sync::Arc;
 
-use actix_web::{middleware::Logger, web::Data, web::Json, App, HttpResponse, HttpServer};
+use actix_web::{middleware::Logger, web::Data, App, HttpResponse, HttpServer};
+use actix_web_validator::Json;
 use async_mutex::Mutex;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Notify;
 
 use crate::config::Config;
-use crate::rollup;
+use crate::rollup::{self, RollupFd};
 use crate::rollup::{
-    AdvanceRequest, Exception, InspectRequest, Notice, Report, RollupRequest, Voucher,
+    AdvanceRequest, Exception, InspectRequest, Notice, Report, RollupRequest, FinishRequest, Voucher,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -40,7 +40,7 @@ enum RollupHttpRequest {
 /// Create new instance of http server
 pub fn create_server(
     config: &Config,
-    rollup_fd: Arc<Mutex<RawFd>>,
+    rollup_fd: Arc<Mutex<RollupFd>>,
 ) -> std::io::Result<actix_server::Server> {
     let server = HttpServer::new(move || {
         let data = Data::new(Mutex::new(Context {
@@ -64,7 +64,7 @@ pub fn create_server(
 /// Create and run new instance of http server
 pub async fn run(
     config: &Config,
-    rollup_fd: Arc<Mutex<RawFd>>,
+    rollup_fd: Arc<Mutex<RollupFd>>,
     server_ready: Arc<Notify>,
 ) -> std::io::Result<()> {
     log::info!("starting http dispatcher http service!");
@@ -90,7 +90,7 @@ async fn voucher(mut voucher: Json<Voucher>, data: Data<Mutex<Context>>) -> Http
     }
     let context = data.lock().await;
     // Write voucher to linux rollup device
-    return match rollup::rollup_write_voucher(*context.rollup_fd.lock().await, &mut voucher.0) {
+    return match rollup::rollup_write_voucher(&*context.rollup_fd.lock().await, &mut voucher.0) {
         Ok(voucher_index) => {
             log::debug!("voucher successfully inserted {:#?}", voucher);
             HttpResponse::Created().json(IndexResponse {
@@ -114,7 +114,7 @@ async fn notice(mut notice: Json<Notice>, data: Data<Mutex<Context>>) -> HttpRes
     log::debug!("received notice request");
     let context = data.lock().await;
     // Write notice to linux rollup device
-    return match rollup::rollup_write_notice(*context.rollup_fd.lock().await, &mut notice.0) {
+    return match rollup::rollup_write_notice(&*context.rollup_fd.lock().await, &mut notice.0) {
         Ok(notice_index) => {
             log::debug!("notice successfully inserted {:#?}", notice);
             HttpResponse::Created().json(IndexResponse {
@@ -135,7 +135,7 @@ async fn report(report: Json<Report>, data: Data<Mutex<Context>>) -> HttpRespons
     log::debug!("received report request");
     let context = data.lock().await;
     // Write report to linux rollup device
-    return match rollup::rollup_write_report(*context.rollup_fd.lock().await, &report.0) {
+    return match rollup::rollup_write_report(&*context.rollup_fd.lock().await, &report.0) {
         Ok(_) => {
             log::debug!("report successfully inserted {:#?}", report);
             HttpResponse::Accepted().body("")
@@ -157,7 +157,7 @@ async fn exception(exception: Json<Exception>, data: Data<Mutex<Context>>) -> Ht
 
     let context = data.lock().await;
     // Throw an exception
-    return match rollup::rollup_throw_exception(*context.rollup_fd.lock().await, &exception.0) {
+    return match rollup::rollup_throw_exception(&*context.rollup_fd.lock().await, &exception.0) {
         Ok(_) => {
             log::debug!("exception successfully thrown {:#?}", exception);
             HttpResponse::Accepted().body("")
@@ -190,7 +190,7 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
     let context = data.lock().await;
     let rollup_fd = context.rollup_fd.lock().await;
     // Write finish request, read indicator for next request
-    let new_rollup_request = match rollup::perform_rollup_finish_request(*rollup_fd, accept).await {
+    let new_rollup_request = match rollup::perform_rollup_finish_request(&*rollup_fd).await {
         Ok(finish_request) => {
             // Received new request, process it
             log::info!(
@@ -201,7 +201,7 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
                     _ => "UNKNOWN",
                 }
             );
-            match rollup::handle_rollup_requests(*rollup_fd, finish_request).await {
+            match rollup::handle_rollup_requests(&*rollup_fd, finish_request).await {
                 Ok(rollup_request) => rollup_request,
                 Err(e) => {
                     let error_message = format!(
@@ -237,11 +237,6 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
         .json(http_rollup_request)
 }
 
-#[derive(Debug, Clone, Deserialize)]
-struct FinishRequest {
-    status: String,
-}
-
 #[derive(Debug, Clone, Serialize)]
 struct IndexResponse {
     index: u64,
@@ -260,5 +255,5 @@ struct Error {
 }
 
 struct Context {
-    pub rollup_fd: Arc<Mutex<RawFd>>,
+    pub rollup_fd: Arc<Mutex<RollupFd>>,
 }
