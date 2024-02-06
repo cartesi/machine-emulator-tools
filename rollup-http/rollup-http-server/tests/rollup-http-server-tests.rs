@@ -23,11 +23,11 @@ use rollup_http_client::rollup::{
     Exception, Notice, Report, RollupRequest, RollupResponse, Voucher,
 };
 use rollup_http_server::config::Config;
+use rollup_http_server::rollup::RollupFd;
 use rollup_http_server::*;
 use rstest::*;
 use std::fs::File;
 use std::future::Future;
-use std::os::unix::io::{IntoRawFd, RawFd};
 use std::sync::Arc;
 
 const PORT: u16 = 10010;
@@ -52,16 +52,8 @@ fn run_test_http_service(
     port: u16,
 ) -> std::io::Result<Option<actix_server::ServerHandle>> {
     println!("Opening rollup device");
-    // Open test rollup device
-    let rollup_file = match File::create(TEST_ROLLUP_DEVICE) {
-        Ok(file) => file,
-        Err(e) => {
-            log::error!("error opening rollup device {}", e.to_string());
-            return Err(e);
-        }
-    };
 
-    let rollup_fd: Arc<Mutex<RawFd>> = Arc::new(Mutex::new(rollup_file.into_raw_fd()));
+    let rollup_fd: Arc<Mutex<RollupFd>> = Arc::new(Mutex::new(RollupFd::create().unwrap()));
     let rollup_fd = rollup_fd.clone();
     let http_config = Config {
         http_address: host.to_string(),
