@@ -211,39 +211,6 @@ int cmt_abi_put_uint(cmt_buf_t *me, size_t data_length, const void *data);
  * @note This function takes care of endianess conversions */
 int cmt_abi_put_uint_be(cmt_buf_t *me, size_t data_length, const void *data);
 
-/** Encode a big-endian value of up to 32bytes of data into the buffer
- *
- * @param [in,out] me     a initialized buffer working as iterator
- * @param [in]     length size of @p data in bytes
- * @param [in]     data   poiter to a integer
- *
- * @return
- * - 0 success
- * - ENOBUFS no space left in @p me
- * - EDOM requested @p n is too large
- *
- * @code
- * ...
- * cmt_buf_t it = ...;
- * uint8_t small[] = {
- *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
- *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
- *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
- *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
- * };
- * cmt_abi_put_uint(&it, sizeof small, &small);
- * ...
- * uint8_t big[] = {
- *     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
- *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
- *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
- *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
- * };
- * cmt_abi_put_uint(&it, sizeof big, &big);
- * @endcode
- * @note This function takes care of endianess conversions */
-int cmt_abi_put_uint_be(cmt_buf_t *me, size_t n, const void *data);
-
 /** Encode a bool into the buffer
  *
  * @param [in,out] me    a initialized buffer working as iterator
