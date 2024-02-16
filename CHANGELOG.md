@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.15.0] - 2024-02-16
 ### Changed
+- Updated linux-sources to v5.6.9-ctsi-2-output-unification-test1
 - Added a value field to vouchers
 - Tools are now implemented in terms of libcmt
 - Added libcmt
@@ -135,7 +137,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [0.2.0]
 - [0.1.0]
 
-[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.14.1...HEAD
+[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.15.0
 [0.14.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.14.1
 [0.14.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.14.0
 [0.13.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.13.0

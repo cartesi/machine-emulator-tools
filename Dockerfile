@@ -16,7 +16,7 @@
 
 FROM ubuntu:22.04 as tools-env
 ARG IMAGE_KERNEL_VERSION=v0.19.1
-ARG LINUX_VERSION=6.5.9-ctsi-1
+ARG LINUX_VERSION=6.5.9-ctsi-2-output-unification-test1
 ARG LINUX_HEADERS_URLPATH=https://github.com/cartesi/image-kernel/releases/download/${IMAGE_KERNEL_VERSION}/linux-libc-dev-riscv64-cross-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
 ARG BUILD_BASE=/opt/cartesi
 
