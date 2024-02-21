@@ -59,6 +59,9 @@ $(ioctl_OBJDIR)io_echo: src/tests/io_echo.c $(ioctl_LIB)
 $(ioctl_OBJDIR)rollup_echo: src/tests/rollup_echo.c $(ioctl_LIB)
 	$(TARGET_CC) $(TARGET_CFLAGS) -o $@ $^
 
+$(ioctl_OBJDIR)dehash: src/tests/dehash.c $(ioctl_LIB)
+	$(TARGET_CC) $(TARGET_CFLAGS) -o $@ $^
+
 ioctl.build: $(ioctl_LIB) $(ioctl_OBJDIR)io_echo $(ioctl_OBJDIR)rollup_echo
 ioctl.install: $(ioctl_LIB)
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
@@ -78,6 +81,7 @@ mock_SRC := \
 	src/merkle.c \
 	src/merkle-table.c \
 	src/rollup.c \
+	src/mock/hook.c \
 	src/mock/io.c
 
 mock_OBJDIR := build/mock/
@@ -95,6 +99,9 @@ $(mock_OBJDIR)io_echo: src/tests/io_echo.c $(mock_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
 
 $(mock_OBJDIR)rollup_echo: src/tests/rollup_echo.c $(mock_LIB)
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(mock_OBJDIR)dehash: src/tests/dehash.c $(mock_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
 
 mock.build: $(mock_LIB) $(mock_OBJDIR)io_echo $(mock_OBJDIR)rollup_echo
