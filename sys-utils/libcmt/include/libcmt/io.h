@@ -102,6 +102,9 @@ typedef struct {
     int output_seq;
     int report_seq;
     int exception_seq;
+
+    int hooks_num;
+    void *hooks;
 } cmt_io_driver_mock_t;
 
 /** Implementation specific cmio state. */

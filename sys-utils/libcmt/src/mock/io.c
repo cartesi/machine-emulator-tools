@@ -7,6 +7,9 @@
 
 #include "libcmt/io.h"
 
+int cmt_io_driver_mock_hook_load(cmt_io_driver_mock_t *me, char *env);
+int cmt_io_driver_mock_hook_dispatch(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr);
+
 static int read_whole_file(const char *name, size_t max, void *data, size_t *length);
 static int write_whole_file(const char *name, size_t length, const void *data);
 
@@ -32,6 +35,8 @@ int cmt_io_init(cmt_io_driver_t *_me) {
     else
         cmt_buf_init(&me->inputs_left, 0, "");
 
+    cmt_io_driver_mock_hook_load(me, getenv("CMT_HOOKS"));
+
     // in case the user writes something before loading any input
     strcpy(me->input_filename, "none");
     strcpy(me->input_fileext, ".bin");
@@ -51,6 +56,7 @@ void cmt_io_fini(cmt_io_driver_t *_me) {
 
     free(me->tx->begin);
     free(me->rx->begin);
+    free(me->hooks);
 }
 
 cmt_buf_t cmt_io_get_tx(cmt_io_driver_t *me) {
@@ -99,10 +105,6 @@ static int load_next_input(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
 static int store_output(cmt_io_driver_mock_t *me, const char *filepath, struct cmt_io_yield *rr) {
     if (rr->data > cmt_buf_length(me->tx))
         return -ENOBUFS;
-
-    //char filepath[128 + 1 + 8 + 16];
-    //snprintf(filepath, sizeof filepath, "%s.%s%d%s", me->input_filename, ns, *seq, me->input_fileext);
-
     int rc = write_whole_file(filepath, rr->data, me->tx->begin);
     if (rc) {
         fprintf(stderr, "failed to store \"%s\". %s\n", filepath, strerror(-rc));
@@ -111,8 +113,6 @@ static int store_output(cmt_io_driver_mock_t *me, const char *filepath, struct c
     if (getenv("CMT_DEBUG")) {
         fprintf(stderr, "wrote filename: \"%s\" (%u)\n", filepath, rr->data);
     }
-
-    //seq[0] += 1;
     return 0;
 }
 
@@ -139,10 +139,10 @@ static int mock_rx_accepted(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
     }
     if (me->input_seq++) { // skip the first
         char filepath[128 + 32 + 8 + 16];
-        snprintf(filepath, sizeof filepath,
-                 "%s.outputs_root_hash%s", me->input_filename, me->input_fileext);
+        snprintf(filepath, sizeof filepath, "%s.outputs_root_hash%s", me->input_filename, me->input_fileext);
         int rc = store_output(me, filepath, rr);
-        if (rc) return rc;
+        if (rc)
+            return rc;
     }
     if (load_next_input(me, rr))
         return -ENODATA;
@@ -215,7 +215,7 @@ int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
         case CMT_IO_REASON_TX_EXCEPTION:
             return mock_tx_exception(me, rr);
         default:
-            return -EINVAL;
+            return cmt_io_driver_mock_hook_dispatch(me, rr);
     }
     return 0;
 }
