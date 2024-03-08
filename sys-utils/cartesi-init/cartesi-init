@@ -1,5 +1,8 @@
 #!/bin/busybox sh
 
+# disable terminal translation from nl to cr nl
+busybox stty -onlcr
+
 # mount
 busybox mkdir -p /dev/pts /dev/shm
 busybox mount -o nosuid,nodev,noexec          -t proc proc /proc
