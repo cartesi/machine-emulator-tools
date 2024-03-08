@@ -3,6 +3,7 @@ control
 machine-emulator-tools-*.tar.gz
 machine-emulator-tools-*.deb
 rootfs.*
+!rootfs.Dockerfile
 
 # Prerequisites
 *.d

@@ -23,6 +23,8 @@ VERSION := $(MAJOR).$(MINOR).$(PATCH)$(LABEL)
 TOOLS_DEB    := machine-emulator-tools-v$(VERSION).deb
 TOOLS_IMAGE  := cartesi/machine-emulator-tools:$(VERSION)
 TOOLS_ROOTFS := rootfs-tools-v$(VERSION).ext2
+TOOLS_HV_HOST_ROOTFS := rootfs-hv-host-tools-v$(VERSION).ext2
+TOOLS_HV_GUEST_ROOTFS := rootfs-hv-guest-tools-v$(VERSION).ext2
 
 IMAGE_KERNEL_VERSION ?= v0.19.1
 LINUX_VERSION ?= 6.5.9-ctsi-1
@@ -51,16 +53,29 @@ $(TOOLS_DEB) deb: build
 control: Makefile control.template
 	@sed 's|ARG_VERSION|$(VERSION)|g' control.template > control
 
+define get_dockerfile_name
+$(firstword $(subst -tools-v$(VERSION), ,$(1))).Dockerfile
+endef
 
-$(TOOLS_ROOTFS) fs: $(TOOLS_DEB)
+%.tar: $(TOOLS_DEB)
 	@docker buildx build --platform=linux/riscv64 \
+		--progress=plain \
+		--no-cache \
 	  --build-arg TOOLS_DEB=$(TOOLS_DEB) \
-	  --output type=tar,dest=rootfs.tar \
-	  --file fs/Dockerfile \
-	  . && \
-	bsdtar -cf rootfs.gnutar --format=gnutar @rootfs.tar && \
-	xgenext2fs -fzB 4096 -b 25600 -i 4096 -a rootfs.gnutar -L rootfs $(TOOLS_ROOTFS) && \
-	rm -f rootfs.gnutar rootfs.tar
+	  --output type=tar,dest=$@ \
+	  --file fs/$(call get_dockerfile_name,$*) .
+
+%.gnutar: %.tar
+	bsdtar -cf $@ --format=gnutar @$<
+
+%.ext2: %.gnutar
+	xgenext2fs -fzB 4096 -b 25600 -i 4096 -a $< -L $* $@
+
+fs: $(TOOLS_ROOTFS)
+
+hv-guest-fs: $(TOOLS_HV_GUEST_ROOTFS)
+hv-host-fs: $(TOOLS_HV_HOST_ROOTFS)
+hv-fs: hv-guest-fs hv-host-fs
 
 env:
 	@echo TOOLS_DEB=$(TOOLS_DEB)
