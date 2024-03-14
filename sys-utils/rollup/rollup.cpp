@@ -65,8 +65,9 @@ static void print_help(void) {
 
     voucher
       emit a voucher read from stdin as a JSON object in the format
-        {"destination": <address>, "value": <string>, "payload": <string>}
-      where field "destination" contains a 20-byte EVM address in hex.
+        {"destination": <address>, "value": <value>, "payload": <string>}
+      where <address> contains a 20-byte EVM address in hex,
+      and <value> contains an big-endian 32-byte unsigned integer in hex.
       if successful, prints to stdout a JSON object in the format
         {"index": <number> }
       where field "index" is the index allocated for the voucher
@@ -97,7 +98,9 @@ static void print_help(void) {
       field "data" contains a JSON object in the format
         {
           "metadata": {
-            "msg_sender": <msg-sender>,
+            "chain_id": <number>,
+            "app": <address>,
+            "sender": <address>,
             "epoch_index": <number>,
             "input_index": <number>,
             "block_number": <number>,
@@ -105,7 +108,7 @@ static void print_help(void) {
             },
             "payload": <string>
         },
-      where field "msg_sender" contains a 20-byte EVM address in hex
+      where field <address> contains a 20-byte EVM address in hex
 
       when field "request_type" contains "inspect_state",
       field "data" contains a JSON object in the format
@@ -258,8 +261,10 @@ static void write_advance_state(rollup &r, cmt_rollup_finish_t *f) {
     nlohmann::json j = {
         {"request_type", "advance_state"},
         {"data", {
+            {"chain_id", advance.chain_id},
             {"payload", hex(reinterpret_cast<const uint8_t *>(advance.data), advance.length)},
-            {"msg_sender", hex(advance.sender, sizeof(advance.sender))},
+            {"app", hex(advance.app, sizeof(advance.app))},
+            {"sender", hex(advance.sender, sizeof(advance.sender))},
             {"block_number", advance.block_number},
             {"block_timestamp", advance.block_timestamp},
             {"index", advance.index},
@@ -276,7 +281,7 @@ static void write_inspect_state(rollup &r, cmt_rollup_finish_t *f) {
         return;
 
     nlohmann::json j = {
-        {"request_type", "advance_state"},
+        {"request_type", "inspect_state"},
         {"data", {
             {"payload", hex(reinterpret_cast<const uint8_t *>(inspect.data), inspect.length)},
         }}
@@ -291,7 +296,6 @@ static int finish_request_and_get_next(bool accept) try {
     f.accept_previous_request = accept;
     if (cmt_rollup_finish(r, &f))
         return 1;
-
     if (f.next_request_type == CMT_IO_REASON_ADVANCE) {
         write_advance_state(r, &f);
     } else if (f.next_request_type == CMT_IO_REASON_INSPECT) {

@@ -113,7 +113,7 @@ int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
 
     if (enabled) {
         fprintf(stderr,
-            "yield {\n"
+            "tohost {\n"
             "\t.dev = %d,\n"
             "\t.cmd = %d,\n"
             "\t.reason = %d,\n"
@@ -125,5 +125,15 @@ int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
     if (ioctl(me->fd, IOCTL_CMIO_YIELD, &req))
         return -errno;
     *rr = unpack(req);
+    if (enabled) {
+        fprintf(stderr,
+            "fromhost {\n"
+            "\t.dev = %d,\n"
+            "\t.cmd = %d,\n"
+            "\t.reason = %d,\n"
+            "\t.data = %d,\n"
+            "};\n",
+            rr->dev, rr->cmd, rr->reason, rr->data);
+    }
     return 0;
 }

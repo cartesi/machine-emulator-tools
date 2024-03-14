@@ -29,8 +29,8 @@
 // Notice(bytes)
 #define NOTICE CMT_ABI_FUNSEL(0xc2, 0x58, 0xd6, 0xe5)
 
-// EvmAdvance(address,uint256,uint256,uint256,bytes)
-#define EVM_ADVANCE CMT_ABI_FUNSEL(0xd2, 0x0c, 0x60, 0xb4)
+// EvmAdvance(uint256,address,address,uint256,uint256,uint256,bytes)
+#define EVM_ADVANCE CMT_ABI_FUNSEL(0xcc, 0x7d, 0xee, 0x1f)
 
 // EvmInspect(bytes)
 #define EVM_INSPECT CMT_ABI_FUNSEL(0x73, 0xd4, 0x41, 0x43)
@@ -186,10 +186,14 @@ int cmt_rollup_read_advance_state(cmt_rollup_t *me, cmt_rollup_advance_t *advanc
     cmt_buf_t of[1];
 
     size_t length = 0;
-    if (DBG(cmt_abi_check_funsel(rd, EVM_ADVANCE)) || DBG(cmt_abi_get_address(rd, advance->sender)) ||
+    if (DBG(cmt_abi_check_funsel(rd, EVM_ADVANCE)) ||
+        DBG(cmt_abi_get_uint(rd, sizeof(advance->chain_id), &advance->chain_id)) ||
+        DBG(cmt_abi_get_address(rd, advance->app)) ||
+        DBG(cmt_abi_get_address(rd, advance->sender)) ||
         DBG(cmt_abi_get_uint(rd, sizeof(advance->block_number), &advance->block_number)) ||
         DBG(cmt_abi_get_uint(rd, sizeof(advance->block_timestamp), &advance->block_timestamp)) ||
-        DBG(cmt_abi_get_uint(rd, sizeof(advance->index), &advance->index)) || DBG(cmt_abi_get_bytes_s(rd, of)) ||
+        DBG(cmt_abi_get_uint(rd, sizeof(advance->index), &advance->index)) ||
+        DBG(cmt_abi_get_bytes_s(rd, of)) ||
         DBG(cmt_abi_get_bytes_d(st, of, &length, &advance->data)))
         return -ENOBUFS;
     advance->length = length;
@@ -253,9 +257,12 @@ int cmt_rollup_finish(cmt_rollup_t *me, cmt_rollup_finish_t *finish) {
 
     cmt_merkle_get_root_hash(me->merkle, cmt_io_get_tx(me->io).begin);
     finish->next_request_payload_length = CMT_WORD_LENGTH;
-    finish->next_request_type = accepted(me->io, &finish->next_request_payload_length);
+    int reason = accepted(me->io, &finish->next_request_payload_length);
+    if (reason < 0)
+        return reason;
+    finish->next_request_type = reason;
     cmt_merkle_init(me->merkle);
-    return finish->next_request_type;
+    return 0;
 }
 
 int cmt_rollup_progress(cmt_rollup_t *me, uint32_t progress) {
