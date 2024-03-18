@@ -15,9 +15,9 @@
 #
 
 MAJOR := 0
-MINOR := 14
-PATCH := 2
-LABEL :=
+MINOR := 15
+PATCH := 0
+LABEL := -output-unification-test1
 VERSION := $(MAJOR).$(MINOR).$(PATCH)$(LABEL)
 
 TOOLS_DEB    := machine-emulator-tools-v$(VERSION).deb
@@ -25,8 +25,8 @@ TOOLS_IMAGE  := cartesi/machine-emulator-tools:$(VERSION)
 TOOLS_ROOTFS := rootfs-tools-v$(VERSION).ext2
 CMT_TAR_GZ   := libcmt-$(VERSION).tar.gz
 
-IMAGE_KERNEL_VERSION ?= v0.19.1
-LINUX_VERSION ?= 6.5.9-ctsi-1
+IMAGE_KERNEL_VERSION ?= v0.20.0-output-unification-test1
+LINUX_VERSION ?= 6.5.13-ctsi-1-output-unification-test1
 LINUX_HEADERS_URLPATH := https://github.com/cartesi/image-kernel/releases/download/${IMAGE_KERNEL_VERSION}/linux-libc-dev-riscv64-cross-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
 
 all: fs
@@ -111,7 +111,7 @@ clean-image:
 	@(docker rmi $(TOOLS_IMAGE) > /dev/null 2>&1 || true)
 
 clean:
-	@rm -f $(TOOLS_DEB) control rootfs*
+	@rm -f $(TOOLS_DEB) control rootfs* libcmt-*
 	@$(MAKE) -C sys-utils clean
 
 distclean: clean clean-image
