@@ -15,8 +15,8 @@
 #
 
 FROM ubuntu:22.04 as tools-env
-ARG IMAGE_KERNEL_VERSION=v0.19.1
-ARG LINUX_VERSION=6.5.9-ctsi-1
+ARG IMAGE_KERNEL_VERSION=v0.20.0
+ARG LINUX_VERSION=6.5.13-ctsi-1
 ARG LINUX_HEADERS_URLPATH=https://github.com/cartesi/image-kernel/releases/download/${IMAGE_KERNEL_VERSION}/linux-libc-dev-riscv64-cross-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
 ARG BUILD_BASE=/opt/cartesi
 
@@ -37,7 +37,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
         g++-12-riscv64-linux-gnu \
         && \
     wget -O ${LINUX_HEADERS_FILEPATH} ${LINUX_HEADERS_URLPATH} && \
-    echo "efdb2243d9b6828e90c826be0f178110f0cc590cb00e8fa588cb20723126c2a4  ${LINUX_HEADERS_FILEPATH}" | sha256sum --check && \
+    echo "2723435e8b45d8fb7a79e9344f6dc517b3dbc08e03ac17baab311300ec475c08  ${LINUX_HEADERS_FILEPATH}" | sha256sum --check && \
     apt-get install -y --no-install-recommends ${LINUX_HEADERS_FILEPATH} && \
     adduser developer -u 499 --gecos ",,," --disabled-password && \
     mkdir -p ${BUILD_BASE}/tools && chown -R developer:developer ${BUILD_BASE}/tools && \
@@ -67,17 +67,16 @@ COPY --chown=developer:developer sys-utils/ ${BUILD_BASE}/tools/sys-utils/
 # ------------------------------------------------------------------------------
 FROM builder as c-builder
 ARG CMT_BASE=${BUILD_BASE}/tools/sys-utils/libcmt
-ARG CMT_TAR_GZ=libcmt-v0.14.1-dev.tar.gz
+ARG CMT_TAR_GZ=libcmt-v0.15.0.tar.gz
 ARG BUILD_BASE=/opt/cartesi
 
 USER developer
 RUN make -C ${CMT_BASE} -j$(nproc) ioctl.build mock.build
 USER root
-RUN make -C ${CMT_BASE} -j$(nproc) ioctl.install \
-	TARGET_PREFIX=${CMT_BASE}/install && \
+RUN make -C ${CMT_BASE} -j$(nproc) ioctl.install TARGET_PREFIX=${CMT_BASE}/install && \
     tar czf ${BUILD_BASE}/${CMT_TAR_GZ} -C ${CMT_BASE}/install .
 RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt/ -j$(nproc) ioctl.install mock.install \
-	PREFIX=/usr/x86_64-linux-gnu TARGET_PREFIX=/usr/riscv64-linux-gnu
+       PREFIX=/usr/x86_64-linux-gnu TARGET_PREFIX=/usr/riscv64-linux-gnu
 USER developer
 RUN make -C ${BUILD_BASE}/tools/sys-utils/ -j$(nproc) all
 
@@ -141,7 +140,7 @@ ARG STAGING_BASE=${BUILD_BASE}/_install
 ARG STAGING_DEBIAN=${STAGING_BASE}/DEBIAN
 ARG STAGING_SBIN=${STAGING_BASE}/usr/sbin
 ARG STAGING_BIN=${STAGING_BASE}/usr/bin
-ARG CMT_TAR_GZ=libcmt-v0.14.1-dev.tar.gz
+ARG CMT_TAR_GZ=libcmt-v0.15.0.tar.gz
 
 RUN mkdir -p ${STAGING_DEBIAN} ${STAGING_SBIN} ${STAGING_BIN} ${STAGING_BASE}/etc && \
     echo "cartesi-machine" > ${staging_base}/etc/hostname
