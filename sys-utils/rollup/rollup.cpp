@@ -97,16 +97,14 @@ static void print_help(void) {
       when field "request_type" contains "advance_state",
       field "data" contains a JSON object in the format
         {
-          "metadata": {
-            "chain_id": <number>,
-            "app": <address>,
-            "sender": <address>,
-            "epoch_index": <number>,
-            "input_index": <number>,
-            "block_number": <number>,
-            "timestamp": <number>
-            },
-            "payload": <string>
+          "chain_id": <number>,
+          "app_contract": <address>,
+          "msg_sender": <address>,
+          "epoch_index": <number>,
+          "input_index": <number>,
+          "block_number": <number>,
+          "timestamp": <number>
+          "payload": <string>
         },
       where field <address> contains a 20-byte EVM address in hex
 
@@ -262,9 +260,9 @@ static void write_advance_state(rollup &r, cmt_rollup_finish_t *f) {
         {"request_type", "advance_state"},
         {"data", {
             {"chain_id", advance.chain_id},
-            {"payload", hex(reinterpret_cast<const uint8_t *>(advance.data), advance.length)},
-            {"app", hex(advance.app, sizeof(advance.app))},
-            {"sender", hex(advance.sender, sizeof(advance.sender))},
+            {"payload", hex(reinterpret_cast<const uint8_t *>(advance.payload), advance.payload_length)},
+            {"app_contract", hex(advance.app_contract, sizeof(advance.app_contract))},
+            {"msg_sender", hex(advance.msg_sender, sizeof(advance.msg_sender))},
             {"block_number", advance.block_number},
             {"block_timestamp", advance.block_timestamp},
             {"index", advance.index},
@@ -283,7 +281,7 @@ static void write_inspect_state(rollup &r, cmt_rollup_finish_t *f) {
     nlohmann::json j = {
         {"request_type", "inspect_state"},
         {"data", {
-            {"payload", hex(reinterpret_cast<const uint8_t *>(inspect.data), inspect.length)},
+            {"payload", hex(reinterpret_cast<const uint8_t *>(inspect.payload), inspect.payload_length)},
         }}
     };
     std::cout << j.dump(2) << '\n';
