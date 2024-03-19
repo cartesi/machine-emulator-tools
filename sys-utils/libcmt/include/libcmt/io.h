@@ -91,6 +91,8 @@ enum {
 typedef struct {
     cmt_buf_t tx[1];
     cmt_buf_t rx[1];
+    uint32_t rx_max_length;
+    uint32_t rx_fromhost_length;
     int fd;
 } cmt_io_driver_ioctl_t;
 

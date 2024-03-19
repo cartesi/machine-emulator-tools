@@ -44,6 +44,9 @@ int cmt_io_init(cmt_io_driver_t *_me) {
         goto do_unmap;
     }
 
+    me->rx_max_length = setup.rx.length;
+    me->rx_fromhost_length = 0;
+
     cmt_buf_init(me->tx, setup.tx.length, tx);
     cmt_buf_init(me->rx, setup.rx.length, rx);
     return 0;
@@ -69,17 +72,23 @@ void cmt_io_fini(cmt_io_driver_t *_me) {
 }
 
 cmt_buf_t cmt_io_get_tx(cmt_io_driver_t *me) {
-    cmt_buf_t empty = {NULL, NULL};
+    static const cmt_buf_t empty = {NULL, NULL};
     if (!me)
         return empty;
     return *me->ioctl.tx;
 }
 
+static uint32_t min(uint32_t a, uint32_t b) {
+    return a < b? a: b;
+}
+
 cmt_buf_t cmt_io_get_rx(cmt_io_driver_t *me) {
-    cmt_buf_t empty = {NULL, NULL};
+    static const cmt_buf_t empty = {NULL, NULL};
     if (!me)
         return empty;
-    return *me->ioctl.rx;
+    cmt_buf_t rx = *me->ioctl.rx;
+    rx.end = rx.begin + min(me->ioctl.rx_max_length, me->ioctl.rx_fromhost_length);
+    return rx;
 }
 
 static uint64_t pack(struct cmt_io_yield *rr) {
@@ -125,6 +134,9 @@ int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
     if (ioctl(me->fd, IOCTL_CMIO_YIELD, &req))
         return -errno;
     *rr = unpack(req);
+
+    me->rx_fromhost_length = rr->data;
+
     if (enabled) {
         fprintf(stderr,
             "fromhost {\n"
