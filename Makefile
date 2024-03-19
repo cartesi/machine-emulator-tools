@@ -59,7 +59,7 @@ $(TOOLS_ROOTFS) fs: $(TOOLS_DEB)
 	  --file fs/Dockerfile \
 	  . && \
 	bsdtar -cf rootfs.gnutar --format=gnutar @rootfs.tar && \
-	xgenext2fs -fzB 4096 -b 25600 -i 4096 -a rootfs.gnutar -L rootfs $(TOOLS_ROOTFS) && \
+	xgenext2fs -fzB 4096 -b 65536 -i 4096 -a rootfs.gnutar -L rootfs $(TOOLS_ROOTFS) && \
 	rm -f rootfs.gnutar rootfs.tar
 
 env:
