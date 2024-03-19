@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -e
+
+USER_NAME="dapp"
+
+# Check if the user already exists
+if ! getent passwd $USER_NAME > /dev/null; then
+    useradd --create-home --user-group $USER_NAME
+fi
+
+exit 0

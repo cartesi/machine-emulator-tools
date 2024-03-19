@@ -48,7 +48,6 @@ RUN apt-get update && \
         file=1:5.41-3ubuntu0.1 \
         /tmp/${TOOLS_DEB} \
         && \
-    useradd --create-home --user-group dapp && \
     rm -rf /var/lib/apt/lists/* /tmp/${TOOLS_DEB}
 COPY --chown=root:root --from=cross-builder /tmp/build-extra/benchmarks/whetstone /usr/bin/
 COPY --chown=root:root --from=cross-builder /tmp/build-extra/benchmarks/dhrystone /usr/bin/
