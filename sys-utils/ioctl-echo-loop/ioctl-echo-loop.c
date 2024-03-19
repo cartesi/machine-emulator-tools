@@ -147,9 +147,9 @@ static int handle_inspect_state_request(cmt_rollup_t *me, struct parsed_args *ar
 
 static int handle_request(cmt_rollup_t *me, struct parsed_args *args, cmt_rollup_finish_t *finish) {
     switch (finish->next_request_type) {
-        case CMT_IO_REASON_ADVANCE:
+        case HTIF_YIELD_REASON_ADVANCE:
             return handle_advance_state_request(me, args);
-        case CMT_IO_REASON_INSPECT:
+        case HTIF_YIELD_REASON_INSPECT:
             return handle_inspect_state_request(me, args);
         default:
             /* unknown request type */
@@ -184,10 +184,10 @@ int main(int argc, char *argv[]) {
             break;
         }
         reject_advance =
-            (finish.next_request_type == CMT_IO_REASON_ADVANCE) && (args.reject == input_index);
-        reject_inspect = (finish.next_request_type == CMT_IO_REASON_INSPECT) && args.reject_inspects;
+            (finish.next_request_type == HTIF_YIELD_REASON_ADVANCE) && (args.reject == input_index);
+        reject_inspect = (finish.next_request_type == HTIF_YIELD_REASON_INSPECT) && args.reject_inspects;
         throw_exception =
-            (finish.next_request_type == CMT_IO_REASON_ADVANCE) && (args.exception == input_index);
+            (finish.next_request_type == HTIF_YIELD_REASON_ADVANCE) && (args.exception == input_index);
         if (throw_exception) {
             const char message[] = "exception";
             cmt_rollup_emit_exception(&rollup, sizeof message -1, message);

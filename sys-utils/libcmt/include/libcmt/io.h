@@ -57,30 +57,35 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/** Device */
 enum {
-    CMT_IO_DEV = 2, /**< IO Device */
+    HTIF_DEVICE_YIELD = 2, /**< Yield device */
 };
 
-/** Request */
+/** Commands */
 enum {
-    CMT_IO_CMD_AUTOMATIC = 0, /**< Automatic */
-    CMT_IO_CMD_MANUAL = 1,    /**< Manual */
+    HTIF_YIELD_CMD_AUTOMATIC = 0, /**< Automatic yield */
+    HTIF_YIELD_CMD_MANUAL = 1,    /**< Manual yield */
 };
 
-/** Request */
+/** Automatic reasons */
 enum {
-    CMT_IO_REASON_PROGRESS = 0,     /**< Progress */
-    CMT_IO_REASON_RX_ACCEPTED = 1,  /**< Accept and load next input */
-    CMT_IO_REASON_RX_REJECTED = 2,  /**< Reject and revert */
-    CMT_IO_REASON_TX_OUTPUT = 3,    /**< emit an output */
-    CMT_IO_REASON_TX_REPORT = 4,    /**< emit a report */
-    CMT_IO_REASON_TX_EXCEPTION = 5, /**< emit a exception and halt execution */
+    HTIF_YIELD_AUTOMATIC_REASON_PROGRESS = 1,     /**< Progress */
+    HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT = 2,    /**< emit an output */
+    HTIF_YIELD_AUTOMATIC_REASON_TX_REPORT = 4,    /**< emit a report */
 };
 
-/** Reply reason when requesting @ref CMT_IO_REASON_RX_ACCEPTED */
+/** Manual reasons */
 enum {
-    CMT_IO_REASON_ADVANCE = 0, /**< Input is advance */
-    CMT_IO_REASON_INSPECT = 1, /**< Input is inspect */
+    HTIF_YIELD_MANUAL_REASON_RX_ACCEPTED = 1,     /**< Accept and load next input */
+    HTIF_YIELD_MANUAL_REASON_RX_REJECTED = 2,     /**< Reject and revert */
+    HTIF_YIELD_MANUAL_REASON_TX_EXCEPTION = 4,    /**< emit a exception and halt execution */
+};
+
+/** Reply reason when requesting @ref HTIF_YIELD_REASON_RX_ACCEPTED or HTIF_YIELD_REASON_RX_REJECTED */
+enum {
+    HTIF_YIELD_REASON_ADVANCE = 0, /**< Input is advance */
+    HTIF_YIELD_REASON_INSPECT = 1, /**< Input is inspect */
 };
 
 typedef struct {

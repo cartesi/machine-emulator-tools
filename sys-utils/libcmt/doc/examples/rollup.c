@@ -17,7 +17,7 @@ int main(void) {
         if (cmt_rollup_finish(&rollup, &finish) < 0)
             return EXIT_FAILURE;
         switch (finish.next_request_type) {
-            case CMT_IO_REASON_ADVANCE:
+            case HTIF_YIELD_REASON_ADVANCE:
                 rc = cmt_rollup_read_advance_state(&rollup, &advance);
                 if (rc < 0) {
                     fprintf(stderr, "%s:%d Error on advance %s (%d)\n", __FILE__, __LINE__, strerror(-rc), (-rc));
@@ -36,7 +36,7 @@ int main(void) {
                     break;
                 }
                 break;
-            case CMT_IO_REASON_INSPECT:
+            case HTIF_YIELD_REASON_INSPECT:
                 break;
         }
     }

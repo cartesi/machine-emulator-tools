@@ -94,9 +94,9 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me,
 
     size_t m = wr->begin - tx->begin;
     struct cmt_io_yield req[1] = {{
-        .dev = CMT_IO_DEV,
-        .cmd = CMT_IO_CMD_AUTOMATIC,
-        .reason = CMT_IO_REASON_TX_OUTPUT,
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = HTIF_YIELD_CMD_AUTOMATIC,
+        .reason = HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT,
         .data = m,
     }};
     int rc = DBG(cmt_io_yield(me->io, req));
@@ -122,9 +122,9 @@ int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data) 
 
     size_t m = wr->begin - tx->begin;
     struct cmt_io_yield req[1] = {{
-        .dev = CMT_IO_DEV,
-        .cmd = CMT_IO_CMD_AUTOMATIC,
-        .reason = CMT_IO_REASON_TX_OUTPUT,
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = HTIF_YIELD_CMD_AUTOMATIC,
+        .reason = HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT,
         .data = m,
     }};
     int rc = DBG(cmt_io_yield(me->io, req));
@@ -146,9 +146,9 @@ int cmt_rollup_emit_report(cmt_rollup_t *me, uint32_t length, const void *data) 
 
     memcpy(wr->begin, data, length);
     struct cmt_io_yield req[1] = {{
-        .dev = CMT_IO_DEV,
-        .cmd = CMT_IO_CMD_AUTOMATIC,
-        .reason = CMT_IO_REASON_TX_REPORT,
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = HTIF_YIELD_CMD_AUTOMATIC,
+        .reason = HTIF_YIELD_AUTOMATIC_REASON_TX_REPORT,
         .data = length,
     }};
     return DBG(cmt_io_yield(me->io, req));
@@ -167,9 +167,9 @@ int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t length, const void *dat
 
     memcpy(tx->begin, data, length);
     struct cmt_io_yield req[1] = {{
-        .dev = CMT_IO_DEV,
-        .cmd = CMT_IO_CMD_MANUAL,
-        .reason = CMT_IO_REASON_TX_EXCEPTION,
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = HTIF_YIELD_CMD_MANUAL,
+        .reason = HTIF_YIELD_MANUAL_REASON_TX_EXCEPTION,
         .data = length,
     }};
     return DBG(cmt_io_yield(me->io, req));
@@ -220,9 +220,9 @@ int cmt_rollup_read_inspect_state(cmt_rollup_t *me, cmt_rollup_inspect_t *inspec
 
 static int accepted(union cmt_io_driver *io, uint32_t *n) {
     struct cmt_io_yield req[1] = {{
-        .dev = CMT_IO_DEV,
-        .cmd = CMT_IO_CMD_MANUAL,
-        .reason = CMT_IO_REASON_RX_ACCEPTED,
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = HTIF_YIELD_CMD_MANUAL,
+        .reason = HTIF_YIELD_MANUAL_REASON_RX_ACCEPTED,
         .data = *n,
     }};
     int rc = DBG(cmt_io_yield(io, req));
@@ -235,9 +235,9 @@ static int accepted(union cmt_io_driver *io, uint32_t *n) {
 
 static int revert(union cmt_io_driver *io) {
     struct cmt_io_yield req[1] = {{
-        .dev = CMT_IO_DEV,
-        .cmd = CMT_IO_CMD_MANUAL,
-        .reason = CMT_IO_REASON_RX_REJECTED,
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = HTIF_YIELD_CMD_MANUAL,
+        .reason = HTIF_YIELD_MANUAL_REASON_RX_REJECTED,
         .data = 0,
     }};
     return DBG(cmt_io_yield(io, req));
@@ -267,9 +267,9 @@ int cmt_rollup_finish(cmt_rollup_t *me, cmt_rollup_finish_t *finish) {
 
 int cmt_rollup_progress(cmt_rollup_t *me, uint32_t progress) {
     cmt_io_yield_t req[1] = {{
-        .dev = CMT_IO_DEV,
-        .cmd = CMT_IO_CMD_AUTOMATIC,
-        .reason = CMT_IO_REASON_PROGRESS,
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = HTIF_YIELD_CMD_AUTOMATIC,
+        .reason = HTIF_YIELD_AUTOMATIC_REASON_PROGRESS,
         .data = progress,
     }};
     return DBG(cmt_io_yield(me->io, req));

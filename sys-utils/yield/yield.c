@@ -53,20 +53,20 @@ static int find_value(const struct name_value *pairs, size_t n, const char *s, u
 
 int get_mode(const char *s, uint64_t *mode) {
     struct name_value modes[] = {
-        {"manual",    CMT_IO_CMD_MANUAL},
-        {"automatic", CMT_IO_CMD_AUTOMATIC},
+        {"manual",    HTIF_YIELD_CMD_MANUAL},
+        {"automatic", HTIF_YIELD_CMD_AUTOMATIC},
     };
     return find_value(modes, sizeof(modes)/sizeof(*modes), s, mode);
 }
 
 int get_reason(const char *s, uint64_t *reason) {
     struct name_value reasons[] = {
-        {"progress",     CMT_IO_REASON_PROGRESS},
-        {"rx-accepted",  CMT_IO_REASON_RX_ACCEPTED},
-        {"rx-rejected",  CMT_IO_REASON_RX_REJECTED},
-        {"tx-exception", CMT_IO_REASON_TX_EXCEPTION},
-        {"tx-output",    CMT_IO_REASON_TX_OUTPUT},
-        {"tx-report",    CMT_IO_REASON_TX_REPORT},
+        {"progress",     HTIF_YIELD_AUTOMATIC_REASON_PROGRESS},
+        {"tx-output",    HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT},
+        {"tx-report",    HTIF_YIELD_AUTOMATIC_REASON_TX_REPORT},
+        {"rx-accepted",  HTIF_YIELD_MANUAL_REASON_RX_ACCEPTED},
+        {"rx-rejected",  HTIF_YIELD_MANUAL_REASON_RX_REJECTED},
+        {"tx-exception", HTIF_YIELD_MANUAL_REASON_TX_EXCEPTION},
     };
     return find_value(reasons, sizeof(reasons)/sizeof(*reasons), s, reason);
 }
@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
 
     parse_args(argc, argv, &args);
     cmt_io_yield_t req[1] = {{
-        .dev = CMT_IO_DEV,
+        .dev = HTIF_DEVICE_YIELD,
         .cmd = args.mode,
         .reason = args.reason,
         .data = args.data,

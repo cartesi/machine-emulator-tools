@@ -6,9 +6,9 @@
 
 int next(union cmt_io_driver *io, uint32_t *n) {
     struct cmt_io_yield req[1] = {{
-        .dev = CMT_IO_DEV,
-        .cmd = CMT_IO_CMD_MANUAL,
-        .reason = CMT_IO_REASON_RX_ACCEPTED,
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = HTIF_YIELD_CMD_MANUAL,
+        .reason = HTIF_YIELD_MANUAL_REASON_RX_ACCEPTED,
         .data = *n,
     }};
     if (cmt_io_yield(io, req)) {
@@ -21,9 +21,9 @@ int next(union cmt_io_driver *io, uint32_t *n) {
 
 int voucher(union cmt_io_driver *io, uint32_t n) {
     struct cmt_io_yield req[1] = {{
-        .dev = CMT_IO_DEV,
-        .cmd = CMT_IO_CMD_AUTOMATIC,
-        .reason = CMT_IO_REASON_TX_OUTPUT,
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = HTIF_YIELD_CMD_AUTOMATIC,
+        .reason = HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT,
         .data = n,
     }};
     return cmt_io_yield(io, req);
@@ -31,9 +31,9 @@ int voucher(union cmt_io_driver *io, uint32_t n) {
 
 int report(union cmt_io_driver *io, uint32_t n) {
     struct cmt_io_yield req[1] = {{
-        .dev = CMT_IO_DEV,
-        .cmd = CMT_IO_CMD_AUTOMATIC,
-        .reason = CMT_IO_REASON_TX_REPORT,
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = HTIF_YIELD_CMD_AUTOMATIC,
+        .reason = HTIF_YIELD_AUTOMATIC_REASON_TX_REPORT,
         .data = n,
     }};
     return cmt_io_yield(io, req);
@@ -41,9 +41,9 @@ int report(union cmt_io_driver *io, uint32_t n) {
 
 int exception(union cmt_io_driver *io, uint32_t n) {
     struct cmt_io_yield req[1] = {{
-        .dev = CMT_IO_DEV,
-        .cmd = CMT_IO_CMD_MANUAL,
-        .reason = CMT_IO_REASON_TX_EXCEPTION,
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = HTIF_YIELD_CMD_MANUAL,
+        .reason = HTIF_YIELD_MANUAL_REASON_TX_EXCEPTION,
         .data = n,
     }};
     return cmt_io_yield(io, req);
