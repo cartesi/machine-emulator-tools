@@ -296,9 +296,9 @@ static int finish_request_and_get_next(bool accept) try {
     f.accept_previous_request = accept;
     if (cmt_rollup_finish(r, &f))
         return 1;
-    if (f.next_request_type == CMT_IO_REASON_ADVANCE) {
+    if (f.next_request_type == HTIF_YIELD_REASON_ADVANCE) {
         write_advance_state(r, &f);
-    } else if (f.next_request_type == CMT_IO_REASON_INSPECT) {
+    } else if (f.next_request_type == HTIF_YIELD_REASON_INSPECT) {
         write_inspect_state(r, &f);
     }
     return 0;

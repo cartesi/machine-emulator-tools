@@ -24,9 +24,9 @@ int main(void) {
 
     /* exception -------------------------------------------------------- */
     struct cmt_io_yield req[1] = {{
-        .dev = CMT_IO_DEV,
-        .cmd = CMT_IO_CMD_MANUAL,
-        .reason = CMT_IO_REASON_TX_EXCEPTION,
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = HTIF_YIELD_CMD_MANUAL,
+        .reason = HTIF_YIELD_MANUAL_REASON_TX_EXCEPTION,
         .data = n,
     }};
     if (cmt_io_yield(io, req)) {

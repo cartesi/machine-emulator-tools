@@ -44,7 +44,7 @@ typedef struct cmt_rollup {
 /** Public struct with the advance state contents */
 typedef struct cmt_rollup_advance {
     uint64_t chain_id;                  /**< network */
-    uint8_t app[CMT_ADDRESS_LENGTH];    /**< application address */
+    uint8_t app[CMT_ADDRESS_LENGTH];    /**< application contract address */
     uint8_t sender[CMT_ADDRESS_LENGTH]; /**< input sender */
     uint64_t block_number;              /**< block number of this input */
     uint64_t block_timestamp;           /**< block timestamp of this input UNIX epoch format) */

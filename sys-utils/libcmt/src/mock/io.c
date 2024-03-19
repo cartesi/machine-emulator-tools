@@ -124,7 +124,7 @@ static int store_next_output(cmt_io_driver_mock_t *me, char *ns, int *seq, struc
 
 static int mock_progress(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
     (void) me;
-    if (rr->cmd != CMT_IO_CMD_AUTOMATIC) {
+    if (rr->cmd != HTIF_YIELD_CMD_AUTOMATIC) {
         fprintf(stderr, "Expected cmd to be AUTOMATIC\n");
         return -EINVAL;
     }
@@ -133,7 +133,7 @@ static int mock_progress(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
 }
 
 static int mock_rx_accepted(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
-    if (rr->cmd != CMT_IO_CMD_MANUAL) {
+    if (rr->cmd != HTIF_YIELD_CMD_MANUAL) {
         fprintf(stderr, "Expected cmd to be MANUAL\n");
         return -EINVAL;
     }
@@ -150,7 +150,7 @@ static int mock_rx_accepted(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
 }
 
 static int mock_rx_rejected(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
-    if (rr->cmd != CMT_IO_CMD_MANUAL) {
+    if (rr->cmd != HTIF_YIELD_CMD_MANUAL) {
         fprintf(stderr, "Expected cmd to be MANUAL\n");
         return -EINVAL;
     }
@@ -161,7 +161,7 @@ static int mock_rx_rejected(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
 }
 
 static int mock_tx_output(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
-    if (rr->cmd != CMT_IO_CMD_AUTOMATIC) {
+    if (rr->cmd != HTIF_YIELD_CMD_AUTOMATIC) {
         fprintf(stderr, "Expected cmd to be AUTOMATIC\n");
         return -EINVAL;
     }
@@ -169,7 +169,7 @@ static int mock_tx_output(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
 }
 
 static int mock_tx_report(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
-    if (rr->cmd != CMT_IO_CMD_AUTOMATIC) {
+    if (rr->cmd != HTIF_YIELD_CMD_AUTOMATIC) {
         fprintf(stderr, "Expected cmd to be AUTOMATIC\n");
         return -EINVAL;
     }
@@ -177,7 +177,7 @@ static int mock_tx_report(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
 }
 
 static int mock_tx_exception(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
-    if (rr->cmd != CMT_IO_CMD_MANUAL) {
+    if (rr->cmd != HTIF_YIELD_CMD_MANUAL) {
         fprintf(stderr, "Expected cmd to be MANUAL\n");
         return -EINVAL;
     }
@@ -201,22 +201,32 @@ int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
             rr->dev, rr->cmd, rr->reason, rr->data);
     }
 
-    switch (rr->reason) {
-        case CMT_IO_REASON_PROGRESS:
-            return mock_progress(me, rr);
-        case CMT_IO_REASON_RX_ACCEPTED:
-            return mock_rx_accepted(me, rr);
-        case CMT_IO_REASON_RX_REJECTED:
-            return mock_rx_rejected(me, rr);
-        case CMT_IO_REASON_TX_OUTPUT:
-            return mock_tx_output(me, rr);
-        case CMT_IO_REASON_TX_REPORT:
-            return mock_tx_report(me, rr);
-        case CMT_IO_REASON_TX_EXCEPTION:
-            return mock_tx_exception(me, rr);
-        default:
-            return -EINVAL;
+    if (rr->cmd == HTIF_YIELD_CMD_MANUAL) {
+        switch (rr->reason) {
+            case HTIF_YIELD_MANUAL_REASON_RX_ACCEPTED:
+                return mock_rx_accepted(me, rr);
+            case HTIF_YIELD_MANUAL_REASON_RX_REJECTED:
+                return mock_rx_rejected(me, rr);
+            case HTIF_YIELD_MANUAL_REASON_TX_EXCEPTION:
+                return mock_tx_exception(me, rr);
+            default:
+                return -EINVAL;
+        }
+    } else if (rr->cmd == HTIF_YIELD_CMD_AUTOMATIC) {
+        switch (rr->reason) {
+            case HTIF_YIELD_AUTOMATIC_REASON_PROGRESS:
+                return mock_progress(me, rr);
+            case HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT:
+                return mock_tx_output(me, rr);
+            case HTIF_YIELD_AUTOMATIC_REASON_TX_REPORT:
+                return mock_tx_report(me, rr);
+            default:
+                return -EINVAL;
+        }
+    } else {
+        return -EINVAL;
     }
+
     return 0;
 }
 
