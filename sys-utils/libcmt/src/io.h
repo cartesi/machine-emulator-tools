@@ -69,9 +69,12 @@ enum {
 
 /** Automatic reasons */
 enum {
-    HTIF_YIELD_AUTOMATIC_REASON_PROGRESS = 1,  /**< Progress */
-    HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT = 2, /**< emit an output */
-    HTIF_YIELD_AUTOMATIC_REASON_TX_REPORT = 4, /**< emit a report */
+    CMT_IO_AUTOMATIC_REASON_PROGRESS = 1,     /**< Progress */
+    CMT_IO_AUTOMATIC_REASON_TX_OUTPUT = 2,    /**< emit an output */
+    CMT_IO_AUTOMATIC_REASON_TX_REPORT = 4,    /**< emit a report */
+    CMT_IO_MANUAL_REASON_RX_ACCEPTED = 1,  /**< Accept and load next input */
+    CMT_IO_MANUAL_REASON_RX_REJECTED = 2,  /**< Reject and revert */
+    CMT_IO_MANUAL_REASON_TX_EXCEPTION = 4, /**< emit a exception and halt execution */
 };
 
 /** Manual reasons */

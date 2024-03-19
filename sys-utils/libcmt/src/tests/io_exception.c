@@ -1,22 +1,26 @@
+#include "io.h"
 #include "libcmt/io.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-int exception(union cmt_io_driver *io) {
+int main(void) {
     /* init ------------------------------------------------------------- */
+    struct cmt_io_driver io[1];
     if (cmt_io_init(io)) {
         fprintf(stderr, "%s:%d failed to init\n", __FILE__, __LINE__);
         return EXIT_FAILURE;
     }
 
-    cmt_buf_t tx = cmt_io_get_tx(io);
+    size_t tx_sz, rx_sz;
+    uint8_t *tx, *rx;
+    tx = cmt_io_get_tx(io, &tx_sz), rx = cmt_io_get_rx(io, &rx_sz);
 
     /* prepare exception ------------------------------------------------ */
     const char message[] = "exception contents\n";
     size_t n = strlen(message);
-    memcpy(tx.begin, message, n);
+    memcpy(tx, message, n);
 
     /* exception -------------------------------------------------------- */
     struct cmt_io_yield req[1] = {{

@@ -235,24 +235,24 @@ int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
             rr->dev, rr->cmd, rr->reason, rr->data);
     }
 
-    if (rr->cmd == HTIF_YIELD_CMD_MANUAL) {
+    if (rr->cmd == CMT_IO_CMD_MANUAL) {
         switch (rr->reason) {
-            case HTIF_YIELD_MANUAL_REASON_RX_ACCEPTED:
+            case CMT_IO_MANUAL_REASON_RX_ACCEPTED:
                 return mock_rx_accepted(me, rr);
-            case HTIF_YIELD_MANUAL_REASON_RX_REJECTED:
+            case CMT_IO_MANUAL_REASON_RX_REJECTED:
                 return mock_rx_rejected(me, rr);
-            case HTIF_YIELD_MANUAL_REASON_TX_EXCEPTION:
+            case CMT_IO_MANUAL_REASON_TX_EXCEPTION:
                 return mock_tx_exception(me, rr);
             default:
                 return -EINVAL;
         }
-    } else if (rr->cmd == HTIF_YIELD_CMD_AUTOMATIC) {
+    } else if (rr->cmd == CMT_IO_CMD_AUTOMATIC) {
         switch (rr->reason) {
-            case HTIF_YIELD_AUTOMATIC_REASON_PROGRESS:
+            case CMT_IO_AUTOMATIC_REASON_PROGRESS:
                 return mock_progress(me, rr);
-            case HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT:
+            case CMT_IO_AUTOMATIC_REASON_TX_OUTPUT:
                 return mock_tx_output(me, rr);
-            case HTIF_YIELD_AUTOMATIC_REASON_TX_REPORT:
+            case CMT_IO_AUTOMATIC_REASON_TX_REPORT:
                 return mock_tx_report(me, rr);
             default:
                 return -EINVAL;
