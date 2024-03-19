@@ -205,16 +205,9 @@ int cmt_rollup_read_inspect_state(cmt_rollup_t *me, cmt_rollup_inspect_t *inspec
         return -EINVAL;
     if (!inspect)
         return -EINVAL;
-
-    cmt_buf_t rd[1] = {cmt_io_get_rx(me->io)};
-    cmt_buf_t st[1] = {{rd->begin + 4, rd->end}}; // EVM offsets are from after funsel
-    cmt_buf_t of[1];
-
-    size_t length = 0;
-    if (DBG(cmt_abi_check_funsel(rd, EVM_INSPECT)) || DBG(cmt_abi_get_bytes_s(rd, of)) ||
-        DBG(cmt_abi_get_bytes_d(st, of, &length, &inspect->data)))
-        return -ENOBUFS;
-    inspect->length = length;
+    cmt_buf_t rx[1] = {cmt_io_get_rx(me->io)};
+    inspect->length = cmt_buf_length(rx);
+    inspect->data = rx->begin;
     return 0;
 }
 
