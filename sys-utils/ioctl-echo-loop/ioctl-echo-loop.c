@@ -122,13 +122,13 @@ static int handle_advance_state_request(cmt_rollup_t *me, struct parsed_args *ar
     int rc = cmt_rollup_read_advance_state(me, &advance);
     if (rc) return rc;
 
-    if (write_vouchers(me, args->voucher_count, advance.sender, advance.length, advance.data) != 0) {
+    if (write_vouchers(me, args->voucher_count, advance.msg_sender, advance.payload_length, advance.payload) != 0) {
         return -1;
     }
-    if (write_notices(me, args->notice_count, advance.length, advance.data) != 0) {
+    if (write_notices(me, args->notice_count, advance.payload_length, advance.payload) != 0) {
         return -1;
     }
-    if (write_reports(me, args->report_count, advance.length, advance.data) != 0) {
+    if (write_reports(me, args->report_count, advance.payload_length, advance.payload) != 0) {
         return -1;
     }
     return 0;
@@ -139,7 +139,7 @@ static int handle_inspect_state_request(cmt_rollup_t *me, struct parsed_args *ar
     int rc = cmt_rollup_read_inspect_state(me, &inspect);
     if (rc) return rc;
 
-    if (write_reports(me, args->report_count, inspect.length, inspect.data) != 0) {
+    if (write_reports(me, args->report_count, inspect.payload_length, inspect.payload) != 0) {
         return -1;
     }
     return 0;

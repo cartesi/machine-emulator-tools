@@ -185,18 +185,18 @@ int cmt_rollup_read_advance_state(cmt_rollup_t *me, cmt_rollup_advance_t *advanc
     cmt_buf_t st[1] = {{rd->begin + 4, rd->end}}; // EVM offsets are from after funsel
     cmt_buf_t of[1];
 
-    size_t length = 0;
+    size_t payload_length = 0;
     if (DBG(cmt_abi_check_funsel(rd, EVM_ADVANCE)) ||
         DBG(cmt_abi_get_uint(rd, sizeof(advance->chain_id), &advance->chain_id)) ||
-        DBG(cmt_abi_get_address(rd, advance->app)) ||
-        DBG(cmt_abi_get_address(rd, advance->sender)) ||
+        DBG(cmt_abi_get_address(rd, advance->app_contract)) ||
+        DBG(cmt_abi_get_address(rd, advance->msg_sender)) ||
         DBG(cmt_abi_get_uint(rd, sizeof(advance->block_number), &advance->block_number)) ||
         DBG(cmt_abi_get_uint(rd, sizeof(advance->block_timestamp), &advance->block_timestamp)) ||
         DBG(cmt_abi_get_uint(rd, sizeof(advance->index), &advance->index)) ||
         DBG(cmt_abi_get_bytes_s(rd, of)) ||
-        DBG(cmt_abi_get_bytes_d(st, of, &length, &advance->data)))
+        DBG(cmt_abi_get_bytes_d(st, of, &payload_length, &advance->payload)))
         return -ENOBUFS;
-    advance->length = length;
+    advance->payload_length = payload_length;
     return 0;
 }
 
@@ -206,8 +206,8 @@ int cmt_rollup_read_inspect_state(cmt_rollup_t *me, cmt_rollup_inspect_t *inspec
     if (!inspect)
         return -EINVAL;
     cmt_buf_t rx[1] = {cmt_io_get_rx(me->io)};
-    inspect->length = cmt_buf_length(rx);
-    inspect->data = rx->begin;
+    inspect->payload_length = cmt_buf_length(rx);
+    inspect->payload = rx->begin;
     return 0;
 }
 

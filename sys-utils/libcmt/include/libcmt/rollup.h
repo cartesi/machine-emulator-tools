@@ -43,20 +43,20 @@ typedef struct cmt_rollup {
 
 /** Public struct with the advance state contents */
 typedef struct cmt_rollup_advance {
-    uint64_t chain_id;                  /**< network */
-    uint8_t app[CMT_ADDRESS_LENGTH];    /**< application contract address */
-    uint8_t sender[CMT_ADDRESS_LENGTH]; /**< input sender */
-    uint64_t block_number;              /**< block number of this input */
-    uint64_t block_timestamp;           /**< block timestamp of this input UNIX epoch format) */
-    uint64_t index;                     /**< input index (in relation to all inputs ever sent to the DApp) */
-    uint32_t length;                    /**< length in bytes of the data field */
-    void *data;                         /**< advance contents */
+    uint64_t chain_id;                        /**< network */
+    uint8_t app_contract[CMT_ADDRESS_LENGTH]; /**< application contract address */
+    uint8_t msg_sender[CMT_ADDRESS_LENGTH];   /**< input sender address */
+    uint64_t block_number;                    /**< block number of this input */
+    uint64_t block_timestamp;                 /**< block timestamp of this input UNIX epoch format) */
+    uint64_t index;                           /**< input index (in relation to all inputs ever sent to the DApp) */
+    uint32_t payload_length;                  /**< length in bytes of the payload field */
+    void *payload;                            /**< payload for this input */
 } cmt_rollup_advance_t;
 
 /** Public struct with the inspect state contents */
 typedef struct cmt_rollup_inspect {
-    uint32_t length; /**< length in bytes of the data field */
-    void *data;      /**< inspect contents */
+    uint32_t payload_length; /**< length in bytes of the payload field */
+    void *payload;           /**< payload for this query */
 } cmt_rollup_inspect_t;
 
 /** Public struct with the finish state contents */

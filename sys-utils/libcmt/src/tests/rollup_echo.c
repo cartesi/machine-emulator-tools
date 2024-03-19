@@ -46,19 +46,19 @@ int main(void) {
                     break;
                 }
 
-                rc = cmt_rollup_emit_voucher(&rollup, sizeof advance.sender, advance.sender, sizeof small, small, advance.length, advance.data);
+                rc = cmt_rollup_emit_voucher(&rollup, sizeof advance.msg_sender, advance.msg_sender, sizeof small, small, advance.payload_length, advance.payload);
                 if (rc < 0) {
                     fprintf(stderr, "%s:%d Error on voucher %s (%d)\n", __FILE__, __LINE__, strerror(-rc), (-rc));
                     break;
                 }
 
-                rc = cmt_rollup_emit_notice(&rollup, advance.length, advance.data);
+                rc = cmt_rollup_emit_notice(&rollup, advance.payload_length, advance.payload);
                 if (rc < 0) {
                     fprintf(stderr, "%s:%d Error on notice %s (%d)\n", __FILE__, __LINE__, strerror(-rc), (-rc));
                     break;
                 }
 
-                rc = cmt_rollup_emit_report(&rollup, advance.length, advance.data);
+                rc = cmt_rollup_emit_report(&rollup, advance.payload_length, advance.payload);
                 if (rc < 0) {
                     fprintf(stderr, "%s:%d Error on notice %s (%d)\n", __FILE__, __LINE__, strerror(-rc), (-rc));
                     break;
