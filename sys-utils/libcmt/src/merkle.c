@@ -109,6 +109,10 @@ int cmt_merkle_push_back(cmt_merkle_t *me, uint8_t hash[CMT_KECCAK_LENGTH]) {
     return 0;
 }
 
+uint64_t cmt_merkle_get_leaf_count(cmt_merkle_t *me) {
+    return me->leaf_count;
+}
+
 void cmt_merkle_get_root_hash(cmt_merkle_t *me, uint8_t root[CMT_KECCAK_LENGTH]) {
     /* n is bound by CMT_MERKLE_MAX_DEPTH-1u */
     unsigned n = ((uint64_t) ffsll(me->leaf_count) - 1u) & (CMT_MERKLE_MAX_DEPTH - 1u);

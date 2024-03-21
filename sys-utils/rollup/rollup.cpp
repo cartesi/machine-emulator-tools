@@ -201,13 +201,24 @@ static int write_voucher(void) try {
     auto payload = ji["payload"].get<std::string>();
     auto destination = unhex20(ji["destination"].get<std::string>());
     auto value = unhex32(ji["value"].get<std::string>());
-    return cmt_rollup_emit_voucher(r,
-                                   destination.length(),
-                                   reinterpret_cast<unsigned char *>(destination.data()),
-                                   value.length(),
-                                   reinterpret_cast<unsigned char *>(value.data()),
-                                   payload.size(),
-                                   reinterpret_cast<unsigned char *>(payload.data()));
+    uint64_t index = 0;
+    int ret = cmt_rollup_emit_voucher(r,
+                                      destination.length(),
+                                      reinterpret_cast<unsigned char *>(destination.data()),
+                                      value.length(),
+                                      reinterpret_cast<unsigned char *>(value.data()),
+                                      payload.size(),
+                                      reinterpret_cast<unsigned char *>(payload.data()),
+                                      &index);
+    if (ret)
+        return ret;
+
+    nlohmann::json j = {
+        {"index", index }
+    };
+    std::cout << j.dump(2) << '\n';
+
+    return 0;
 } catch (std::exception &x) {
     std::cerr << x.what() << '\n';
     return 1;
@@ -218,8 +229,18 @@ static int write_notice(void) try {
     rollup r;
     auto ji = nlohmann::json::parse(read_input());
     auto payload = ji["payload"].get<std::string>();
-    return cmt_rollup_emit_notice(r, payload.size(),
-                                  reinterpret_cast<uint8_t *>(payload.data()));
+    uint64_t index = 0;
+    int ret = cmt_rollup_emit_notice(r, payload.size(), reinterpret_cast<uint8_t *>(payload.data()), &index);
+    if (ret)
+        return ret;
+
+    nlohmann::json j = {
+        {"index", index }
+    };
+    std::cout << j.dump(2) << '\n';
+
+    return 0;
+
 } catch (std::exception &x) {
     std::cerr << x.what() << '\n';
     return 1;
