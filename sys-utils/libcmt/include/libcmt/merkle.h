@@ -81,6 +81,13 @@ size_t cmt_merkle_max_length(void);
  * - -ENOBUFS indicates the tree is full */
 int cmt_merkle_push_back(cmt_merkle_t *me, uint8_t hash[CMT_KECCAK_LENGTH]);
 
+/** Return number of leaves already in tree
+ *
+ * @param [in,out] me initialized state
+ * @return
+ * - leaf count */
+uint64_t cmt_merkle_get_leaf_count(cmt_merkle_t *me);
+
 /** Compute the keccak-256 hash of @p data and append it as a leaf node
  *
  * @param [in,out] me     initialized state

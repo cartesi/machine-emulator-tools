@@ -74,7 +74,7 @@ void cmt_rollup_fini(cmt_rollup_t *me) {
 int cmt_rollup_emit_voucher(cmt_rollup_t *me,
                             uint32_t address_length, const void *address_data,
                             uint32_t value_length, const void *value_data,
-                            uint32_t length, const void *data) {
+                            uint32_t length, const void *data, uint64_t *index) {
     if (!me)
         return -EINVAL;
     if (!data && length)
@@ -102,10 +102,20 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me,
     int rc = DBG(cmt_io_yield(me->io, req));
     if (rc)
         return rc;
-    return cmt_merkle_push_back_data(me->merkle, m, tx->begin);
+
+    uint64_t count = cmt_merkle_get_leaf_count(me->merkle);
+
+    rc = cmt_merkle_push_back_data(me->merkle, m, tx->begin);
+    if (rc)
+        return rc;
+
+    if (index)
+        *index = count;
+
+    return 0;
 }
 
-int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data) {
+int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data, uint64_t *index) {
     if (!me)
         return -EINVAL;
     if (!data && length)
@@ -130,7 +140,17 @@ int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data) 
     int rc = DBG(cmt_io_yield(me->io, req));
     if (rc)
         return rc;
-    return cmt_merkle_push_back_data(me->merkle, m, tx->begin);
+
+    uint64_t count = cmt_merkle_get_leaf_count(me->merkle);
+
+    rc = cmt_merkle_push_back_data(me->merkle, m, tx->begin);
+    if (rc)
+        return rc;
+
+    if (index)
+        *index = count;
+
+    return 0;
 }
 
 int cmt_rollup_emit_report(cmt_rollup_t *me, uint32_t length, const void *data) {

@@ -185,7 +185,7 @@ func main() {
         C.cmt_rollup_emit_voucher(&rollup,
                                   C.CMT_ADDRESS_LENGTH, &advance.sender[0],
                                   C.uint(size), unsafe.Pointer(&bytes[0]),
-                                  advance.length, advance.data)
+                                  advance.length, advance.data, NULL)
         C.cmt_rollup_emit_report(&rollup, advance.length, advance.data)
     }
 }

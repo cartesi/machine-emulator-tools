@@ -96,6 +96,7 @@ void cmt_rollup_fini(cmt_rollup_t *me);
  * @param [in]     value          value data
  * @param [in]     data_length    data length in bytes
  * @param [in]     data           message contents
+ * @param [out]    index          index of emitted voucher, if successful
  *
  * @return
  * |   |                             |
@@ -105,13 +106,14 @@ void cmt_rollup_fini(cmt_rollup_t *me);
 int cmt_rollup_emit_voucher(cmt_rollup_t *me,
                             uint32_t address_length, const void *address_data,
                             uint32_t value_length, const void *value_data,
-                            uint32_t length, const void *data);
+                            uint32_t length, const void *data, uint64_t *index);
 
 /** Emit a notice
  *
  * @param [in,out] me          initialized cmt_rollup_t instance
  * @param [in]     data_length data length in bytes
  * @param [in]     data        message contents
+ * @param [out]    index       index of emitted notice, if successful
  *
  * @return
  * |   |                             |
@@ -119,7 +121,7 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me,
  * |  0| success                     |
  * |< 0| failure with a -errno value | */
 int cmt_rollup_emit_notice(cmt_rollup_t *me,
-                           uint32_t data_length, const void *data);
+                           uint32_t data_length, const void *data, uint64_t *index);
 
 /** Emit a report
  * @param [in,out] me      initialized cmt_rollup_t instance
