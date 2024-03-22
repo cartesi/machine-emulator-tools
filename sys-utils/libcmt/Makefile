@@ -1,3 +1,19 @@
+# Copyright Cartesi and individual authors (see AUTHORS)
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # paths
 PREFIX = /usr
 TARGET_PREFIX ?= $(PREFIX)
@@ -5,12 +21,12 @@ TARGET_PREFIX ?= $(PREFIX)
 TOOLCHAIN_PREFIX ?= riscv64-linux-gnu-
 TARGET_CC := $(TOOLCHAIN_PREFIX)gcc
 TARGET_AR := $(TOOLCHAIN_PREFIX)ar
-TARGET_CFLAGS := -Wvla -O2 -g -Wall -pedantic -Wextra -Iinclude
-CFLAGS := -Wvla -O2 -g -Wall -pedantic -Wextra -Iinclude
+TARGET_CFLAGS := -Wvla -O2 -g -Wall -pedantic -Wextra -Isrc
+CFLAGS := -Wvla -O2 -g -Wall -pedantic -Wextra -Isrc
+CC := gcc
 
-ALL := ioctl.build mock.build tools.build doc.build test.run
-all: $(ALL)
-
+all: libcmt host
+host: mock tools
 #-------------------------------------------------------------------------------
 examples_SRC := \
 	doc/examples/abi_encode_000.c \
@@ -22,52 +38,50 @@ examples_SRC := \
 	doc/examples/io.c \
 	doc/examples/rollup.c
 
-examples_OBJDIR := .build/examples/
-examples_OBJ    := $(patsubst %.c,$(examples_OBJDIR)%.o,$(examples_SRC))
+examples_OBJDIR := build/examples
+examples_OBJ    := $(patsubst %.c,$(examples_OBJDIR)/%.o,$(examples_SRC))
 
-$(examples_OBJ): $(examples_OBJDIR)%.o: %.c
+$(examples_OBJ): $(examples_OBJDIR)/%.o: %.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -MT $@ -MMD -MP -MF $(@:.o=.d) -c -o $@ $<
 
 # no need to link, just ensure examples build correctly
-examples.build: $(examples_OBJ)
+examples: $(examples_OBJ)
 
 #-------------------------------------------------------------------------------
-ioctl_SRC := \
+libcmt_SRC := \
 	src/buf.c \
 	src/abi.c \
 	src/keccak.c \
 	src/merkle.c \
 	src/rollup.c \
-	src/ioctl/io.c
+	src/io.c
 
-ioctl_OBJDIR    := build/ioctl/
-ioctl_OBJ       := $(patsubst %.c,$(ioctl_OBJDIR)%.o,$(ioctl_SRC))
-ioctl_LIB       := $(ioctl_OBJDIR)libcmt.a
+libcmt_OBJDIR    := build/lib
+libcmt_OBJ       := $(patsubst %.c,$(libcmt_OBJDIR)/%.o,$(libcmt_SRC))
+libcmt_LIB       := $(libcmt_OBJDIR)/libcmt.a
 
-$(ioctl_OBJ): $(ioctl_OBJDIR)%.o: %.c
+$(libcmt_OBJ): $(libcmt_OBJDIR)/%.o: %.c
 	@mkdir -p $(@D)
 	$(TARGET_CC) $(TARGET_CFLAGS) -MT $@ -MMD -MP -MF $(@:.o=.d) -c -o $@ $<
 
-$(ioctl_LIB): $(ioctl_OBJ)
+$(libcmt_LIB): $(libcmt_OBJ)
 	$(TARGET_AR) rcs $@ $^
 
-$(ioctl_OBJDIR)io_echo: src/tests/io_echo.c $(ioctl_LIB)
+$(libcmt_OBJDIR)/io_echo: tests/io_echo.c $(libcmt_LIB)
 	$(TARGET_CC) $(TARGET_CFLAGS) -o $@ $^
 
-$(ioctl_OBJDIR)rollup_echo: src/tests/rollup_echo.c $(ioctl_LIB)
+$(libcmt_OBJDIR)/rollup_echo: tests/rollup_echo.c $(libcmt_LIB)
 	$(TARGET_CC) $(TARGET_CFLAGS) -o $@ $^
 
-ioctl.build: $(ioctl_LIB) $(ioctl_OBJDIR)io_echo $(ioctl_OBJDIR)rollup_echo
-ioctl.install: $(ioctl_LIB)
+libcmt: $(libcmt_LIB) $(libcmt_OBJDIR)/io_echo $(libcmt_OBJDIR)/rollup_echo
+install: $(libcmt_LIB)
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
 	cp -f $< $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
-	cp -f include/libcmt/*.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
+	cp -f src/*.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig
-	sed \
-		-e 's|@ARG_PREFIX@|$(TARGET_PREFIX)|g' \
-		tools/templates/libcmt.pc > $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig/libcmt.pc
+	sed -e 's|@ARG_PREFIX@|$(TARGET_PREFIX)|g' src/libcmt.pc > $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig/libcmt.pc
 
 #-------------------------------------------------------------------------------
 mock_SRC := \
@@ -76,36 +90,28 @@ mock_SRC := \
 	src/keccak.c \
 	src/merkle.c \
 	src/rollup.c \
-	src/mock/io.c
+	src/io-mock.c
 
-mock_OBJDIR := build/mock/
-mock_OBJ    := $(patsubst %.c,$(mock_OBJDIR)%.o,$(mock_SRC))
-mock_LIB    := $(mock_OBJDIR)libcmt.a
+mock_OBJDIR := build/mock
+mock_OBJ    := $(patsubst %.c,$(mock_OBJDIR)/%.o,$(mock_SRC))
+mock_LIB    := $(mock_OBJDIR)/libcmt.a
 
-$(mock_OBJ): $(mock_OBJDIR)%.o: %.c
+$(mock_OBJ): $(mock_OBJDIR)/%.o: %.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -MT $@ -MMD -MP -MF $(@:.o=.d) -c -o $@ $<
 
 $(mock_LIB): $(mock_OBJ)
 	$(AR) rcs $@ $^
 
-$(mock_OBJDIR)io_echo: src/tests/io_echo.c $(mock_LIB)
-	$(CC) $(CFLAGS) -o $@ $^
+mock: $(mock_LIB) $(mock_OBJDIR)/io_echo $(mock_OBJDIR)/rollup_echo
 
-$(mock_OBJDIR)rollup_echo: src/tests/rollup_echo.c $(mock_LIB)
-	$(CC) $(CFLAGS) -o $@ $^
-
-mock.build: $(mock_LIB) $(mock_OBJDIR)io_echo $(mock_OBJDIR)rollup_echo
-
-mock.install: $(mock_LIB)
+install-mock: $(mock_LIB)
 	mkdir -p $(DESTDIR)$(PREFIX)/lib
 	cp -f $< $(DESTDIR)$(PREFIX)/lib
 	mkdir -p $(DESTDIR)$(PREFIX)/include/libcmt/mock
-	cp -f include/libcmt/*.h $(DESTDIR)$(PREFIX)/include/libcmt/
+	cp -f src/*.h $(DESTDIR)$(PREFIX)/include/libcmt/
 	mkdir -p $(DESTDIR)$(PREFIX)/lib/pkgconfig
-	sed \
-		-e 's|@ARG_PREFIX@|$(PREFIX)|g' \
-		tools/templates/libcmt_mock.pc > $(DESTDIR)$(PREFIX)/lib/pkgconfig/libcmt.pc
+	sed -e 's|@ARG_PREFIX@|$(PREFIX)|g' src/libcmt_mock.pc > $(DESTDIR)$(PREFIX)/lib/pkgconfig/libcmt.pc
 
 #-------------------------------------------------------------------------------
 testdata:
@@ -120,76 +126,75 @@ testdata:
 	xxd -n notice  -i dat/C.n0.bin > dat/C.n0.h
 
 unittests_BINS := \
-	$(mock_OBJDIR)abi-multi \
-	$(mock_OBJDIR)abi-single \
-	$(mock_OBJDIR)keccak \
-	$(mock_OBJDIR)merkle \
+	$(mock_OBJDIR)/abi-multi \
+	$(mock_OBJDIR)/abi-single \
+	$(mock_OBJDIR)/keccak \
+	$(mock_OBJDIR)/merkle \
+	$(mock_OBJDIR)/io_echo \
+	$(mock_OBJDIR)/rollup_echo
 
-$(mock_OBJDIR)abi-multi: src/tests/abi-multi.c $(mock_LIB)
+$(mock_OBJDIR)/io_echo: tests/io_echo.c $(mock_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
 
-$(mock_OBJDIR)abi-single: src/tests/abi-single.c $(mock_LIB)
+$(mock_OBJDIR)/rollup_echo: tests/rollup_echo.c $(mock_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
 
-$(mock_OBJDIR)keccak: src/tests/keccak.c $(mock_LIB)
+$(mock_OBJDIR)/abi-multi: tests/abi-multi.c $(mock_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
 
-$(mock_OBJDIR)merkle: src/tests/merkle.c $(mock_LIB)
+$(mock_OBJDIR)/abi-single: tests/abi-single.c $(mock_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
 
-test.build: $(unittests_BINS) $(mock_OBJDIR)io_echo
-test.run: test.build
+$(mock_OBJDIR)/keccak: tests/keccak.c $(mock_LIB)
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(mock_OBJDIR)/merkle: tests/merkle.c $(mock_LIB)
+	$(CC) $(CFLAGS) -o $@ $^
+
+test: $(unittests_BINS) $(mock_OBJDIR)/io_echo
 	$(foreach test,$(unittests_BINS),$(test) &&) true
 
 #-------------------------------------------------------------------------------
-tools_OBJDIR := build/tools/
-
+tools_OBJDIR := build/tools
 tools_BINS := \
-	$(tools_OBJDIR)funsel \
-	$(tools_OBJDIR)merkle-table
+	$(tools_OBJDIR)/funsel
 
-$(tools_OBJDIR)funsel: src/tools/funsel.c $(mock_LIB)
+$(tools_OBJDIR)/funsel: tools/funsel.c $(mock_LIB)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -o $@ $^
 
-$(tools_OBJDIR)merkle-table: src/tools/merkle-table.c src/keccak.c
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -o $@ $^
-
-# generated source code
-src/merkle.c: src/merkle-table.c
-src/merkle-table.c: $(tools_OBJDIR)merkle-table
-	$< > $@
-
-tools.build: $(tools_BINS)
+tools: $(tools_BINS)
 
 #-------------------------------------------------------------------------------
 
 help:
 	@echo "Targets: (default: '*')"
-	@echo "* all            - $(ALL)"
-	@echo "  mock.build     - Build a mocked version of the library, tools and examples; to run on the host system."
-	@echo "  mock.install   - Install the mocked version of the library and C headers; on the host system."
-	@echo "                   Use DESTDIR and PREFIX to customize the installation."
-	@echo "  ioctl.build    - Build the library, tools and examples; to run on the cartesi-machine."
-	@echo "                   (requires the cartesi Linux headers to build)"
-	@echo "  ioctl.install  - Install the library and C headers; on the host system."
-	@echo "                   Use TARGET_DESTDIR and TARGET_PREFIX to customize the installation."
-	@echo "  test.build     - Build tests on top of the mocked library to run on the host system."
-	@echo "  test.run       - Execute the tests."
-	@echo "  tools.build    - Build tools on top of the mocked library to run on the host system."
-	@echo "  doc.build      - Build the documentation and API references as html."
-	@echo "  clean          - remove the binaries and objects."
+	@echo "* all          - Build libcmt, mock and tools"
+	@echo "  libcmt       - Build the library, tools and examples; to run on the cartesi-machine."
+	@echo "                 (requires the cartesi Linux headers to build)"
+	@echo "  mock         - Build a mocked version of the library, tools and examples; to run on the host system."
+	@echo "  tools        - Build tools on top of the mocked library to run on the host system."
+	@echo "  test         - Build and run tests on top of the mocked library on the host system."
+	@echo "  doc          - Build the documentation and API references as html."
+	@echo "  clean        - remove the binaries and objects."
+	@echo "  install      - Install the library and C headers; on the host system."
+	@echo "                 Use TARGET_DESTDIR and TARGET_PREFIX to customize the installation."
+	@echo "  install-mock - Install the mocked version of the library and C headers; on the host system."
+	@echo "                 Use DESTDIR and PREFIX to customize the installation."
 
 doc/theme:
 	git clone git@github.com:jothepro/doxygen-awesome-css.git $@
 	git -C doc/theme checkout 8cea9a073ecd50a5b2c0958a3df100292d6c7374
 
-doc.build: doc/theme examples.build
+doc: doc/theme examples
 	doxygen doc/Doxyfile
 
-OBJ := $(mock_OBJ) $(ioctl_OBJ) $(examples_OBJ) $(tools_OBJ)
 clean:
-	rm -rf $(OBJ) $(unittests_BINS) $(tools_BINS) libcmt_mock.a libcmt.a
+	rm -rf build
+
+clangd-config:
+	@echo "$(CFLAGS)" | sed -e $$'s/ \{1,\}/\\\n/g' | grep -v "MMD" > compile_flags.txt
+
+OBJ := $(mock_OBJ) $(libcmt_OBJ) $(examples_OBJ) $(tools_OBJ)
 
 -include $(OBJ:%.o=%.d)

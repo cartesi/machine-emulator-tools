@@ -23,7 +23,6 @@ VERSION := $(MAJOR).$(MINOR).$(PATCH)$(LABEL)
 TOOLS_DEB    := machine-emulator-tools-v$(VERSION).deb
 TOOLS_IMAGE  := cartesi/machine-emulator-tools:$(VERSION)
 TOOLS_ROOTFS := rootfs-tools-v$(VERSION).ext2
-CMT_TAR_GZ   := libcmt-$(VERSION).tar.gz
 
 IMAGE_KERNEL_VERSION ?= v0.20.0-output-unification-test1
 LINUX_VERSION ?= 6.5.13-ctsi-1-output-unification-test1
@@ -34,7 +33,6 @@ all: fs
 build: control
 	@docker buildx build --load \
 		--build-arg TOOLS_DEB=$(TOOLS_DEB) \
-		--build-arg CMT_TAR_GZ=$(CMT_TAR_GZ) \
 		--build-arg IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION) \
 		--build-arg LINUX_VERSION=$(LINUX_VERSION) \
 		--build-arg LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH) \
@@ -46,7 +44,6 @@ build: control
 copy:
 	@ID=`docker create $(TOOLS_IMAGE)` && \
 	   docker cp $$ID:/opt/cartesi/$(TOOLS_DEB) . && \
-	   docker cp $$ID:/opt/cartesi/$(CMT_TAR_GZ) . && \
 	   docker rm $$ID
 
 $(TOOLS_DEB) deb: build
@@ -66,7 +63,6 @@ $(TOOLS_ROOTFS) fs: $(TOOLS_DEB)
 	rm -f rootfs.gnutar rootfs.tar
 
 env:
-	@echo CMT_TAR_GZ=$(CMT_TAR_GZ)
 	@echo TOOLS_DEB=$(TOOLS_DEB)
 	@echo TOOLS_ROOTFS=$(TOOLS_ROOTFS)
 	@echo TOOLS_IMAGE=$(TOOLS_IMAGE)

@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "buf.h"
+
 #include <errno.h>
-#include <libcmt/buf.h>
 #include <stdbool.h>
 #include <stdio.h>
 

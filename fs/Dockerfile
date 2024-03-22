@@ -4,10 +4,11 @@ ENV BUILD_BASE=/tmp/build-extra
 # Install dependencies
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     apt-get install -y --no-install-recommends \
-        build-essential \
         ca-certificates \
         wget \
-        crossbuild-essential-riscv64 \
+        patch \
+        libdigest-sha-perl \
+        libc6-dev-riscv64-cross \
         gcc-12-riscv64-linux-gnu \
         && \
     adduser developer -u 499 --gecos ",,," --disabled-password && \
