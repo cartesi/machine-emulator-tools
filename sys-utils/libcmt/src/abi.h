@@ -501,4 +501,3 @@ int cmt_abi_decode_uint_nn(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_
 
 #endif /* CMT_ABI_H */
 /** @} */
-

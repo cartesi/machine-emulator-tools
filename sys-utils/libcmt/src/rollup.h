@@ -68,12 +68,12 @@ typedef struct cmt_rollup_finish {
 
 /** Public struct with generic io request/response */
 typedef struct cmt_gio {
-    uint16_t domain;           /**< domain for the gio request */
-    uint32_t id_length;        /**< length of id */
-    void *id;                  /**< id for the request */
-    uint16_t response_code;    /**< response */
-    uint32_t response_length;  /**< length of response data */
-    void *response;            /**< response data */
+    uint16_t domain;          /**< domain for the gio request */
+    uint32_t id_length;       /**< length of id */
+    void *id;                 /**< id for the request */
+    uint16_t response_code;   /**< response */
+    uint32_t response_length; /**< length of response data */
+    void *response;           /**< response data */
 } cmt_gio_request_t;
 
 /** Initialize a @ref cmt_rollup_t state.
@@ -113,10 +113,8 @@ void cmt_rollup_fini(cmt_rollup_t *me);
  * |--:|-----------------------------|
  * |  0| success                     |
  * |< 0| failure with a -errno value | */
-int cmt_rollup_emit_voucher(cmt_rollup_t *me,
-                            uint32_t address_length, const void *address_data,
-                            uint32_t value_length, const void *value_data,
-                            uint32_t length, const void *data, uint64_t *index);
+int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint32_t address_length, const void *address_data, uint32_t value_length,
+    const void *value_data, uint32_t length, const void *data, uint64_t *index);
 
 /** Emit a notice
  *
@@ -130,8 +128,7 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me,
  * |--:|-----------------------------|
  * |  0| success                     |
  * |< 0| failure with a -errno value | */
-int cmt_rollup_emit_notice(cmt_rollup_t *me,
-                           uint32_t data_length, const void *data, uint64_t *index);
+int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t data_length, const void *data, uint64_t *index);
 
 /** Emit a report
  * @param [in,out] me      initialized cmt_rollup_t instance
@@ -143,8 +140,7 @@ int cmt_rollup_emit_notice(cmt_rollup_t *me,
  * |--:|-----------------------------|
  * |  0| success                     |
  * |< 0| failure with a -errno value | */
-int cmt_rollup_emit_report(cmt_rollup_t *me,
-                           uint32_t data_length, const void *data);
+int cmt_rollup_emit_report(cmt_rollup_t *me, uint32_t data_length, const void *data);
 
 /** Emit a exception
  * @param [in,out] me          initialized cmt_rollup_t instance
@@ -156,8 +152,7 @@ int cmt_rollup_emit_report(cmt_rollup_t *me,
  * |--:|-----------------------------|
  * |  0| success                     |
  * |< 0| failure with a -errno value | */
-int cmt_rollup_emit_exception(cmt_rollup_t *me,
-                              uint32_t data_length, const void *data);
+int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t data_length, const void *data);
 
 /** Read advance state
  *
@@ -195,7 +190,6 @@ int cmt_rollup_read_inspect_state(cmt_rollup_t *me, cmt_rollup_inspect_t *inspec
  * |  0| success                     |
  * |< 0| failure with a -errno value | */
 int cmt_rollup_finish(cmt_rollup_t *me, cmt_rollup_finish_t *finish);
-
 
 /** Performs a generic IO request
  *
@@ -238,4 +232,3 @@ int cmt_rollup_save_merkle(cmt_rollup_t *me, const char *path);
 int cmt_rollup_reset_merkle(cmt_rollup_t *me);
 
 #endif /* CMT_ROLLUP_H */
-

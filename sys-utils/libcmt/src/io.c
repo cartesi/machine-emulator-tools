@@ -28,7 +28,6 @@
 
 #include <linux/cartesi/cmio.h>
 
-
 int cmt_io_init(cmt_io_driver_t *_me) {
     int rc = 0;
 
@@ -95,7 +94,7 @@ cmt_buf_t cmt_io_get_tx(cmt_io_driver_t *me) {
 }
 
 static uint32_t min(uint32_t a, uint32_t b) {
-    return a < b? a: b;
+    return a < b ? a : b;
 }
 
 cmt_buf_t cmt_io_get_rx(cmt_io_driver_t *me) {

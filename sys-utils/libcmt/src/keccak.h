@@ -129,4 +129,3 @@ uint8_t *cmt_keccak_data(size_t length, const void *data, uint8_t md[CMT_KECCAK_
 uint32_t cmt_keccak_funsel(const char *decl);
 #endif /* CMT_KECCAK_H */
 /** $@} */
-
