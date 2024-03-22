@@ -166,10 +166,46 @@ $(tools_OBJDIR)/funsel: tools/funsel.c $(mock_LIB)
 tools: $(tools_BINS)
 
 #-------------------------------------------------------------------------------
+LINTER_IGNORE_SOURCES=src/io.c
+LINTER_IGNORE_HEADERS=
+LINTER_SOURCES=$(filter-out $(LINTER_IGNORE_SOURCES),$(strip $(wildcard src/*.c) $(wildcard tests/*.c) $(wildcard tools/*.c)))
+LINTER_HEADERS=$(filter-out $(LINTER_IGNORE_HEADERS),$(strip $(wildcard src/*.h)))
+
+CLANG_TIDY=clang-tidy
+CLANG_TIDY_TARGETS=$(patsubst %.c,%.clang-tidy,$(LINTER_SOURCES))
+
+CLANG_FORMAT=clang-format
+CLANG_FORMAT_FILES:=$(wildcard src/*.c) $(wildcard src/*.h) $(wildcard tests/*.c) $(wildcard tools/*.c)
+CLANG_FORMAT_IGNORE_FILES:=
+CLANG_FORMAT_FILES:=$(strip $(CLANG_FORMAT_FILES))
+CLANG_FORMAT_FILES:=$(filter-out $(CLANG_FORMAT_IGNORE_FILES),$(strip $(CLANG_FORMAT_FILES)))
+
+EMPTY:=
+SPACE:=$(EMPTY) $(EMPTY)
+CLANG_TIDY_HEADER_FILTER=$(CURDIR)/($(subst $(SPACE),|,$(LINTER_HEADERS)))
+
+%.clang-tidy: %.c
+	@$(CLANG_TIDY) --header-filter='$(CLANG_TIDY_HEADER_FILTER)' $< -- $(CFLAGS) 2>/dev/null
+	@$(CC) $(CFLAGS) $< -MM -MT $@ -MF $@.d > /dev/null 2>&1
+	@touch $@
+
+clangd-config:
+	@echo "$(CFLAGS)" | sed -e $$'s/ \{1,\}/\\\n/g' | grep -v "MMD" > compile_flags.txt
+
+format:
+	@$(CLANG_FORMAT) -i $(CLANG_FORMAT_FILES)
+
+check-format:
+	@$(CLANG_FORMAT) -Werror --dry-run $(CLANG_FORMAT_FILES)
+
+lint: $(CLANG_TIDY_TARGETS)
+
+#-------------------------------------------------------------------------------
 
 help:
 	@echo "Targets: (default: '*')"
-	@echo "* all          - Build libcmt, mock and tools"
+	@echo "* all          - Build libcmt and host targets"
+	@echo "  host         - Build mock and tools targets"
 	@echo "  libcmt       - Build the library, tools and examples; to run on the cartesi-machine."
 	@echo "                 (requires the cartesi Linux headers to build)"
 	@echo "  mock         - Build a mocked version of the library, tools and examples; to run on the host system."
@@ -190,10 +226,14 @@ doc: doc/theme examples
 	doxygen doc/Doxyfile
 
 clean:
-	rm -rf build
+	@rm -rf build
+	@rm -rf src/*.clang-tidy src/*.d
+	@rm -rf tests/*.clang-tidy tests/*.d
+	@rm -rf tools/*.clang-tidy tools/*.d
 
-clangd-config:
-	@echo "$(CFLAGS)" | sed -e $$'s/ \{1,\}/\\\n/g' | grep -v "MMD" > compile_flags.txt
+distclean: clean
+	@rm -rf doc/html doc/theme
+	@rm -rf compile_flags.txt
 
 OBJ := $(mock_OBJ) $(libcmt_OBJ) $(examples_OBJ) $(tools_OBJ)
 
