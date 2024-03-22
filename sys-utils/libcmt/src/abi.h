@@ -66,7 +66,7 @@
  * ## Encoder
  *
  * Lets look at some code starting with a simple case. A function that encodes
- * the function selector and a signle @b address value into the buffer:
+ * the function selector and a single @b address value into the buffer:
  *
  * @includelineno "examples/abi_encode_000.c"
  *
@@ -156,7 +156,7 @@ int cmt_abi_put_funsel(cmt_buf_t *me, uint32_t funsel);
  *
  * @param [in,out] me   a initialized buffer working as iterator
  * @param [in]     n    size of @p data in bytes
- * @param [in]     data poiter to a integer
+ * @param [in]     data pointer to a integer
  *
  * @return
  * |        |                                          |
@@ -173,14 +173,14 @@ int cmt_abi_put_funsel(cmt_buf_t *me, uint32_t funsel);
  * cmt_abi_put_uint(&it, sizeof x, &x);
  * ...
  * @endcode
- * @note This function takes care of endianess conversions */
+ * @note This function takes care of endianness conversions */
 int cmt_abi_put_uint(cmt_buf_t *me, size_t data_length, const void *data);
 
 /** Encode a big-endian value of up to 32bytes of data into the buffer
  *
  * @param [in,out] me     a initialized buffer working as iterator
  * @param [in]     length size of @p data in bytes
- * @param [in]     data   poiter to a integer
+ * @param [in]     data   pointer to a integer
  *
  * @return
  * |        |                                                   |
@@ -208,7 +208,7 @@ int cmt_abi_put_uint(cmt_buf_t *me, size_t data_length, const void *data);
  * };
  * cmt_abi_put_uint(&it, sizeof big, &big);
  * @endcode
- * @note This function takes care of endianess conversions */
+ * @note This function takes care of endianness conversions */
 int cmt_abi_put_uint_be(cmt_buf_t *me, size_t data_length, const void *data);
 
 /** Encode a bool into the buffer
@@ -228,10 +228,10 @@ int cmt_abi_put_uint_be(cmt_buf_t *me, size_t data_length, const void *data);
  * cmt_abi_put_bool(&it, true);
  * ...
  * @endcode
- * @note This function takes care of endianess conversions */
+ * @note This function takes care of endianness conversions */
 int cmt_abi_put_bool(cmt_buf_t *me, bool value);
 
-/** Encode @p address (exacly @ref CMT_ADDRESS_LENGTH bytes) into the buffer
+/** Encode @p address (exactly @ref CMT_ADDRESS_LENGTH bytes) into the buffer
  *
  * @param [in,out] me      initialized buffer
  * @param [in]     address exactly @ref CMT_ADDRESS_LENGTH bytes
@@ -324,7 +324,7 @@ uint32_t cmt_abi_peek_funsel(cmt_buf_t *me);
  * |-------:|------------------------|
  * |       0| success                |
  * |-ENOBUFS| no space left in @p me |
- * |-EBADMSG| funsel missmatch       | */
+ * |-EBADMSG| funsel mismatch       | */
 int cmt_abi_check_funsel(cmt_buf_t *me, uint32_t expected);
 
 /** Decode a unsigned integer of up to 32bytes from the buffer
@@ -384,7 +384,7 @@ int cmt_abi_get_bytes_s(cmt_buf_t *me, cmt_buf_t of[1]);
  * @param [in]  start initialized buffer (from the start after funsel)
  * @param [out]    of    offset to @p bytes data
  * @param [out]    n     amount of data available in @b bytes
- * @param [out]    bytes memory range with contents
+ * @param [out]    data memory range with contents
  *
  * @return
  * |        |                        |
@@ -393,7 +393,7 @@ int cmt_abi_get_bytes_s(cmt_buf_t *me, cmt_buf_t of[1]);
  * |-ENOBUFS| no space left in @p me |
  *
  * @note @p of can be initialized by calling @ref cmt_abi_get_bytes_s */
-int cmt_abi_get_bytes_d(const cmt_buf_t *start, cmt_buf_t of[1], size_t *n, void **bytes);
+int cmt_abi_get_bytes_d(const cmt_buf_t *start, cmt_buf_t of[1], size_t *n, void **data);
 
 /** Decode @b bytes from the buffer by taking a pointer to its contents.
  *

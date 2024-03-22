@@ -15,11 +15,9 @@
  */
 #include "rollup.h"
 #include "abi.h"
-#include "keccak.h"
 #include "merkle.h"
 
 #include <errno.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,35 +36,41 @@
 
 #define DBG(X) debug(X, #X, __FILE__, __LINE__)
 static int debug(int rc, const char *expr, const char *file, int line) {
-    static bool checked = false, enabled = false;
+    static bool checked = false;
+    static bool enabled = false;
 
-    if (rc == 0)
+    if (rc == 0) {
         return 0;
+    }
 
     if (!checked) {
         enabled = getenv("CMT_DEBUG") != NULL;
         checked = true;
     }
-    if (enabled)
-        fprintf(stderr, "%s:%d Error %s on `%s'\n", file, line, expr, strerror(-rc));
+    if (enabled) {
+        (void) fprintf(stderr, "%s:%d Error %s on `%s'\n", file, line, expr, strerror(-rc));
+    }
     return rc;
 }
 
 int cmt_rollup_init(cmt_rollup_t *me) {
-    if (!me)
+    if (!me) {
         return -EINVAL;
+    }
 
     int rc = DBG(cmt_io_init(me->io));
-    if (rc)
+    if (rc) {
         return rc;
+    }
 
     cmt_merkle_init(me->merkle);
     return 0;
 }
 
 void cmt_rollup_fini(cmt_rollup_t *me) {
-    if (!me)
+    if (!me) {
         return;
+    }
 
     cmt_io_fini(me->io);
     cmt_merkle_fini(me->merkle);
@@ -74,10 +78,12 @@ void cmt_rollup_fini(cmt_rollup_t *me) {
 
 int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint32_t address_length, const void *address_data, uint32_t value_length,
     const void *value_data, uint32_t length, const void *data, uint64_t *index) {
-    if (!me)
+    if (!me) {
         return -EINVAL;
-    if (!data && length)
+    }
+    if (!data && length) {
         return -EINVAL;
+    }
 
     cmt_buf_t tx[1] = {cmt_io_get_tx(me->io)};
     cmt_buf_t wr[1] = {*tx};
@@ -86,8 +92,9 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint32_t address_length, const voi
 
     if (DBG(cmt_abi_put_funsel(wr, VOUCHER)) || DBG(cmt_abi_put_uint_be(wr, address_length, address_data)) ||
         DBG(cmt_abi_put_uint_be(wr, value_length, value_data)) || DBG(cmt_abi_put_bytes_s(wr, of)) ||
-        DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base)))
+        DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base))) {
         return -ENOBUFS;
+    }
 
     size_t m = wr->begin - tx->begin;
     struct cmt_io_yield req[1] = {{
@@ -97,26 +104,31 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint32_t address_length, const voi
         .data = m,
     }};
     int rc = DBG(cmt_io_yield(me->io, req));
-    if (rc)
+    if (rc) {
         return rc;
+    }
 
     uint64_t count = cmt_merkle_get_leaf_count(me->merkle);
 
     rc = cmt_merkle_push_back_data(me->merkle, m, tx->begin);
-    if (rc)
+    if (rc) {
         return rc;
+    }
 
-    if (index)
+    if (index) {
         *index = count;
+    }
 
     return 0;
 }
 
 int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data, uint64_t *index) {
-    if (!me)
+    if (!me) {
         return -EINVAL;
-    if (!data && length)
+    }
+    if (!data && length) {
         return -EINVAL;
+    }
 
     cmt_buf_t tx[1] = {cmt_io_get_tx(me->io)};
     cmt_buf_t wr[1] = {*tx};
@@ -124,8 +136,9 @@ int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data, 
     void *params_base = tx->begin + 4; // after funsel
 
     if (DBG(cmt_abi_put_funsel(wr, NOTICE)) || DBG(cmt_abi_put_bytes_s(wr, of)) ||
-        DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base)))
+        DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base))) {
         return -ENOBUFS;
+    }
 
     size_t m = wr->begin - tx->begin;
     struct cmt_io_yield req[1] = {{
@@ -135,31 +148,37 @@ int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data, 
         .data = m,
     }};
     int rc = DBG(cmt_io_yield(me->io, req));
-    if (rc)
+    if (rc) {
         return rc;
+    }
 
     uint64_t count = cmt_merkle_get_leaf_count(me->merkle);
 
     rc = cmt_merkle_push_back_data(me->merkle, m, tx->begin);
-    if (rc)
+    if (rc) {
         return rc;
+    }
 
-    if (index)
+    if (index) {
         *index = count;
+    }
 
     return 0;
 }
 
 int cmt_rollup_emit_report(cmt_rollup_t *me, uint32_t length, const void *data) {
-    if (!me)
+    if (!me) {
         return -EINVAL;
-    if (!data && length)
+    }
+    if (!data && length) {
         return -EINVAL;
+    }
 
     cmt_buf_t tx[1] = {cmt_io_get_tx(me->io)};
     cmt_buf_t wr[1] = {*tx};
-    if (cmt_buf_split(tx, length, wr, tx))
+    if (cmt_buf_split(tx, length, wr, tx)) {
         return -ENOBUFS;
+    }
 
     memcpy(wr->begin, data, length);
     struct cmt_io_yield req[1] = {{
@@ -172,15 +191,18 @@ int cmt_rollup_emit_report(cmt_rollup_t *me, uint32_t length, const void *data) 
 }
 
 int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t length, const void *data) {
-    if (!me)
+    if (!me) {
         return -EINVAL;
-    if (!data && length)
+    }
+    if (!data && length) {
         return -EINVAL;
+    }
 
     cmt_buf_t tx[1] = {cmt_io_get_tx(me->io)};
     cmt_buf_t wr[1] = {*tx};
-    if (cmt_buf_split(tx, length, wr, tx))
+    if (cmt_buf_split(tx, length, wr, tx)) {
         return -ENOBUFS;
+    }
 
     memcpy(tx->begin, data, length);
     struct cmt_io_yield req[1] = {{
@@ -193,10 +215,12 @@ int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t length, const void *dat
 }
 
 int cmt_rollup_read_advance_state(cmt_rollup_t *me, cmt_rollup_advance_t *advance) {
-    if (!me)
+    if (!me) {
         return -EINVAL;
-    if (!advance)
+    }
+    if (!advance) {
         return -EINVAL;
+    }
 
     cmt_buf_t rd[1] = {cmt_io_get_rx(me->io)};
     cmt_buf_t st[1] = {{rd->begin + 4, rd->end}}; // EVM offsets are from after funsel
@@ -209,17 +233,20 @@ int cmt_rollup_read_advance_state(cmt_rollup_t *me, cmt_rollup_advance_t *advanc
         DBG(cmt_abi_get_uint(rd, sizeof(advance->block_number), &advance->block_number)) ||
         DBG(cmt_abi_get_uint(rd, sizeof(advance->block_timestamp), &advance->block_timestamp)) ||
         DBG(cmt_abi_get_uint(rd, sizeof(advance->index), &advance->index)) || DBG(cmt_abi_get_bytes_s(rd, of)) ||
-        DBG(cmt_abi_get_bytes_d(st, of, &payload_length, &advance->payload)))
+        DBG(cmt_abi_get_bytes_d(st, of, &payload_length, &advance->payload))) {
         return -ENOBUFS;
+    }
     advance->payload_length = payload_length;
     return 0;
 }
 
 int cmt_rollup_read_inspect_state(cmt_rollup_t *me, cmt_rollup_inspect_t *inspect) {
-    if (!me)
+    if (!me) {
         return -EINVAL;
-    if (!inspect)
+    }
+    if (!inspect) {
         return -EINVAL;
+    }
     cmt_buf_t rx[1] = {cmt_io_get_rx(me->io)};
     inspect->payload_length = cmt_buf_length(rx);
     inspect->payload = rx->begin;
@@ -234,8 +261,9 @@ static int accepted(union cmt_io_driver *io, uint32_t *n) {
         .data = *n,
     }};
     int rc = DBG(cmt_io_yield(io, req));
-    if (rc)
+    if (rc) {
         return rc;
+    }
 
     *n = req->data;
     return req->reason;
@@ -252,10 +280,12 @@ static int revert(union cmt_io_driver *io) {
 }
 
 int cmt_rollup_finish(cmt_rollup_t *me, cmt_rollup_finish_t *finish) {
-    if (!me)
+    if (!me) {
         return -EINVAL;
-    if (!finish)
+    }
+    if (!finish) {
         return -EINVAL;
+    }
 
     if (!finish->accept_previous_request) {
         return revert(me->io); /* revert should not return! */
@@ -264,27 +294,32 @@ int cmt_rollup_finish(cmt_rollup_t *me, cmt_rollup_finish_t *finish) {
     cmt_merkle_get_root_hash(me->merkle, cmt_io_get_tx(me->io).begin);
     finish->next_request_payload_length = CMT_WORD_LENGTH;
     int reason = accepted(me->io, &finish->next_request_payload_length);
-    if (reason < 0)
+    if (reason < 0) {
         return reason;
+    }
     finish->next_request_type = reason;
     cmt_merkle_init(me->merkle);
     return 0;
 }
 
 int cmt_gio_request(cmt_rollup_t *me, cmt_gio_request_t *req) {
-    if (!me)
+    if (!me) {
         return -EINVAL;
-    if (!req)
+    }
+    if (!req) {
         return -EINVAL;
+    }
 
     cmt_buf_t tx[1] = {cmt_io_get_tx(me->io)};
     size_t tx_length = tx->end - tx->begin;
-    if (req->id_length > tx_length || req->id_length > UINT32_MAX)
+    if (req->id_length > tx_length || req->id_length > UINT32_MAX) {
         return -ENOBUFS;
+    }
 
     if (req->id_length > 0) {
-        if (!req->id)
+        if (!req->id) {
             return -EINVAL;
+        }
         memcpy(tx->begin, req->id, req->id_length);
     }
 
@@ -296,13 +331,15 @@ int cmt_gio_request(cmt_rollup_t *me, cmt_gio_request_t *req) {
     }};
 
     int rc = DBG(cmt_io_yield(me->io, y));
-    if (rc != 0)
+    if (rc != 0) {
         return rc;
+    }
 
     cmt_buf_t rx[1] = {cmt_io_get_rx(me->io)};
     size_t rx_length = rx->end - rx->begin;
-    if (rx_length != y->data)
+    if (rx_length != y->data) {
         return -EINVAL;
+    }
 
     req->response = rx->begin;
     req->response_code = y->reason;

@@ -127,8 +127,8 @@ void cmt_merkle_fini(cmt_merkle_t *me) {
     (void) me;
 }
 
-int cmt_merkle_load(cmt_merkle_t *me, const char *name) {
-    FILE *fin = fopen(name, "rb");
+int cmt_merkle_load(cmt_merkle_t *me, const char *filepath) {
+    FILE *fin = fopen(filepath, "rb");
     if (!fin) {
         return -errno;
     }
@@ -143,8 +143,8 @@ int cmt_merkle_load(cmt_merkle_t *me, const char *name) {
     return rc;
 }
 
-int cmt_merkle_save(cmt_merkle_t *me, const char *name) {
-    FILE *fout = fopen(name, "wb");
+int cmt_merkle_save(cmt_merkle_t *me, const char *filepath) {
+    FILE *fout = fopen(filepath, "wb");
     if (!fout) {
         return -errno;
     }
@@ -202,11 +202,11 @@ void cmt_merkle_get_root_hash(cmt_merkle_t *me, uint8_t root[CMT_KECCAK_LENGTH])
     }
 }
 
-int cmt_merkle_push_back_data(cmt_merkle_t *me, size_t n, const void *data) {
+int cmt_merkle_push_back_data(cmt_merkle_t *me, size_t length, const void *data) {
     uint8_t hash[CMT_KECCAK_LENGTH];
     cmt_keccak_t c[1];
     cmt_keccak_init(c);
-    cmt_keccak_update(c, n, data);
+    cmt_keccak_update(c, length, data);
     cmt_keccak_final(c, hash);
     return cmt_merkle_push_back(me, hash);
 }

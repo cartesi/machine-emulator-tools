@@ -23,21 +23,17 @@
  * @param [in] N - size in bytes
  * @note don't port */
 #define CMT_BUF_DECL(S, L)                                                                                             \
-    cmt_buf_t S[1] = {{                                                                                                \
-        .begin = (uint8_t[L]){0},                                                                                      \
-        .end = (S)->begin + L,                                                                                         \
-    }}
+    cmt_buf_t S[1] = {{.begin = (uint8_t[L]){0},                                                                       \
+        .end = (S)->begin + (L)}} // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
 
 /** Declare a cmt_buf_t with parameters backed memory.
  * @param [in] L - size in bytes
  * @note don't port */
 #define CMT_BUF_DECL3(S, L, P)                                                                                         \
-    cmt_buf_t S[1] = {{                                                                                                \
-        .begin = P,                                                                                                    \
-        .end = (S)->begin + L,                                                                                         \
-    }}
+    cmt_buf_t S[1] = {                                                                                                 \
+        {.begin = (P), .end = (S)->begin + (L)}} // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
 
-static void encode_u8() {
+static void encode_u8(void) {
     uint8_t x = 0x01;
     uint8_t en[CMT_WORD_LENGTH];
     uint8_t be[CMT_WORD_LENGTH] = {
@@ -78,7 +74,7 @@ static void encode_u8() {
     assert(memcmp(en, be, sizeof(be)) == 0);
 }
 
-static void encode_u16() {
+static void encode_u16(void) {
     uint16_t x = UINT16_C(0x0123);
     uint8_t en[CMT_WORD_LENGTH];
     uint8_t be[CMT_WORD_LENGTH] = {
@@ -119,7 +115,7 @@ static void encode_u16() {
     assert(memcmp(en, be, sizeof(be)) == 0);
 }
 
-static void encode_u32() {
+static void encode_u32(void) {
     uint32_t x = UINT32_C(0x01234567);
     uint8_t en[CMT_WORD_LENGTH];
     uint8_t be[CMT_WORD_LENGTH] = {
@@ -160,7 +156,7 @@ static void encode_u32() {
     assert(memcmp(en, be, sizeof(be)) == 0);
 }
 
-static void encode_u64() {
+static void encode_u64(void) {
     uint64_t x = UINT64_C(0x0123456789abcdef);
     uint8_t en[CMT_WORD_LENGTH];
     uint8_t be[CMT_WORD_LENGTH] = {
@@ -201,7 +197,7 @@ static void encode_u64() {
     assert(memcmp(en, be, sizeof(be)) == 0);
 }
 
-static void encode_u256() {
+static void encode_u256(void) {
     uint8_t x[CMT_WORD_LENGTH] = {
         0x1f,
         0x1e,
@@ -275,7 +271,7 @@ static void encode_u256() {
     assert(memcmp(en, be, sizeof(be)) == 0);
 }
 
-static void encode_edom() {
+static void encode_edom(void) {
     uint8_t x[CMT_WORD_LENGTH + 1] = {
         0x00,
         0x01,
@@ -316,8 +312,9 @@ static void encode_edom() {
     assert(cmt_abi_encode_uint_nn(sizeof(x), x, en) == EDOM);
 }
 
-static void decode_u8() {
-    uint8_t x, ex = 0x01;
+static void decode_u8(void) {
+    uint8_t x = 0;
+    uint8_t ex = 0x01;
     uint8_t be[CMT_WORD_LENGTH] = {
         0x00,
         0x00,
@@ -356,8 +353,9 @@ static void decode_u8() {
     assert(x == ex);
 }
 
-static void decode_u16() {
-    uint16_t x, ex = UINT16_C(0x0123);
+static void decode_u16(void) {
+    uint16_t x = 0;
+    uint16_t ex = UINT16_C(0x0123);
     uint8_t be[CMT_WORD_LENGTH] = {
         0x00,
         0x00,
@@ -396,8 +394,9 @@ static void decode_u16() {
     assert(x == ex);
 }
 
-static void decode_u32() {
-    uint32_t x, ex = UINT32_C(0x01234567);
+static void decode_u32(void) {
+    uint32_t x = 0;
+    uint32_t ex = UINT32_C(0x01234567);
     uint8_t be[CMT_WORD_LENGTH] = {
         0x00,
         0x00,
@@ -436,8 +435,9 @@ static void decode_u32() {
     assert(x == ex);
 }
 
-static void decode_u64() {
-    uint64_t x, ex = UINT64_C(0x0123456789abcdef);
+static void decode_u64(void) {
+    uint64_t x = 0;
+    uint64_t ex = UINT64_C(0x0123456789abcdef);
     uint8_t be[CMT_WORD_LENGTH] = {
         0x00,
         0x00,
@@ -476,42 +476,42 @@ static void decode_u64() {
     assert(x == ex);
 }
 
-static void decode_u256() {
-    uint8_t x[CMT_WORD_LENGTH],
-        ex[CMT_WORD_LENGTH] = {
-            0x1f,
-            0x1e,
-            0x1d,
-            0x1c,
-            0x1b,
-            0x1a,
-            0x19,
-            0x18,
-            0x17,
-            0x16,
-            0x15,
-            0x14,
-            0x13,
-            0x12,
-            0x11,
-            0x10,
-            0x0f,
-            0x0e,
-            0x0d,
-            0x0c,
-            0x0b,
-            0x0a,
-            0x09,
-            0x08,
-            0x07,
-            0x06,
-            0x05,
-            0x04,
-            0x03,
-            0x02,
-            0x01,
-            0x00,
-        };
+static void decode_u256(void) {
+    uint8_t x[CMT_WORD_LENGTH];
+    uint8_t ex[CMT_WORD_LENGTH] = {
+        0x1f,
+        0x1e,
+        0x1d,
+        0x1c,
+        0x1b,
+        0x1a,
+        0x19,
+        0x18,
+        0x17,
+        0x16,
+        0x15,
+        0x14,
+        0x13,
+        0x12,
+        0x11,
+        0x10,
+        0x0f,
+        0x0e,
+        0x0d,
+        0x0c,
+        0x0b,
+        0x0a,
+        0x09,
+        0x08,
+        0x07,
+        0x06,
+        0x05,
+        0x04,
+        0x03,
+        0x02,
+        0x01,
+        0x00,
+    };
     uint8_t be[CMT_WORD_LENGTH] = {
         0x00,
         0x01,
@@ -551,8 +551,8 @@ static void decode_u256() {
 }
 
 /* encoded value can't be represented in a uint64_t. */
-static void decode_edom() {
-    uint64_t x;
+static void decode_edom(void) {
+    uint64_t x = 0;
     uint8_t be[CMT_WORD_LENGTH] = {
         0x00,
         0x00,
@@ -590,7 +590,7 @@ static void decode_edom() {
     assert(cmt_abi_decode_uint(be, sizeof(x), (void *) &x) == -EDOM);
 }
 
-static void put_funsel() {
+static void put_funsel(void) {
     uint8_t data[] = {0xcd, 0xcd, 0x77, 0xc0};
     uint32_t funsel = CMT_ABI_FUNSEL(data[0], data[1], data[2], data[3]);
     CMT_BUF_DECL(b, 64);
@@ -600,7 +600,7 @@ static void put_funsel() {
     assert(memcmp(b->begin, data, 4) == 0);
 }
 
-static void put_uint() {
+static void put_uint(void) {
     uint64_t x = UINT64_C(0x0123456789abcdef);
     uint8_t be[CMT_WORD_LENGTH] = {
         0x00,
@@ -643,7 +643,7 @@ static void put_uint() {
     assert(memcmp(b->begin, be, sizeof(be)) == 0);
 }
 
-static void put_address() {
+static void put_address(void) {
     uint8_t x[20] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
         0x01, 0x23, 0x45, 0x67};
     uint8_t be[CMT_WORD_LENGTH] = {
@@ -687,7 +687,7 @@ static void put_address() {
     assert(memcmp(b->begin, be, sizeof(be)) == 0);
 }
 
-static void put_bytes() {
+static void put_bytes(void) {
     uint64_t x = UINT64_C(0x0123456789abcdef);
     uint8_t be[] = {
         0x00,
@@ -772,16 +772,18 @@ static void put_bytes() {
         0x00,
     };
     CMT_BUF_DECL(b, 128);
-    cmt_buf_t it[1] = {*b}, of[1];
+    cmt_buf_t it[1] = {*b};
+    cmt_buf_t of[1];
 
     assert(cmt_abi_put_bytes_s(it, of) == 0);
     assert(cmt_abi_put_bytes_d(it, of, sizeof(x), &x, b->begin) == 0);
     assert(memcmp(b->begin, be, sizeof(be)) == 0);
 }
 
-static void get_funsel() {
+static void get_funsel(void) {
     CMT_BUF_DECL(b, 64);
-    cmt_buf_t wr[1] = {*b}, rd[1] = {*b};
+    cmt_buf_t wr[1] = {*b};
+    cmt_buf_t rd[1] = {*b};
     uint32_t funsel = CMT_ABI_FUNSEL(1, 2, 3, 4);
 
     assert(cmt_abi_put_funsel(wr, funsel) == 0);
@@ -789,8 +791,9 @@ static void get_funsel() {
     assert(cmt_abi_check_funsel(rd, funsel) == 0);
 }
 
-static void get_uint() {
-    uint64_t x, ex = UINT64_C(0x0123456789abcdef);
+static void get_uint(void) {
+    uint64_t x = 0;
+    uint64_t ex = UINT64_C(0x0123456789abcdef);
     uint8_t be[CMT_WORD_LENGTH] = {
         0x00,
         0x00,
@@ -832,7 +835,7 @@ static void get_uint() {
     assert(x == ex);
 }
 
-static void get_address() {
+static void get_address(void) {
     uint8_t x[20];
     uint8_t ex[20] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
         0x01, 0x23, 0x45, 0x67};
@@ -877,7 +880,7 @@ static void get_address() {
     assert(memcmp(x, ex, sizeof(ex)) == 0);
 }
 
-static void get_bytes() {
+static void get_bytes(void) {
     uint64_t ex = UINT64_C(0x0123456789abcdef);
     uint8_t be[] = {
         0x00,
@@ -962,14 +965,16 @@ static void get_bytes() {
         0x00,
     };
     CMT_BUF_DECL3(b, sizeof(be), be);
-    cmt_buf_t it[1] = {*b}, of[1], bytes[1];
+    cmt_buf_t it[1] = {*b};
+    cmt_buf_t of[1];
+    cmt_buf_t bytes[1];
 
     assert(cmt_abi_get_bytes_s(it, of) == 0);
     assert(cmt_abi_peek_bytes_d(b, of, bytes) == 0);
     assert(memcmp(bytes->begin, &ex, sizeof(ex)) == 0);
 }
 
-int main() {
+int main(void) {
     encode_u8();
     encode_u16();
     encode_u32();

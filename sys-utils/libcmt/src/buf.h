@@ -73,7 +73,7 @@ void cmt_buf_xxd(void *begin, void *end, int bytes_per_line);
 
 /** Take the substring @p x from @p xs start to the first @p , (comma).
  * @param [out]    x           substring
- * @param [in,out] xs          string (interator)
+ * @param [in,out] xs          string (iterator)
  *
  * @note @p x points inside @p xs, make a copy if it outlives @p xs. */
 bool cmt_buf_split_by_comma(cmt_buf_t *x, cmt_buf_t *xs);

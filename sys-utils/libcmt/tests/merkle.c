@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#if 0
+#if 0 // NOLINT
 static void print(int m, uint8_t md[CMT_KECCAK_LENGTH])
 {
 	printf("%3d: ", m);
@@ -28,7 +28,7 @@ static void print(int m, uint8_t md[CMT_KECCAK_LENGTH])
 }
 #endif
 
-static int pristine_zero() {
+static int pristine_zero(void) {
     uint8_t md[CMT_KECCAK_LENGTH];
     cmt_merkle_t M[1];
     cmt_merkle_init(M);
@@ -70,15 +70,16 @@ static int pristine_zero() {
 
     for (uint64_t i = 0; i < 64; ++i) {
         cmt_merkle_get_root_hash(M, md);
-        if (memcmp(md, expected, sizeof expected) != 0)
+        if (memcmp(md, expected, sizeof expected) != 0) {
             return -1;
+        }
 
         cmt_merkle_push_back_data(M, 0, NULL);
     }
     return 0;
 }
 
-int main() {
+int main(void) {
     assert(pristine_zero() == 0);
     return 0;
 }

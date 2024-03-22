@@ -31,8 +31,9 @@
 int cmt_io_init(cmt_io_driver_t *_me) {
     int rc = 0;
 
-    if (!_me)
+    if (!_me) {
         return -EINVAL;
+    }
     cmt_io_driver_ioctl_t *me = &_me->ioctl;
     me->fd = open("/dev/cmio", O_RDWR);
 
@@ -74,8 +75,9 @@ do_close:
 }
 
 void cmt_io_fini(cmt_io_driver_t *_me) {
-    if (!_me)
+    if (!_me) {
         return;
+    }
     cmt_io_driver_ioctl_t *me = &_me->ioctl;
 
     munmap(me->tx->begin, cmt_buf_length(me->tx));
@@ -88,8 +90,9 @@ void cmt_io_fini(cmt_io_driver_t *_me) {
 
 cmt_buf_t cmt_io_get_tx(cmt_io_driver_t *me) {
     static const cmt_buf_t empty = {NULL, NULL};
-    if (!me)
+    if (!me) {
         return empty;
+    }
     return *me->ioctl.tx;
 }
 
@@ -99,8 +102,9 @@ static uint32_t min(uint32_t a, uint32_t b) {
 
 cmt_buf_t cmt_io_get_rx(cmt_io_driver_t *me) {
     static const cmt_buf_t empty = {NULL, NULL};
-    if (!me)
+    if (!me) {
         return empty;
+    }
     cmt_buf_t rx = *me->ioctl.rx;
     rx.end = rx.begin + min(me->ioctl.rx_max_length, me->ioctl.rx_fromhost_length);
     return rx;
@@ -113,22 +117,25 @@ static uint64_t pack(struct cmt_io_yield *rr) {
 
 static struct cmt_io_yield unpack(uint64_t x) {
     struct cmt_io_yield out = {
-        (uint64_t) x >> 56,
-        (uint64_t) x << 8 >> 56,
-        (uint64_t) x << 16 >> 48,
-        (uint64_t) x << 32 >> 32,
+        x >> 56,
+        x << 8 >> 56,
+        x << 16 >> 48,
+        x << 32 >> 32,
     };
     return out;
 }
 
 int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
-    if (!_me)
+    if (!_me) {
         return -EINVAL;
-    if (!rr)
+    }
+    if (!rr) {
         return -EINVAL;
+    }
     cmt_io_driver_ioctl_t *me = &_me->ioctl;
 
-    static bool checked = false, enabled = false;
+    static bool checked = false;
+    static bool enabled = false;
 
     if (!checked) {
         enabled = getenv("CMT_DEBUG") != NULL;
@@ -136,7 +143,7 @@ int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
     }
 
     if (enabled) {
-        fprintf(stderr,
+        (void) fprintf(stderr,
             "tohost {\n"
             "\t.dev = %d,\n"
             "\t.cmd = %d,\n"
@@ -146,14 +153,15 @@ int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
             rr->dev, rr->cmd, rr->reason, rr->data);
     }
     uint64_t req = pack(rr);
-    if (ioctl(me->fd, IOCTL_CMIO_YIELD, &req))
+    if (ioctl(me->fd, IOCTL_CMIO_YIELD, &req)) {
         return -errno;
+    }
     *rr = unpack(req);
 
     me->rx_fromhost_length = rr->data;
 
     if (enabled) {
-        fprintf(stderr,
+        (void) fprintf(stderr,
             "fromhost {\n"
             "\t.dev = %d,\n"
             "\t.cmd = %d,\n"

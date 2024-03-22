@@ -21,7 +21,7 @@
  * encoding/decoding and @ref libcmt_merkle tree handling.
  *
  * Mocked version has support for simulating I/O via environment variables:
- * @p CMT_INPUTS="0:input.bin,..." and verbose ouput with @p CMT_DEBUG=yes.
+ * @p CMT_INPUTS="0:input.bin,..." and verbose output with @p CMT_DEBUG=yes.
  *
  * Lets look at some code:
  *
@@ -32,7 +32,6 @@
 #ifndef CMT_ROLLUP_H
 #define CMT_ROLLUP_H
 #include "abi.h"
-#include "buf.h"
 #include "io.h"
 #include "merkle.h"
 

@@ -27,35 +27,39 @@ uint32_t cmt_abi_funsel(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 }
 
 int cmt_abi_put_funsel(cmt_buf_t *me, uint32_t funsel) {
-    int rc;
     cmt_buf_t x[1];
-    if ((rc = cmt_buf_split(me, sizeof(funsel), x, me)))
+    int rc = cmt_buf_split(me, sizeof(funsel), x, me);
+    if (rc) {
         return rc;
+    }
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
     memcpy(x->begin, &funsel, sizeof(funsel));
     return 0;
 }
 
 int cmt_abi_encode_uint_nr(size_t n, const uint8_t *data, uint8_t out[CMT_WORD_LENGTH]) {
-    if (n > CMT_WORD_LENGTH)
+    if (n > CMT_WORD_LENGTH) {
         return EDOM;
-
-    for (size_t i = 0; i < n; ++i)
+    }
+    for (size_t i = 0; i < n; ++i) {
         out[CMT_WORD_LENGTH - 1 - i] = data[i];
-    for (size_t i = n; i < CMT_WORD_LENGTH; ++i)
+    }
+    for (size_t i = n; i < CMT_WORD_LENGTH; ++i) {
         out[CMT_WORD_LENGTH - 1 - i] = 0;
-
+    }
     return 0;
 }
 
 int cmt_abi_encode_uint_nn(size_t n, const uint8_t *data, uint8_t out[CMT_WORD_LENGTH]) {
-    if (n > CMT_WORD_LENGTH)
+    if (n > CMT_WORD_LENGTH) {
         return EDOM;
-
-    for (size_t i = 0; i < CMT_WORD_LENGTH - n; ++i)
+    }
+    for (size_t i = 0; i < CMT_WORD_LENGTH - n; ++i) {
         out[i] = 0;
-    for (size_t i = CMT_WORD_LENGTH - n; i < CMT_WORD_LENGTH; ++i)
+    }
+    for (size_t i = CMT_WORD_LENGTH - n; i < CMT_WORD_LENGTH; ++i) {
         out[i] = data[i - CMT_WORD_LENGTH + n];
-
+    }
     return 0;
 }
 
@@ -68,26 +72,32 @@ int cmt_abi_encode_uint(size_t n, const void *data, uint8_t out[CMT_WORD_LENGTH]
 }
 
 int cmt_abi_decode_uint_nr(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_t *out) {
-    if (n > CMT_WORD_LENGTH)
+    if (n > CMT_WORD_LENGTH) {
         return EDOM;
-
-    for (size_t i = 0; i < CMT_WORD_LENGTH - n; ++i)
-        if (data[i])
+    }
+    for (size_t i = 0; i < CMT_WORD_LENGTH - n; ++i) {
+        if (data[i]) {
             return -EDOM;
-    for (size_t i = CMT_WORD_LENGTH - n; i < CMT_WORD_LENGTH; ++i)
+        }
+    }
+    for (size_t i = CMT_WORD_LENGTH - n; i < CMT_WORD_LENGTH; ++i) {
         out[CMT_WORD_LENGTH - 1 - i] = data[i];
+    }
     return 0;
 }
 
 int cmt_abi_decode_uint_nn(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_t *out) {
-    if (n > CMT_WORD_LENGTH)
+    if (n > CMT_WORD_LENGTH) {
         return EDOM;
-
-    for (size_t i = 0; i < CMT_WORD_LENGTH - n; ++i)
-        if (data[i])
+    }
+    for (size_t i = 0; i < CMT_WORD_LENGTH - n; ++i) {
+        if (data[i]) {
             return -EDOM;
-    for (size_t i = CMT_WORD_LENGTH - n; i < CMT_WORD_LENGTH; ++i)
+        }
+    }
+    for (size_t i = CMT_WORD_LENGTH - n; i < CMT_WORD_LENGTH; ++i) {
         out[i - CMT_WORD_LENGTH + n] = data[i];
+    }
     return 0;
 }
 
@@ -99,26 +109,26 @@ int cmt_abi_decode_uint(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_t *
 #endif
 }
 
-int cmt_abi_put_uint(cmt_buf_t *me, size_t n, const void *data) {
+int cmt_abi_put_uint(cmt_buf_t *me, size_t data_length, const void *data) {
     cmt_buf_t x[1];
-
-    if (n > CMT_WORD_LENGTH)
+    if (data_length > CMT_WORD_LENGTH) {
         return -EDOM;
-    if (cmt_buf_split(me, CMT_WORD_LENGTH, x, me))
+    }
+    if (cmt_buf_split(me, CMT_WORD_LENGTH, x, me)) {
         return -ENOBUFS;
-
-    return cmt_abi_encode_uint(n, data, x->begin);
+    }
+    return cmt_abi_encode_uint(data_length, data, x->begin);
 }
 
-int cmt_abi_put_uint_be(cmt_buf_t *me, size_t n, const void *data) {
+int cmt_abi_put_uint_be(cmt_buf_t *me, size_t data_length, const void *data) {
     cmt_buf_t x[1];
-
-    if (n > CMT_WORD_LENGTH)
+    if (data_length > CMT_WORD_LENGTH) {
         return -EDOM;
-    if (cmt_buf_split(me, CMT_WORD_LENGTH, x, me))
+    }
+    if (cmt_buf_split(me, CMT_WORD_LENGTH, x, me)) {
         return -ENOBUFS;
-
-    return cmt_abi_encode_uint_nn(n, data, x->begin);
+    }
+    return cmt_abi_encode_uint_nn(data_length, data, x->begin);
 }
 
 int cmt_abi_put_bool(cmt_buf_t *me, bool value) {
@@ -126,13 +136,12 @@ int cmt_abi_put_bool(cmt_buf_t *me, bool value) {
     return cmt_abi_put_uint(me, sizeof(boolean), &boolean);
 }
 
-int cmt_abi_put_address(cmt_buf_t *me, const uint8_t data[20]) {
+int cmt_abi_put_address(cmt_buf_t *me, const uint8_t address[20]) {
     cmt_buf_t x[1];
-
-    if (cmt_buf_split(me, CMT_WORD_LENGTH, x, me))
+    if (cmt_buf_split(me, CMT_WORD_LENGTH, x, me)) {
         return -ENOBUFS;
-
-    return cmt_abi_encode_uint_nn(CMT_ADDRESS_LENGTH, data, x->begin);
+    }
+    return cmt_abi_encode_uint_nn(CMT_ADDRESS_LENGTH, address, x->begin);
 }
 
 int cmt_abi_put_bytes_s(cmt_buf_t *me, cmt_buf_t *offset) {
@@ -140,49 +149,62 @@ int cmt_abi_put_bytes_s(cmt_buf_t *me, cmt_buf_t *offset) {
 }
 
 int cmt_abi_reserve_bytes_d(cmt_buf_t *me, cmt_buf_t *of, size_t n, cmt_buf_t *out, const void *start) {
-    int rc;
-    cmt_buf_t tmp[1], sz[1];
+    int rc = 0;
+    cmt_buf_t tmp[1];
+    cmt_buf_t sz[1];
     size_t n32 = align_forward(n, CMT_WORD_LENGTH);
 
-    if ((rc = cmt_buf_split(me, CMT_WORD_LENGTH, sz, tmp)))
+    rc = cmt_buf_split(me, CMT_WORD_LENGTH, sz, tmp);
+    if (rc) {
         return rc;
-    if ((rc = cmt_buf_split(tmp, n32, out, tmp)))
+    }
+    rc = cmt_buf_split(tmp, n32, out, tmp);
+    if (rc) {
         return rc;
+    }
 
     size_t offset = sz->begin - (uint8_t *) start;
-    if ((rc = cmt_abi_encode_uint(sizeof(offset), &offset, of->begin)))
+    rc = cmt_abi_encode_uint(sizeof(offset), &offset, of->begin);
+    if (rc) {
         return rc;
-    if ((rc = cmt_abi_encode_uint(sizeof(n), &n, sz->begin)))
+    }
+    rc = cmt_abi_encode_uint(sizeof(n), &n, sz->begin);
+    if (rc) {
         return rc;
+    }
 
-    *me = *tmp;                         // commit the buffer changes
+    *me = *tmp; // commit the buffer changes
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
     memset(out->begin + n, 0, n32 - n); // zero out the padding
     return 0;
 }
 
 int cmt_abi_put_bytes_d(cmt_buf_t *me, cmt_buf_t *offset, size_t n, const void *data, const void *start) {
-    int rc;
     cmt_buf_t res[1];
-
-    if ((rc = cmt_abi_reserve_bytes_d(me, offset, n, res, start)))
+    int rc = cmt_abi_reserve_bytes_d(me, offset, n, res, start);
+    if (rc) {
         return rc;
-
+    }
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
     memcpy(res->begin, data, n);
     return 0;
 }
 
 uint32_t cmt_abi_peek_funsel(cmt_buf_t *me) {
-    if (cmt_buf_length(me) < 4)
+    if (cmt_buf_length(me) < 4) {
         return 0;
+    }
     return CMT_ABI_FUNSEL(me->begin[0], me->begin[1], me->begin[2], me->begin[3]);
 }
 
 int cmt_abi_check_funsel(cmt_buf_t *me, uint32_t expected) {
-    if (cmt_buf_length(me) < 4)
+    if (cmt_buf_length(me) < 4) {
         return -ENOBUFS;
+    }
 
-    if (cmt_abi_peek_funsel(me) != expected)
+    if (cmt_abi_peek_funsel(me) != expected) {
         return -EBADMSG;
+    }
 
     me->begin += 4;
     return 0;
@@ -191,11 +213,13 @@ int cmt_abi_check_funsel(cmt_buf_t *me, uint32_t expected) {
 int cmt_abi_get_uint(cmt_buf_t *me, size_t n, void *data) {
     cmt_buf_t x[1];
 
-    if (n > CMT_WORD_LENGTH)
+    if (n > CMT_WORD_LENGTH) {
         return -EDOM;
+    }
     int rc = cmt_buf_split(me, CMT_WORD_LENGTH, x, me);
-    if (rc)
+    if (rc) {
         return rc;
+    }
 
     return cmt_abi_decode_uint(x->begin, n, data);
 }
@@ -203,11 +227,13 @@ int cmt_abi_get_uint(cmt_buf_t *me, size_t n, void *data) {
 int cmt_abi_get_uint_be(cmt_buf_t *me, size_t n, void *data) {
     cmt_buf_t x[1];
 
-    if (n > CMT_WORD_LENGTH)
+    if (n > CMT_WORD_LENGTH) {
         return -EDOM;
+    }
     int rc = cmt_buf_split(me, CMT_WORD_LENGTH, x, me);
-    if (rc)
+    if (rc) {
         return rc;
+    }
 
     return cmt_abi_decode_uint_nn(x->begin, n, data);
 }
@@ -215,8 +241,9 @@ int cmt_abi_get_uint_be(cmt_buf_t *me, size_t n, void *data) {
 int cmt_abi_get_bool(cmt_buf_t *me, bool *value) {
     uint8_t boolean = 0;
     int rc = cmt_abi_put_uint(me, sizeof(boolean), &boolean);
-    if (rc)
+    if (rc) {
         return rc;
+    }
     *value = boolean;
     return 0;
 }
@@ -225,8 +252,9 @@ int cmt_abi_get_address(cmt_buf_t *me, uint8_t address[CMT_ADDRESS_LENGTH]) {
     cmt_buf_t x[1];
 
     int rc = cmt_buf_split(me, CMT_WORD_LENGTH, x, me);
-    if (rc)
+    if (rc) {
         return rc;
+    }
 
     return cmt_abi_decode_uint_nn(x->begin, CMT_ADDRESS_LENGTH, address);
 }
@@ -236,23 +264,29 @@ int cmt_abi_get_bytes_s(cmt_buf_t *me, cmt_buf_t of[1]) {
 }
 
 int cmt_abi_peek_bytes_d(const cmt_buf_t *start, cmt_buf_t of[1], cmt_buf_t *bytes) {
-    int rc;
-    uint64_t offset, size;
-    if ((rc = cmt_abi_get_uint(of, sizeof(offset), &offset)))
+    int rc = 0;
+    uint64_t offset = 0;
+    uint64_t size = 0;
+    rc = cmt_abi_get_uint(of, sizeof(offset), &offset);
+    if (rc) {
         return rc;
+    }
 
     /* from the beginning, after funsel */
     cmt_buf_t it[1] = {{start->begin + offset, start->end}};
-    if ((rc = cmt_abi_get_uint(it, sizeof(size), &size)))
+    rc = cmt_abi_get_uint(it, sizeof(size), &size);
+    if (rc) {
         return rc;
+    }
     return cmt_buf_split(it, size, bytes, it);
 }
 
-int cmt_abi_get_bytes_d(const cmt_buf_t *me, cmt_buf_t of[1], size_t *n, void **data) {
+int cmt_abi_get_bytes_d(const cmt_buf_t *start, cmt_buf_t of[1], size_t *n, void **data) {
     cmt_buf_t bytes[1];
-    int rc = cmt_abi_peek_bytes_d(me, of, bytes);
-    if (rc)
+    int rc = cmt_abi_peek_bytes_d(start, of, bytes);
+    if (rc) {
         return rc;
+    }
     *n = cmt_buf_length(bytes);
     *data = bytes->begin;
     return 0;
