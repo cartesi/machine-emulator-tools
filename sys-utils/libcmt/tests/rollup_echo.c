@@ -40,10 +40,38 @@ int main(void) {
     // cmt_rollup_load_merkle(rollup, "/tmp/merkle.dat");
 
     uint8_t small[] = {
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
     };
     for (;;) {
         int rc;
@@ -62,7 +90,8 @@ int main(void) {
                     break;
                 }
 
-                rc = cmt_rollup_emit_voucher(&rollup, sizeof advance.msg_sender, advance.msg_sender, sizeof small, small, advance.payload_length, advance.payload, NULL);
+                rc = cmt_rollup_emit_voucher(&rollup, sizeof advance.msg_sender, advance.msg_sender, sizeof small,
+                    small, advance.payload_length, advance.payload, NULL);
                 if (rc < 0) {
                     fprintf(stderr, "%s:%d Error on voucher %s (%d)\n", __FILE__, __LINE__, strerror(-rc), (-rc));
                     break;

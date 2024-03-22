@@ -80,4 +80,3 @@ bool cmt_buf_split_by_comma(cmt_buf_t *x, cmt_buf_t *xs);
 
 #endif /* CMT_BUF_H */
 /** @} */
-

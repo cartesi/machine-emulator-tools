@@ -70,16 +70,16 @@ enum {
 
 /** Automatic reasons */
 enum {
-    HTIF_YIELD_AUTOMATIC_REASON_PROGRESS = 1,     /**< Progress */
-    HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT = 2,    /**< emit an output */
-    HTIF_YIELD_AUTOMATIC_REASON_TX_REPORT = 4,    /**< emit a report */
+    HTIF_YIELD_AUTOMATIC_REASON_PROGRESS = 1,  /**< Progress */
+    HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT = 2, /**< emit an output */
+    HTIF_YIELD_AUTOMATIC_REASON_TX_REPORT = 4, /**< emit a report */
 };
 
 /** Manual reasons */
 enum {
-    HTIF_YIELD_MANUAL_REASON_RX_ACCEPTED = 1,     /**< Accept and load next input */
-    HTIF_YIELD_MANUAL_REASON_RX_REJECTED = 2,     /**< Reject and revert */
-    HTIF_YIELD_MANUAL_REASON_TX_EXCEPTION = 4,    /**< emit a exception and halt execution */
+    HTIF_YIELD_MANUAL_REASON_RX_ACCEPTED = 1,  /**< Accept and load next input */
+    HTIF_YIELD_MANUAL_REASON_RX_REJECTED = 2,  /**< Reject and revert */
+    HTIF_YIELD_MANUAL_REASON_TX_EXCEPTION = 4, /**< emit a exception and halt execution */
 };
 
 /** Reply reason when requesting @ref HTIF_YIELD_REASON_RX_ACCEPTED or HTIF_YIELD_REASON_RX_REJECTED */
@@ -165,4 +165,3 @@ cmt_buf_t cmt_io_get_rx(cmt_io_driver_t *me);
 int cmt_io_yield(cmt_io_driver_t *me, cmt_io_yield_t *rr);
 
 #endif /* CMT_IO_H */
-

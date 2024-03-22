@@ -30,7 +30,7 @@ enum {
 /** Opaque Merkle tree state.
  * initialize with: @ref cmt_merkle_init */
 typedef struct {
-    uint64_t leaf_count;  /**< number of leaves in tree */
+    uint64_t leaf_count;                                      /**< number of leaves in tree */
     uint8_t state[CMT_MERKLE_TREE_HEIGHT][CMT_KECCAK_LENGTH]; /**< hashes of complete subtrees */
 } cmt_merkle_t;
 
@@ -100,4 +100,3 @@ int cmt_merkle_push_back_data(cmt_merkle_t *me, size_t length, const void *data)
 void cmt_merkle_get_root_hash(cmt_merkle_t *me, uint8_t root[CMT_KECCAK_LENGTH]);
 
 #endif /* CMT_MERKLE_H */
-

@@ -25,7 +25,7 @@
 #include <string.h>
 
 // Voucher(address,uint256,bytes)
-#define VOUCHER  CMT_ABI_FUNSEL(0x23, 0x7a, 0x81, 0x6f)
+#define VOUCHER CMT_ABI_FUNSEL(0x23, 0x7a, 0x81, 0x6f)
 
 // Notice(bytes)
 #define NOTICE CMT_ABI_FUNSEL(0xc2, 0x58, 0xd6, 0xe5)
@@ -72,10 +72,8 @@ void cmt_rollup_fini(cmt_rollup_t *me) {
     cmt_merkle_fini(me->merkle);
 }
 
-int cmt_rollup_emit_voucher(cmt_rollup_t *me,
-                            uint32_t address_length, const void *address_data,
-                            uint32_t value_length, const void *value_data,
-                            uint32_t length, const void *data, uint64_t *index) {
+int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint32_t address_length, const void *address_data, uint32_t value_length,
+    const void *value_data, uint32_t length, const void *data, uint64_t *index) {
     if (!me)
         return -EINVAL;
     if (!data && length)
@@ -86,11 +84,9 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me,
     cmt_buf_t of[1];
     void *params_base = tx->begin + 4; // after funsel
 
-    if (DBG(cmt_abi_put_funsel(wr, VOUCHER))
-    ||  DBG(cmt_abi_put_uint_be(wr, address_length, address_data))
-    ||  DBG(cmt_abi_put_uint_be(wr, value_length, value_data))
-    ||  DBG(cmt_abi_put_bytes_s(wr, of))
-    ||  DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base)))
+    if (DBG(cmt_abi_put_funsel(wr, VOUCHER)) || DBG(cmt_abi_put_uint_be(wr, address_length, address_data)) ||
+        DBG(cmt_abi_put_uint_be(wr, value_length, value_data)) || DBG(cmt_abi_put_bytes_s(wr, of)) ||
+        DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base)))
         return -ENOBUFS;
 
     size_t m = wr->begin - tx->begin;
@@ -209,12 +205,10 @@ int cmt_rollup_read_advance_state(cmt_rollup_t *me, cmt_rollup_advance_t *advanc
     size_t payload_length = 0;
     if (DBG(cmt_abi_check_funsel(rd, EVM_ADVANCE)) ||
         DBG(cmt_abi_get_uint(rd, sizeof(advance->chain_id), &advance->chain_id)) ||
-        DBG(cmt_abi_get_address(rd, advance->app_contract)) ||
-        DBG(cmt_abi_get_address(rd, advance->msg_sender)) ||
+        DBG(cmt_abi_get_address(rd, advance->app_contract)) || DBG(cmt_abi_get_address(rd, advance->msg_sender)) ||
         DBG(cmt_abi_get_uint(rd, sizeof(advance->block_number), &advance->block_number)) ||
         DBG(cmt_abi_get_uint(rd, sizeof(advance->block_timestamp), &advance->block_timestamp)) ||
-        DBG(cmt_abi_get_uint(rd, sizeof(advance->index), &advance->index)) ||
-        DBG(cmt_abi_get_bytes_s(rd, of)) ||
+        DBG(cmt_abi_get_uint(rd, sizeof(advance->index), &advance->index)) || DBG(cmt_abi_get_bytes_s(rd, of)) ||
         DBG(cmt_abi_get_bytes_d(st, of, &payload_length, &advance->payload)))
         return -ENOBUFS;
     advance->payload_length = payload_length;
