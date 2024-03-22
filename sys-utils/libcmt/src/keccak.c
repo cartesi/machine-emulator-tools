@@ -134,18 +134,21 @@ static void keccakf(uint64_t st[25]) {
 #endif
 
     for (int r = 0; r < 24; r++) {
-        uint64_t t, bc[5];
+        uint64_t t = 0;
+        uint64_t bc[5];
 
         // Theta
         UNROLL_LOOP(5)
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 5; i++) {
             bc[i] = st[i] ^ st[i + 5] ^ st[i + 10] ^ st[i + 15] ^ st[i + 20];
+        }
 
         UNROLL_LOOP(5)
         for (int i = 0; i < 5; i++) {
             t = bc[(i + 4) % 5] ^ ROTL64(bc[(i + 1) % 5], 1);
-            for (int j = 0; j < 25; j += 5)
+            for (int j = 0; j < 25; j += 5) {
                 st[j + i] ^= t;
+            }
         }
 
         // Rho Pi
@@ -161,10 +164,12 @@ static void keccakf(uint64_t st[25]) {
         //  Chi
         UNROLL_LOOP(25)
         for (int j = 0; j < 25; j += 5) {
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 5; i++) {
                 bc[i] = st[j + i];
-            for (int i = 0; i < 5; i++)
+            }
+            for (int i = 0; i < 5; i++) {
                 st[j + i] ^= (~bc[(i + 1) % 5]) & bc[(i + 2) % 5];
+            }
         }
 
         //  Iota
@@ -178,36 +183,36 @@ static void keccakf(uint64_t st[25]) {
 #endif
 }
 
-void cmt_keccak_init(cmt_keccak_t *c) {
-    *c = (cmt_keccak_t) CMT_KECCAK_INIT(c);
+void cmt_keccak_init(cmt_keccak_t *state) {
+    *state = (cmt_keccak_t) CMT_KECCAK_INIT(state);
 }
 
-void cmt_keccak_update(cmt_keccak_t *c, size_t n, const void *data) {
-    int j = c->pt;
+void cmt_keccak_update(cmt_keccak_t *state, size_t n, const void *data) {
+    int j = state->pt;
     for (size_t i = 0; i < n; i++) {
-        c->st.b[j++] ^= ((const uint8_t *) data)[i];
-        if (j >= c->rsiz) {
-            keccakf(c->st.q);
+        state->st.b[j++] ^= ((const uint8_t *) data)[i];
+        if (j >= state->rsiz) {
+            keccakf(state->st.q);
             j = 0;
         }
     }
-    c->pt = j;
+    state->pt = j;
 }
 
-void cmt_keccak_final(cmt_keccak_t *c, void *md) {
-    c->st.b[c->pt] ^= 0x01;
-    c->st.b[c->rsiz - 1] ^= 0x80;
-    keccakf(c->st.q);
+void cmt_keccak_final(cmt_keccak_t *state, void *md) {
+    state->st.b[state->pt] ^= 0x01;
+    state->st.b[state->rsiz - 1] ^= 0x80;
+    keccakf(state->st.q);
 
     for (int i = 0; i < CMT_KECCAK_LENGTH; i++) {
-        ((uint8_t *) md)[i] = c->st.b[i];
+        ((uint8_t *) md)[i] = state->st.b[i];
     }
 }
 
-uint8_t *cmt_keccak_data(size_t n, const void *data, uint8_t md[CMT_KECCAK_LENGTH]) {
+uint8_t *cmt_keccak_data(size_t length, const void *data, uint8_t md[CMT_KECCAK_LENGTH]) {
     cmt_keccak_t c[1];
     cmt_keccak_init(c);
-    cmt_keccak_update(c, n, data);
+    cmt_keccak_update(c, length, data);
     cmt_keccak_final(c, md);
     return md;
 }

@@ -17,11 +17,9 @@
 #include "abi.h"
 
 #include <assert.h>
-#include <errno.h>
-#include <stdio.h>
 #include <string.h>
 
-static void inits() {
+static void inits(void) {
     uint8_t md[3][CMT_KECCAK_LENGTH];
     uint8_t data[] = {
         0x00,
@@ -69,12 +67,12 @@ static void inits() {
     assert(memcmp(md[0], md[1], CMT_KECCAK_LENGTH) == 0);
 }
 
-static void funsel() {
+static void funsel(void) {
     const char s[] = "baz(uint32,bool)";
     assert(cmt_keccak_funsel(s) == CMT_ABI_FUNSEL(0xcd, 0xcd, 0x77, 0xc0));
 }
 
-int main() {
+int main(void) {
     funsel();
     inits();
     return 0;

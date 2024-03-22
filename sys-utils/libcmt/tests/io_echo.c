@@ -15,7 +15,6 @@
  */
 #include "io.h"
 
-#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +27,7 @@ int next(union cmt_io_driver *io, uint32_t *n) {
         .data = *n,
     }};
     if (cmt_io_yield(io, req)) {
-        fprintf(stderr, "%s:%d failed to yield\n", __FILE__, __LINE__);
+        (void) fprintf(stderr, "%s:%d failed to yield\n", __FILE__, __LINE__);
         return -1;
     }
     *n = req->data;
@@ -70,16 +69,15 @@ int main(void) {
     union cmt_io_driver io[1];
     int rc = cmt_io_init(io);
     if (rc) {
-        fprintf(stderr, "%s:%d failed to init with: %s\n", __FILE__, __LINE__, strerror(-rc));
+        (void) fprintf(stderr, "%s:%d failed to init with: %s\n", __FILE__, __LINE__, strerror(-rc));
         return EXIT_FAILURE;
     }
 
     cmt_buf_t tx = cmt_io_get_tx(io);
     cmt_buf_t rx = cmt_io_get_rx(io);
 
-    int type;
     uint32_t n = 0;
-    while ((type = next(io, &n)) >= 0) {
+    while (next(io, &n) >= 0) {
         memcpy(tx.begin, rx.begin, n);
         voucher(io, n);
         report(io, n);

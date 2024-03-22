@@ -13,29 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "buf.h"
 #include "io.h"
 
-#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 int main(void) {
     /* init ------------------------------------------------------------- */
-    struct cmt_io_driver io[1];
+    union cmt_io_driver io[1];
     if (cmt_io_init(io)) {
-        fprintf(stderr, "%s:%d failed to init\n", __FILE__, __LINE__);
+        (void) fprintf(stderr, "%s:%d failed to init\n", __FILE__, __LINE__);
         return EXIT_FAILURE;
     }
 
-    size_t tx_sz, rx_sz;
-    uint8_t *tx, *rx;
-    tx = cmt_io_get_tx(io, &tx_sz), rx = cmt_io_get_rx(io, &rx_sz);
+    cmt_buf_t tx = cmt_io_get_tx(io);
 
     /* prepare exception ------------------------------------------------ */
     const char message[] = "exception contents\n";
     size_t n = strlen(message);
-    memcpy(tx, message, n);
+    tx.begin = (uint8_t *) message;
+    tx.end = tx.begin + n;
 
     /* exception -------------------------------------------------------- */
     struct cmt_io_yield req[1] = {{
@@ -45,7 +44,7 @@ int main(void) {
         .data = n,
     }};
     if (cmt_io_yield(io, req)) {
-        fprintf(stderr, "%s:%d failed to yield\n", __FILE__, __LINE__);
+        (void) fprintf(stderr, "%s:%d failed to yield\n", __FILE__, __LINE__);
         return -1;
     }
 

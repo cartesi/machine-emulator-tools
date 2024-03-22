@@ -20,7 +20,7 @@
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "usage: %s \"<declaration>\"\n", argv[0]);
+        (void) fprintf(stderr, "usage: %s \"<declaration>\"\n", argv[0]);
         exit(1);
     }
 

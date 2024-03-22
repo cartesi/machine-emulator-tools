@@ -54,7 +54,6 @@
 #ifndef CMT_IO_H
 #define CMT_IO_H
 #include "buf.h"
-#include <stddef.h>
 #include <stdint.h>
 
 /** Device */
@@ -135,13 +134,13 @@ int cmt_io_init(cmt_io_driver_t *me);
 
 /** Release the driver resources and close the io device.
  *
- * @param [in] me A sucessfuly initialized state by @ref cmt_io_init
+ * @param [in] me A successfully initialized state by @ref cmt_io_init
  * @note usage of @p me after this call is a BUG and will cause undefined behaviour */
 void cmt_io_fini(cmt_io_driver_t *me);
 
 /** Retrieve the transmit buffer @p tx
  *
- * @param [in] me A sucessfuly initialized state by @ref cmt_io_init
+ * @param [in] me A successfully initialized state by @ref cmt_io_init
  * @return
  * - writable memory region (check @ref cmt_buf_t)
  * @note memory is valid until @ref cmt_io_fini is called. */
@@ -149,7 +148,7 @@ cmt_buf_t cmt_io_get_tx(cmt_io_driver_t *me);
 
 /** Retrieve the receive buffer @p rx
  *
- * @param [in] me A sucessfuly initialized state by @ref cmt_io_init
+ * @param [in] me A successfully initialized state by @ref cmt_io_init
  * @return
  * - readable memory region (check @ref cmt_buf_t)
  * @note memory is valid until @ref cmt_io_fini is called. */
@@ -157,7 +156,7 @@ cmt_buf_t cmt_io_get_rx(cmt_io_driver_t *me);
 
 /** Perform the yield encoded in @p rr.
  *
- * @param [in] me A sucessfuly initialized state by @ref cmt_io_init
+ * @param [in] me A successfully initialized state by @ref cmt_io_init
  * @param [in,out] rr Request and Reply
  * @return
  * - 0 on success

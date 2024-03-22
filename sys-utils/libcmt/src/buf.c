@@ -23,20 +23,24 @@ static inline int is_pow2(int l) {
     return !(l & (l - 1));
 }
 
-void cmt_buf_init(cmt_buf_t *me, size_t n, void *data) {
-    if (!me)
+void cmt_buf_init(cmt_buf_t *me, size_t length, void *data) {
+    if (!me) {
         return;
+    }
     me->begin = (uint8_t *) data;
-    me->end = (uint8_t *) data + n;
+    me->end = (uint8_t *) data + length;
 }
 
 int cmt_buf_split(const cmt_buf_t *me, size_t lhs_length, cmt_buf_t *lhs, cmt_buf_t *rhs) {
-    if (!me)
+    if (!me) {
         return -EINVAL;
-    if (!lhs)
+    }
+    if (!lhs) {
         return -EINVAL;
-    if (!rhs)
+    }
+    if (!rhs) {
         return -EINVAL;
+    }
 
     lhs->begin = me->begin;
     lhs->end = rhs->begin = me->begin + lhs_length;
@@ -48,50 +52,61 @@ int cmt_buf_split(const cmt_buf_t *me, size_t lhs_length, cmt_buf_t *lhs, cmt_bu
 static int comma(const uint8_t *s, const uint8_t *end) {
     return s < end && *s == ',';
 }
+
 static bool cmt_buf_split_by(cmt_buf_t *x, cmt_buf_t *xs, int (*nxt)(const uint8_t *s, const uint8_t *end)) {
-    if (xs->begin == xs->end)
+    if (xs->begin == xs->end) {
         return false;
+    }
     x->begin = xs->begin;
-    for (; *xs->begin && xs->begin < xs->end && !nxt(xs->begin, xs->end); ++xs->begin)
+    for (; *xs->begin && xs->begin < xs->end && !nxt(xs->begin, xs->end); ++xs->begin) {
         ;
+    }
     x->end = xs->begin;
     xs->begin = xs->begin + nxt(xs->begin, xs->end);
     return *x->begin;
 }
+
 bool cmt_buf_split_by_comma(cmt_buf_t *x, cmt_buf_t *xs) {
     return cmt_buf_split_by(x, xs, comma);
 }
 
 size_t cmt_buf_length(const cmt_buf_t *me) {
-    if (!me)
+    if (!me) {
         return 0;
+    }
     return me->end - me->begin;
 }
 
 static void xxd(const uint8_t *p, const uint8_t *q, size_t mask) {
-    if (q < p)
+    if (q < p) {
         return;
+    }
 
-    for (size_t i = 0u, n = q - p; i < n; ++i) {
+    for (size_t i = 0U, n = q - p; i < n; ++i) {
         bool is_line_start = (i & mask) == 0;
         bool is_line_end = (i & mask) == mask || (i + 1 == n);
         char separator = is_line_end ? '\n' : ' ';
 
-        if (is_line_start)
+        if (is_line_start) {
             printf("%p %4zu: ", (void *) (p + i), i);
+        }
         printf("%02x%c", p[i], separator);
     }
 }
 
-void cmt_buf_xxd(void *p, void *q, int l) {
-    if (!p)
+void cmt_buf_xxd(void *begin, void *end, int bytes_per_line) {
+    if (!begin) {
         return;
-    if (!q)
+    }
+    if (!end) {
         return;
-    if (q <= p)
+    }
+    if (end <= begin) {
         return;
-    if (!is_pow2(l))
+    }
+    if (!is_pow2(bytes_per_line)) {
         return;
+    }
 
-    xxd(p, q, l - 1);
+    xxd(begin, end, bytes_per_line - 1);
 }

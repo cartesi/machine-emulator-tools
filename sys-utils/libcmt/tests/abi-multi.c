@@ -18,8 +18,6 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 // EvmAdvance(address,uint256,uint256,uint256,bytes)
 #define ADVANCE CMT_ABI_FUNSEL(0xd2, 0x0c, 0x60, 0xb4)
@@ -31,13 +29,14 @@
 #define NOTICE CMT_ABI_FUNSEL(0xc2, 0x58, 0xd6, 0xe5)
 
 static int memeq(uint8_t *x, uint8_t *y, size_t n, const char *file, int line) {
-    for (size_t i = 0; i < n; ++i)
+    for (size_t i = 0; i < n; ++i) {
         if (x[i] != y[i]) {
-            fprintf(stderr, "%s:%d Missmatch at offset %zu (0x%02x != 0x%02x)\n", file, line, i, x[i], y[i]);
+            (void) fprintf(stderr, "%s:%d Mismatch at offset %zu (0x%02x != 0x%02x)\n", file, line, i, x[i], y[i]);
             cmt_buf_xxd(x, x + n, 0x20);
             cmt_buf_xxd(y, y + n, 0x20);
             return -1;
         }
+    }
     return 0;
 }
 
@@ -58,7 +57,9 @@ static int advance(void) {
         0x04, 0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t mem[256];
-    cmt_buf_t bb[1] = {{mem, mem + sizeof mem}}, wr[1] = {*bb}, of[1];
+    cmt_buf_t bb[1] = {{mem, mem + sizeof mem}};
+    cmt_buf_t wr[1] = {*bb};
+    cmt_buf_t of[1];
 
     uint8_t address[20] = {0};
     uint8_t bytes[] = {0xde, 0xad, 0xbe, 0xef};
@@ -88,7 +89,9 @@ static int voucher(void) {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     uint8_t mem[256];
-    cmt_buf_t bb[1] = {{mem, mem + sizeof mem}}, wr[1] = {*bb}, of[1];
+    cmt_buf_t bb[1] = {{mem, mem + sizeof mem}};
+    cmt_buf_t wr[1] = {*bb};
+    cmt_buf_t of[1];
 
     uint8_t address[20] = {0};
     uint8_t bytes[] = {0xde, 0xad, 0xbe, 0xef};
@@ -112,7 +115,9 @@ static int notice(void) {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     uint8_t mem[256];
-    cmt_buf_t bb[1] = {{mem, mem + sizeof mem}}, wr[1] = {*bb}, of[1];
+    cmt_buf_t bb[1] = {{mem, mem + sizeof mem}};
+    cmt_buf_t wr[1] = {*bb};
+    cmt_buf_t of[1];
 
     uint8_t bytes[] = {0xde, 0xad, 0xbe, 0xef};
 
