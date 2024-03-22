@@ -24,21 +24,25 @@
 #include "keccak.h"
 
 enum {
-    CMT_MERKLE_MAX_DEPTH = 64, /**< merkle tree height */
+    CMT_MERKLE_TREE_HEIGHT = 64, /**< merkle tree height */
 };
 
 /** Opaque Merkle tree state.
  * initialize with: @ref cmt_merkle_init */
 typedef struct {
-    uint64_t leaf_count;
-    uint8_t state[CMT_MERKLE_MAX_DEPTH][CMT_KECCAK_LENGTH];
-    const uint8_t (*zero)[CMT_KECCAK_LENGTH];
+    uint64_t leaf_count;  /**< number of leaves in tree */
+    uint8_t state[CMT_MERKLE_TREE_HEIGHT][CMT_KECCAK_LENGTH]; /**< hashes of complete subtrees */
 } cmt_merkle_t;
 
 /** Initialize a @ref cmt_merkle_t tree state.
  *
  * @param [in] me    uninitialized state */
 void cmt_merkle_init(cmt_merkle_t *me);
+
+/** Resets a @ref cmt_merkle_t to pristine conditions.
+ *
+ * @param [in] me    initialized state */
+void cmt_merkle_reset(cmt_merkle_t *me);
 
 /** Finalize a @ref cmt_merkle_t tree state.
  *
@@ -63,14 +67,12 @@ int cmt_merkle_load(cmt_merkle_t *me, const char *filepath);
  * - 0 on success */
 int cmt_merkle_save(cmt_merkle_t *me, const char *filepath);
 
-/** Size in bytes required by merkle state save
+/** Return number of leaves already in tree
  *
- * @param [in] me     uninitialized state
- * @param [in] length size of @p data in bytes
- * @param [in] data   array of bytes
+ * @param [in,out] me initialized state
  * @return
- * - size of the array required by @ref cmt_merkle_state_save */
-size_t cmt_merkle_max_length(void);
+ * - leaf count */
+uint64_t cmt_merkle_get_leaf_count(cmt_merkle_t *me);
 
 /** Append a leaf node
  *
@@ -79,14 +81,7 @@ size_t cmt_merkle_max_length(void);
  * @return
  * - 0        success
  * - -ENOBUFS indicates the tree is full */
-int cmt_merkle_push_back(cmt_merkle_t *me, uint8_t hash[CMT_KECCAK_LENGTH]);
-
-/** Return number of leaves already in tree
- *
- * @param [in,out] me initialized state
- * @return
- * - leaf count */
-uint64_t cmt_merkle_get_leaf_count(cmt_merkle_t *me);
+int cmt_merkle_push_back(cmt_merkle_t *me, const uint8_t hash[CMT_KECCAK_LENGTH]);
 
 /** Compute the keccak-256 hash of @p data and append it as a leaf node
  *
@@ -98,7 +93,7 @@ uint64_t cmt_merkle_get_leaf_count(cmt_merkle_t *me);
  * - -ENOBUFS indicates that the tree is full */
 int cmt_merkle_push_back_data(cmt_merkle_t *me, size_t length, const void *data);
 
-/** Retrieve the root hash of the merkle tree
+/** Compute the root hash of the merkle tree
  *
  * @param [in]  me   initialized state
  * @param [out] root root hash of the merkle tree */

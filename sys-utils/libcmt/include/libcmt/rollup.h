@@ -209,5 +209,10 @@ int cmt_rollup_load_merkle(cmt_rollup_t *me, const char *path);
  * |< 0| failure with a -errno value | */
 int cmt_rollup_save_merkle(cmt_rollup_t *me, const char *path);
 
+/** Resets the merkle tree to pristine conditions
+ *
+ * @param [in,out] me      initialized cmt_rollup_t instance */
+int cmt_rollup_reset_merkle(cmt_rollup_t *me);
+
 #endif /* CMT_ROLLUP_H */
 

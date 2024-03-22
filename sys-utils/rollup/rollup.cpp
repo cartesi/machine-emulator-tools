@@ -67,7 +67,7 @@ static void print_help(void) {
       emit a voucher read from stdin as a JSON object in the format
         {"destination": <address>, "value": <value>, "payload": <string>}
       where <address> contains a 20-byte EVM address in hex,
-      and <value> contains an big-endian 32-byte unsigned integer in hex.
+      and <value> contains a big-endian 32-byte unsigned integer in hex.
       if successful, prints to stdout a JSON object in the format
         {"index": <number> }
       where field "index" is the index allocated for the voucher
@@ -316,6 +316,7 @@ static int finish_request_and_get_next(bool accept) try {
     if (cmt_rollup_finish(r, &f))
         return 1;
     if (f.next_request_type == HTIF_YIELD_REASON_ADVANCE) {
+        cmt_rollup_reset_merkle(r);
         write_advance_state(r, &f);
     } else if (f.next_request_type == HTIF_YIELD_REASON_INSPECT) {
         write_inspect_state(r, &f);

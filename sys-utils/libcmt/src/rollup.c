@@ -295,3 +295,8 @@ int cmt_rollup_load_merkle(cmt_rollup_t *me, const char *path) {
 int cmt_rollup_save_merkle(cmt_rollup_t *me, const char *path) {
     return DBG(cmt_merkle_save(me->merkle, path));
 }
+
+int cmt_rollup_reset_merkle(cmt_rollup_t *me) {
+    cmt_merkle_reset(me->merkle);
+    return 0;
+}
