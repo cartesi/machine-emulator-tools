@@ -264,9 +264,7 @@ int cmt_rollup_finish(cmt_rollup_t *me, cmt_rollup_finish_t *finish) {
         return -EINVAL;
 
     if (!finish->accept_previous_request) {
-        revert(me->io);
-        /* revert should not return! */
-        return -EBADE;
+        return revert(me->io); /* revert should not return! */
     }
 
     cmt_merkle_get_root_hash(me->merkle, cmt_io_get_tx(me->io).begin);
