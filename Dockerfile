@@ -24,35 +24,35 @@ ARG BUILD_BASE=/opt/cartesi
 # ------------------------------------------------------------------------------
 ENV LINUX_HEADERS_FILEPATH=/tmp/linux-libc-dev-riscv64-cross-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends \
-        build-essential \
+RUN <<EOF
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get upgrade -y
+apt-get install -y --no-install-recommends \
+        dpkg-dev \
+        g++-12 \
+        gcc-12 \
+        make \
         ca-certificates \
         git \
         wget \
         pkg-config \
-        crossbuild-essential-riscv64 \
+        dpkg-cross \
         gcc-12-riscv64-linux-gnu \
-        g++-12-riscv64-linux-gnu \
-        && \
-    wget -O ${LINUX_HEADERS_FILEPATH} ${LINUX_HEADERS_URLPATH} && \
-    echo "2723435e8b45d8fb7a79e9344f6dc517b3dbc08e03ac17baab311300ec475c08  ${LINUX_HEADERS_FILEPATH}" | sha256sum --check && \
-    apt-get install -y --no-install-recommends ${LINUX_HEADERS_FILEPATH} && \
-    adduser developer -u 499 --gecos ",,," --disabled-password && \
-    mkdir -p ${BUILD_BASE}/tools && chown -R developer:developer ${BUILD_BASE}/tools && \
-    rm -rf /var/lib/apt/lists/* ${LINUX_HEADERS_FILEPATH}
+        g++-12-riscv64-linux-gnu
 
-# Setup latest cross compiler as default
-# ------------------------------------------------------------------------------
-RUN <<EOF
 for tool in cpp g++ gcc gcc-ar gcc-nm gcc-ranlib gcov gcov-dump gcov-tool; do
-    for version in 12; do
-        update-alternatives --install \
-            /usr/bin/riscv64-linux-gnu-$tool riscv64-linux-gnu-$tool \
-            /usr/bin/riscv64-linux-gnu-$tool-$version $version
-        done
+    update-alternatives --install /usr/bin/riscv64-linux-gnu-$tool riscv64-linux-gnu-$tool /usr/bin/riscv64-linux-gnu-$tool-12 12
+    update-alternatives --install /usr/bin/$tool $tool /usr/bin/$tool-12 12
 done
+
+wget -O ${LINUX_HEADERS_FILEPATH} ${LINUX_HEADERS_URLPATH}
+echo "2723435e8b45d8fb7a79e9344f6dc517b3dbc08e03ac17baab311300ec475c08  ${LINUX_HEADERS_FILEPATH}" | sha256sum --check
+apt-get install -y --no-install-recommends ${LINUX_HEADERS_FILEPATH}
+
+adduser developer -u 499 --gecos ",,," --disabled-password
+mkdir -p ${BUILD_BASE}/tools && chown -R developer:developer ${BUILD_BASE}/tools
+rm -rf /var/lib/apt/lists/* ${LINUX_HEADERS_FILEPATH}
 EOF
 
 ENV RISCV_ARCH="rv64gc"
@@ -67,16 +67,13 @@ COPY --chown=developer:developer sys-utils/ ${BUILD_BASE}/tools/sys-utils/
 # ------------------------------------------------------------------------------
 FROM builder as c-builder
 ARG CMT_BASE=${BUILD_BASE}/tools/sys-utils/libcmt
-ARG CMT_TAR_GZ=libcmt-v0.15.0.tar.gz
 ARG BUILD_BASE=/opt/cartesi
 
 USER developer
-RUN make -C ${CMT_BASE} -j$(nproc) ioctl.build mock.build
+RUN make -C ${CMT_BASE} -j$(nproc) libcmt host
 USER root
-RUN make -C ${CMT_BASE} -j$(nproc) ioctl.install TARGET_PREFIX=${CMT_BASE}/install && \
-    tar czf ${BUILD_BASE}/${CMT_TAR_GZ} -C ${CMT_BASE}/install .
-RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt/ -j$(nproc) ioctl.install mock.install \
-       PREFIX=/usr/x86_64-linux-gnu TARGET_PREFIX=/usr/riscv64-linux-gnu
+RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt/ -j$(nproc) install install-mock \
+    PREFIX=/usr/x86_64-linux-gnu TARGET_PREFIX=/usr/riscv64-linux-gnu
 USER developer
 RUN make -C ${BUILD_BASE}/tools/sys-utils/ -j$(nproc) all
 
@@ -140,7 +137,6 @@ ARG STAGING_BASE=${BUILD_BASE}/_install
 ARG STAGING_DEBIAN=${STAGING_BASE}/DEBIAN
 ARG STAGING_SBIN=${STAGING_BASE}/usr/sbin
 ARG STAGING_BIN=${STAGING_BASE}/usr/bin
-ARG CMT_TAR_GZ=libcmt-v0.15.0.tar.gz
 
 RUN mkdir -p ${STAGING_DEBIAN} ${STAGING_SBIN} ${STAGING_BIN} ${STAGING_BASE}/etc && \
     echo "cartesi-machine" > ${staging_base}/etc/hostname
@@ -160,4 +156,3 @@ COPY --from=http-server-builder ${BUILD_BASE}/tools/rollup-http/rollup-http-serv
 COPY --from=echo-dapp-builder ${BUILD_BASE}/tools/rollup-http/echo-dapp/target/riscv64gc-unknown-linux-gnu/release/echo-dapp ${STAGING_BIN}
 
 RUN dpkg-deb -Zxz --root-owner-group --build ${STAGING_BASE} ${BUILD_BASE}/${TOOLS_DEB}
-COPY --from=c-builder ${BUILD_BASE}/${CMT_TAR_GZ} ${BUILD_BASE}/${CMT_TAR_GZ}

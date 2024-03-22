@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <libcmt/abi.h>
-#include <libcmt/keccak.h>
+#include "abi.h"
+#include "keccak.h"
+
 #include <string.h>
 
 // Helper macros for stringification

@@ -13,8 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include "libcmt/merkle.h"
+#include "merkle.h"
 
 #include <errno.h>
 #include <stdbool.h>
@@ -103,15 +102,17 @@ static void concat_hash(const uint8_t lhs[CMT_KECCAK_LENGTH], const uint8_t rhs[
     cmt_keccak_final(c, out);
 }
 
+#if 0 // NOLINT
 static void print_hash(uint8_t hash[CMT_KECCAK_LENGTH]) {
     for (int i = 0; i < CMT_KECCAK_LENGTH; ++i) {
         fprintf(stderr, "%02x", hash[i]);
     }
     fprintf(stderr, "\n");
 }
+#endif
 
 void cmt_merkle_init(cmt_merkle_t *me) {
-    return cmt_merkle_reset(me);
+    cmt_merkle_reset(me);
 }
 
 void cmt_merkle_reset(cmt_merkle_t *me) {
@@ -197,7 +198,6 @@ void cmt_merkle_get_root_hash(cmt_merkle_t *me, uint8_t root[CMT_KECCAK_LENGTH])
             concat_hash(root, pristine_hash[i], root);
         }
     }
-    return 0;
 }
 
 int cmt_merkle_push_back_data(cmt_merkle_t *me, size_t n, const void *data) {

@@ -59,7 +59,6 @@ jobs:
           push: false
           load: true
           build-args: |
-            CMT_TAR_GZ=${{ env.CMT_TAR_GZ }}
             TOOLS_DEB=${{ env.TOOLS_DEB }}
             IMAGE_KERNEL_VERSION=${{ env.IMAGE_KERNEL_VERSION }}
             LINUX_VERSION=${{ env.LINUX_VERSION }}
@@ -88,7 +87,6 @@ jobs:
         run: |
           sha512sum ${{ env.TOOLS_DEB }} > ${{ env.TOOLS_DEB }}.sha512
           sha512sum ${{ env.TOOLS_ROOTFS }} > ${{ env.TOOLS_ROOTFS }}.sha512
-          sha512sum ${{ env.CMT_TAR_GZ }} > ${{ env.CMT_TAR_GZ }}.sha512
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -99,8 +97,6 @@ jobs:
             ${{ env.TOOLS_DEB }}.sha512
             ${{ env.TOOLS_ROOTFS }}
             ${{ env.TOOLS_ROOTFS }}.sha512
-            ${{ env.CMT_TAR_GZ }}
-            ${{ env.CMT_TAR_GZ }}.sha512
 
   test-rollup-http-server:
     runs-on: ubuntu-22.04

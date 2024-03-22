@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "libcmt/rollup.h"
-#include "libcmt/abi.h"
-#include "libcmt/keccak.h"
-#include "libcmt/merkle.h"
+#include "rollup.h"
+#include "abi.h"
+#include "keccak.h"
+#include "merkle.h"
+
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
