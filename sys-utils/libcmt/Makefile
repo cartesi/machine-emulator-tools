@@ -38,7 +38,6 @@ ioctl_SRC := \
 	src/abi.c \
 	src/keccak.c \
 	src/merkle.c \
-	src/merkle-table.c \
 	src/rollup.c \
 	src/ioctl/io.c
 
@@ -76,7 +75,6 @@ mock_SRC := \
 	src/buf.c \
 	src/keccak.c \
 	src/merkle.c \
-	src/merkle-table.c \
 	src/rollup.c \
 	src/mock/io.c
 
