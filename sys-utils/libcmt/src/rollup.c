@@ -302,7 +302,7 @@ int cmt_rollup_finish(cmt_rollup_t *me, cmt_rollup_finish_t *finish) {
     return 0;
 }
 
-int cmt_gio_request(cmt_rollup_t *me, cmt_gio_request_t *req) {
+int cmt_gio_request(cmt_rollup_t *me, cmt_gio_t *req) {
     if (!me) {
         return -EINVAL;
     }
@@ -341,9 +341,9 @@ int cmt_gio_request(cmt_rollup_t *me, cmt_gio_request_t *req) {
         return -EINVAL;
     }
 
-    req->response = rx->begin;
+    req->response_data = rx->begin;
     req->response_code = y->reason;
-    req->response_length = y->data;
+    req->response_data_length = y->data;
     return 0;
 }
 

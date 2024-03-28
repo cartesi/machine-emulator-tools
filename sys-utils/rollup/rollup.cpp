@@ -65,25 +65,29 @@ static void print_help(void) {
 
     voucher
       emit a voucher read from stdin as a JSON object in the format
-        {"destination": <address>, "value": <value>, "payload": <string>}
-      where <address> contains a 20-byte EVM address in hex,
-      and <value> contains a big-endian 32-byte unsigned integer in hex.
+        {"destination": <address>, "value": <hex-uint256>, "payload": <hex-data>}
+      where
+        <address> contains a 20-byte EVM address in hex,
+        <hex-uint256> contains a big-endian 32-byte unsigned integer in hex, and
+        <hex-data> contains arbitrary data in hex
       if successful, prints to stdout a JSON object in the format
         {"index": <number> }
       where field "index" is the index allocated for the voucher
-      in the voucher hashes array.
 
     notice
       emit a notice read from stdin as a JSON object in the format
-        {"payload": <string> }
+        {"payload": <hex-data> }
+      where
+        <hex-data> contains arbitrary data in hex
       if successful, prints to stdout a JSON object in the format
         {"index": <number> }
       where field "index" is the index allocated for the notice
-      in the voucher hashes array.
 
     report
       emit a report read from stdin as a JSON object in the format
-        {"payload": <string> }
+        {"payload": <hex-data> }
+      where
+        <hex-data> contains arbitrary data in hex
 
     finish
       accept or reject the previous request based on a JSON object
@@ -103,14 +107,18 @@ static void print_help(void) {
           "epoch_index": <number>,
           "input_index": <number>,
           "block_number": <number>,
-          "timestamp": <number>
-          "payload": <string>
+          "block_timestamp": <number>
+          "payload": <hex-data>
         },
-      where field <address> contains a 20-byte EVM address in hex
+      where
+        <address> contains a 20-byte EVM address in hex, and
+        <hex-data> contains arbitrary data in hex
 
       when field "request_type" contains "inspect_state",
       field "data" contains a JSON object in the format
-        {"payload": <string> }
+        {"payload": <hex-data> }
+      where
+        <hex-data> contains arbitrary data in hex
 
     accept
       a shortcut for finish with implied input
@@ -124,7 +132,19 @@ static void print_help(void) {
 
     exception
       throw an exception read from stdin as a JSON object in the format
-        {"payload": <string> }
+        {"payload": <hex-data> }
+      where
+        <hex-data> contains arbitrary data in hex
+
+    gio
+      performs a generic IO operation request based on a JSON object
+      read from stdin in the format
+        { "domain": <number>, "id": <hex-data> }
+      if successful, prints to stdout a JSON object in the format
+        { "code": <number>, "data": <hex-data> }
+      where
+        <hex-data> contains arbitrary data in hex
+
 )";
 }
 
@@ -198,7 +218,7 @@ static std::string hex(const uint8_t *data, uint64_t length) {
 static int write_voucher(void) try {
     rollup r;
     auto ji = nlohmann::json::parse(read_input());
-    auto payload = ji["payload"].get<std::string>();
+    auto payload = unhex(ji["payload"].get<std::string>());
     auto destination = unhex20(ji["destination"].get<std::string>());
     auto value = unhex32(ji["value"].get<std::string>());
     uint64_t index = 0;
@@ -228,7 +248,7 @@ static int write_voucher(void) try {
 static int write_notice(void) try {
     rollup r;
     auto ji = nlohmann::json::parse(read_input());
-    auto payload = ji["payload"].get<std::string>();
+    auto payload = unhex(ji["payload"].get<std::string>());
     uint64_t index = 0;
     int ret = cmt_rollup_emit_notice(r, payload.size(), reinterpret_cast<uint8_t *>(payload.data()), &index);
     if (ret)
@@ -250,7 +270,7 @@ static int write_notice(void) try {
 static int write_report(void) try {
     rollup r;
     auto ji = nlohmann::json::parse(read_input());
-    auto payload = ji["payload"].get<std::string>();
+    auto payload = unhex(ji["payload"].get<std::string>());
     return cmt_rollup_emit_report(r, payload.size(),
                                   reinterpret_cast<uint8_t *>(payload.data()));
 } catch (std::exception &x) {
@@ -262,7 +282,7 @@ static int write_report(void) try {
 static int throw_exception(void) try {
     rollup r;
     auto ji = nlohmann::json::parse(read_input());
-    auto payload = ji["payload"].get<std::string>();
+    auto payload = unhex(ji["payload"].get<std::string>());
     return cmt_rollup_emit_exception(r, payload.size(),
                                      reinterpret_cast<uint8_t *>(payload.data()));
 } catch (std::exception &x) {
@@ -354,6 +374,39 @@ static int finish_request(void) try {
     return 1;
 }
 
+// Read GIO request, issue operation, write response to output
+static int gio(void) try {
+    rollup r;
+    auto ji = nlohmann::json::parse(read_input());
+    auto id = unhex(ji["id"].get<std::string>());
+    auto domain = ji["domain"].get<uint16_t>();
+
+    cmt_gio req {
+        .domain = domain,
+        .id_length = static_cast<uint32_t>(id.size()),
+        .id = id.data(),
+        .response_code = 0,
+        .response_data_length = 0,
+        .response_data = nullptr
+    };
+
+    int ret = cmt_gio_request(r, &req);
+    if (ret)
+        return ret;
+
+    nlohmann::json j = {
+        {"code", req.response_code },
+        {"data", hex(reinterpret_cast<const uint8_t *>(req.response_data), req.response_data_length)},
+    };
+    std::cout << j.dump(2) << '\n';
+
+    return 0;
+
+} catch (std::exception &x) {
+    std::cerr << x.what() << '\n';
+    return 1;
+}
+
 // Figure out command and run it
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -375,6 +428,8 @@ int main(int argc, char *argv[]) {
         return accept_request();
     } else if (strcmp(command, "reject") == 0) {
         return reject_request();
+    } else if (strcmp(command, "gio") == 0) {
+        return gio();
     } else if (strcmp(command, "-h") == 0 || strcmp(command, "--help") == 0) {
         print_help();
         return 0;
