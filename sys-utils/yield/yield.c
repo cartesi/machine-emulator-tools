@@ -15,18 +15,12 @@
  */
 
 
+#include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <inttypes.h>
-#include <fcntl.h>
-#include "sys/ioctl.h"
-
-#include <linux/types.h>
-#include <linux/cartesi/yield.h>
-
-#define YIELD_DEVICE_NAME "/dev/yield"
+#include "libcmt/io.h"
 
 static void help(const char *progname) {
     fprintf(stderr,
@@ -40,25 +34,6 @@ static void help(const char *progname) {
         progname);
 
     exit(1);
-}
-
-int send_request(struct yield_request* request) {
-    int fd, res;
-
-    fd = open(YIELD_DEVICE_NAME, O_RDWR);
-    if (fd < 0) {
-        fprintf(stderr, "Error opening device " YIELD_DEVICE_NAME "\n");
-        return fd;
-    }
-
-    res = ioctl(fd, IOCTL_YIELD, (unsigned long)request);
-
-    close(fd);
-    if (res != 0) {
-        fprintf(stderr, "Device returned error %d\n", res);
-        return res;
-    }
-    return 0;
 }
 
 struct name_value {
@@ -78,21 +53,20 @@ static int find_value(const struct name_value *pairs, size_t n, const char *s, u
 
 int get_mode(const char *s, uint64_t *mode) {
     struct name_value modes[] = {
-        {"manual",    HTIF_YIELD_MANUAL},
-        {"automatic", HTIF_YIELD_AUTOMATIC},
+        {"manual",    HTIF_YIELD_CMD_MANUAL},
+        {"automatic", HTIF_YIELD_CMD_AUTOMATIC},
     };
     return find_value(modes, sizeof(modes)/sizeof(*modes), s, mode);
 }
 
 int get_reason(const char *s, uint64_t *reason) {
     struct name_value reasons[] = {
-        {"progress",     HTIF_YIELD_REASON_PROGRESS},
-        {"rx-accepted",  HTIF_YIELD_REASON_RX_ACCEPTED},
-        {"rx-rejected",  HTIF_YIELD_REASON_RX_REJECTED},
-        {"tx-exception", HTIF_YIELD_REASON_TX_EXCEPTION},
-        {"tx-notice",    HTIF_YIELD_REASON_TX_NOTICE},
-        {"tx-report",    HTIF_YIELD_REASON_TX_REPORT},
-        {"tx-voucher",   HTIF_YIELD_REASON_TX_VOUCHER},
+        {"progress",     HTIF_YIELD_AUTOMATIC_REASON_PROGRESS},
+        {"tx-output",    HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT},
+        {"tx-report",    HTIF_YIELD_AUTOMATIC_REASON_TX_REPORT},
+        {"rx-accepted",  HTIF_YIELD_MANUAL_REASON_RX_ACCEPTED},
+        {"rx-rejected",  HTIF_YIELD_MANUAL_REASON_RX_REJECTED},
+        {"tx-exception", HTIF_YIELD_MANUAL_REASON_TX_EXCEPTION},
     };
     return find_value(reasons, sizeof(reasons)/sizeof(*reasons), s, reason);
 }
@@ -157,18 +131,20 @@ void parse_args(int argc, char *argv[], struct parsed_args *p) {
 }
 
 int main(int argc, char *argv[]) {
-    struct yield_request request;
-    int res = 0;
     struct parsed_args args;
+    cmt_io_driver_t io[1];
 
     parse_args(argc, argv, &args);
+    cmt_io_yield_t req[1] = {{
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = args.mode,
+        .reason = args.reason,
+        .data = args.data,
+    }};
 
-    request.dev = HTIF_DEVICE_YIELD;
-    request.cmd = args.mode;
-    request.reason = args.reason;
-    request.data = args.data;
-    if ((res = send_request(&request)))
-        return res;
+    int rc = cmt_io_init(io);
+    if (rc)
+        return rc;
 
-    return 0;
+    return cmt_io_yield(io, req);
 }

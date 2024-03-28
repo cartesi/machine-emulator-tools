@@ -15,7 +15,7 @@
 #
 
 
-UTILITIES := xhalt yield rollup ioctl-echo-loop
+UTILITIES := hex xhalt yield rollup ioctl-echo-loop
 UTILITIES_WITH_TOOLCHAIN := $(addsuffix -with-toolchain,$(UTILITIES))
 
 all: $(UTILITIES)
@@ -23,8 +23,8 @@ all: $(UTILITIES)
 $(UTILITIES):
 	@$(MAKE) -C $@
 
-with-toolchain: 
-	@$(MAKE) $(UTILITIES_WITH_TOOLCHAIN) 
+with-toolchain:
+	@$(MAKE) $(UTILITIES_WITH_TOOLCHAIN)
 
 $(UTILITIES_WITH_TOOLCHAIN):
 	@$(MAKE) -C $@ with-toolchain

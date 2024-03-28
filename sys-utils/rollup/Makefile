@@ -22,14 +22,14 @@ RISCV_ARCH ?= rv64gc
 RISCV_ABI ?= lp64d
 
 TOOLCHAIN_PREFIX ?= riscv64-cartesi-linux-gnu-
-TOOLCHAIN_SUFFIX ?=
 
-RVCC  = $(TOOLCHAIN_PREFIX)gcc$(TOOLCHAIN_SUFFIX)
-RVCXX = $(TOOLCHAIN_PREFIX)g++$(TOOLCHAIN_SUFFIX)
-RVCOPY = $(TOOLCHAIN_PREFIX)objcopy$(TOOLCHAIN_SUFFIX)
-RVDUMP = $(TOOLCHAIN_PREFIX)objdump$(TOOLCHAIN_SUFFIX)
+RVCC  = $(TOOLCHAIN_PREFIX)gcc
+RVCXX = $(TOOLCHAIN_PREFIX)g++
+RVCOPY = $(TOOLCHAIN_PREFIX)objcopy
+RVDUMP = $(TOOLCHAIN_PREFIX)objdump
 STRIP = $(TOOLCHAIN_PREFIX)strip
-RISCV_CFLAGS :=-march=$(RISCV_ARCH) -mabi=$(RISCV_ABI)
+CXXFLAGS := -Wall -Wextra -pedantic -O2 -std=c++20 `pkg-config --cflags libcmt`
+LDLIBS := `pkg-config --libs libcmt`
 
 CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
@@ -43,8 +43,9 @@ rollup.with-toolchain with-toolchain:
 extra.ext2.with-toolchain:
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
+rollup: export PKG_CONFIG_PATH ?= /usr/riscv64-linux-gnu/lib/pkgconfig
 rollup: rollup.cpp
-	$(RVCXX) -std=c++17 -O2 -o rollup rollup.cpp
+	$(RVCXX) $(CXXFLAGS) -O2 -o rollup rollup.cpp $(LDLIBS)
 	$(STRIP) rollup
 
 extra.ext2: rollup

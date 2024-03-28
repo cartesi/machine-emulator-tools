@@ -4,10 +4,11 @@ ENV BUILD_BASE=/tmp/build-extra
 # Install dependencies
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     apt-get install -y --no-install-recommends \
-        build-essential \
         ca-certificates \
         wget \
-        crossbuild-essential-riscv64 \
+        patch \
+        libdigest-sha-perl \
+        libc6-dev-riscv64-cross \
         gcc-12-riscv64-linux-gnu \
         && \
     adduser developer -u 499 --gecos ",,," --disabled-password && \
@@ -30,7 +31,7 @@ RUN mkdir benchmarks && cd benchmarks && \
 
 # Final image
 FROM --platform=linux/riscv64 riscv64/ubuntu:22.04
-ARG TOOLS_DEB=machine-emulator-tools-v0.14.0.deb
+ARG TOOLS_DEB=machine-emulator-tools-v0.14.1-dev.deb
 ADD ${TOOLS_DEB} /tmp/
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -39,16 +40,15 @@ RUN apt-get update && \
         bash=5.1-6ubuntu1 \
         psmisc=23.4-2build3 \
         bc=1.07.1-3build1 \
-        curl=7.81.0-1ubuntu1.15 \
+        curl=7.81.0-1ubuntu1.16 \
         device-tree-compiler=1.6.1-1 \
         jq=1.6-2.1ubuntu3 \
         lua5.4=5.4.4-1 \
         lua-socket=3.0~rc1+git+ac3201d-6 \
-        xxd=2:8.2.3995-1ubuntu2.15 \
+        xxd=2:8.2.3995-1ubuntu2.16 \
         file=1:5.41-3ubuntu0.1 \
         /tmp/${TOOLS_DEB} \
         && \
-    useradd --create-home --user-group dapp && \
     rm -rf /var/lib/apt/lists/* /tmp/${TOOLS_DEB}
 COPY --chown=root:root --from=cross-builder /tmp/build-extra/benchmarks/whetstone /usr/bin/
 COPY --chown=root:root --from=cross-builder /tmp/build-extra/benchmarks/dhrystone /usr/bin/

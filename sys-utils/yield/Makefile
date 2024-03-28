@@ -22,14 +22,14 @@ RISCV_ARCH ?= rv64gc
 RISCV_ABI ?= lp64d
 
 TOOLCHAIN_PREFIX ?= riscv64-cartesi-linux-gnu-
-TOOLCHAIN_SUFFIX ?=
 
-RVCC  = $(TOOLCHAIN_PREFIX)gcc$(TOOLCHAIN_SUFFIX)
-RVCXX = $(TOOLCHAIN_PREFIX)g++$(TOOLCHAIN_SUFFIX)
-RVCOPY = $(TOOLCHAIN_PREFIX)objcopy$(TOOLCHAIN_SUFFIX)
-RVDUMP = $(TOOLCHAIN_PREFIX)objdump$(TOOLCHAIN_SUFFIX)
+RVCC  = $(TOOLCHAIN_PREFIX)gcc
+RVCXX = $(TOOLCHAIN_PREFIX)g++
+RVCOPY = $(TOOLCHAIN_PREFIX)objcopy
+RVDUMP = $(TOOLCHAIN_PREFIX)objdump
 STRIP = $(TOOLCHAIN_PREFIX)strip
-RISCV_CFLAGS :=-march=$(RISCV_ARCH) -mabi=$(RISCV_ABI)
+CFLAGS :=-Wall -Wextra -pedantic -O2 `pkg-config --cflags libcmt`
+LDLIBS := `pkg-config --libs libcmt`
 
 CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
@@ -43,8 +43,9 @@ yield.with-toolchain with-toolchain:
 extra.ext2.with-toolchain:
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
+yield: export PKG_CONFIG_PATH ?= /usr/riscv64-linux-gnu/lib/pkgconfig
 yield: yield.c
-	$(RVCC) -O2 -o yield yield.c
+	$(RVCC) $(CFLAGS) -O2 -o yield yield.c $(LDLIBS)
 	$(STRIP) yield
 
 extra.ext2: yield

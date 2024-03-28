@@ -1,5 +1,6 @@
 machine-emulator-tools-*.ext2
 rootfs*
+libcmt*
 .clang-format
 .github
 .git
