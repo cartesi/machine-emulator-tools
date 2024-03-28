@@ -28,29 +28,27 @@ RVCXX = $(TOOLCHAIN_PREFIX)g++
 RVCOPY = $(TOOLCHAIN_PREFIX)objcopy
 RVDUMP = $(TOOLCHAIN_PREFIX)objdump
 STRIP = $(TOOLCHAIN_PREFIX)strip
-CXXFLAGS := -Wall -Wextra -pedantic -O2 -std=c++20 `pkg-config --cflags libcmt`
-LDLIBS := `pkg-config --libs libcmt`
+RISCV_CFLAGS :=-march=$(RISCV_ARCH) -mabi=$(RISCV_ABI)
 
 CONTAINER_MAKE := /usr/bin/make
 CONTAINER_BASE := /opt/cartesi/tools
 KERNEL_HEADERS_PATH := /opt/riscv/usr/include
 
-all: rollup
+all: hex
 
-rollup.with-toolchain with-toolchain:
+hex.with-toolchain with-toolchain:
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
 extra.ext2.with-toolchain:
 	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
 
-rollup: export PKG_CONFIG_PATH ?= /usr/riscv64-linux-gnu/lib/pkgconfig
-rollup: rollup.cpp
-	$(RVCXX) $(CXXFLAGS) -O2 -o rollup rollup.cpp $(LDLIBS)
-	$(STRIP) rollup
+hex: hex.cpp
+	$(RVCXX) -O2 -o hex hex.cpp
+	$(STRIP) hex
 
-extra.ext2: rollup
+extra.ext2: hex
 	mkdir -m 0755 ./extra
-	cp ./rollup ./extra/rollup
+	cp ./hex ./extra/hex
 	xgenext2fs -i 512 -b 8192 -d extra $(basename $@)
 	rm -rf ./extra
 
@@ -75,6 +73,6 @@ toolchain-env:
 		$(TOOLCHAIN_IMAGE):$(TOOLCHAIN_TAG)
 
 clean:
-	@rm -rf rollup extra.ext2 extra
+	@rm -rf hex extra.ext2 extra
 
 .PHONY: toolchain-exec toolchain-env
