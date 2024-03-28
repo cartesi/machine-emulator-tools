@@ -1,8 +1,8 @@
 [package]
 name = "rollup-http-server"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-authors = ["Marko Atanasievski <marko.atanasievski@cartesi.io>"]
+authors = ["Marko Atanasievski <marko.atanasievski@cartesi.io>, Sofia Rodrigues <sofia@algebraic.dev>, Alex Mikhalevich <alex@mikhalevich.com>"]
 
 [lib]
 name = "rollup_http_server"
@@ -17,7 +17,10 @@ getopts = "0.2"
 libc = "0.2"
 regex = "1.5.5"
 actix-web = "4.0.0-rc.2"
+validator = { version = "0.16", features = ["derive"] }
 actix-server = "2.0"
+actix-web-validator = "5.0.1"
+lazy_static = "1.4.0"
 serde = { version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 log = "0.4"
@@ -28,20 +31,18 @@ hyper = { version = "0.14", features = ["http1", "runtime", "client"] }
 hex = "0.4"
 rstest = "0.12"
 
-
 [build-dependencies]
-bindgen = "0.59"
+bindgen = "0.69.4"
 cc = "1.0"
 tonic-build = "0.5"
 
 [dev-dependencies]
 rollup-http-client = {path = "../rollup-http-client"}
-
-
+rand = "0.8.5"
+ethabi = "18.0.0"
 
 [profile.release]
 strip = true
 lto = true          # Enable Link Time Optimization
 opt-level = "z"     # Optimize for size.
 codegen-units = 1   # Reduce number of codegen units to increase optimizations, but slower build
-# panic = "abort"     # Abort on panic

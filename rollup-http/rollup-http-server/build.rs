@@ -14,20 +14,25 @@
 // limitations under the License.
 //
 
+use std::env;
+use std::path::PathBuf;
+
 extern crate cc;
 
 fn main() {
-    println!("cargo:rerun-if-changed=src/rollup/bindings.c,src/rollup/bindings.h,tests/rollup_test_bindings.c,tests/rollup_test.h");
-    let test = std::env::var("USE_ROLLUP_BINDINGS_MOCK").unwrap_or("0".to_string());
-    if test == "1" {
-        cc::Build::new()
-            .file("tests/rollup_test_bindings.c")
-            .compile("libtest_bindings.a");
-        println!("cargo:rustc-link-lib=test_bindings");
-    } else {
-        cc::Build::new()
-            .file("src/rollup/bindings.c")
-            .compile("libbindings.a");
-        println!("cargo:rustc-link-lib=bindings");
-    }
+    // link the libcmt shared library
+    println!("cargo:rustc-link-lib=cmt");
+
+    let bindings = bindgen::Builder::default()
+        // the input header we would like to generate bindings for
+        .header("src/rollup/wrapper.h")
+        // invalidate the built crate whenever any of the included header files changed
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .generate()
+        .expect("Unable to generate bindings");
+
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    bindings
+        .write_to_file(out_path.join("bindings.rs"))
+        .expect("Couldn't write bindings!");
 }

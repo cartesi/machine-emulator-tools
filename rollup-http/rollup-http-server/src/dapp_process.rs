@@ -14,16 +14,15 @@
 // limitations under the License.
 //
 
-use std::os::unix::io::RawFd;
 use std::sync::Arc;
 
 use async_mutex::Mutex;
 use tokio::process::Command;
 
-use crate::rollup::{self, Exception};
+use crate::rollup::{self, Exception, RollupFd};
 
 /// Execute the dapp command and throw a rollup exception if it fails or exits
-pub async fn run(args: Vec<String>, rollup_fd: Arc<Mutex<RawFd>>) {
+pub async fn run(args: Vec<String>, rollup_fd: Arc<Mutex<RollupFd>>) {
     log::info!("starting dapp: {}", args.join(" "));
     let task = tokio::task::spawn_blocking(move || Command::new(&args[0]).args(&args[1..]).spawn());
     let message = match task.await {
@@ -40,7 +39,7 @@ pub async fn run(args: Vec<String>, rollup_fd: Arc<Mutex<RawFd>>) {
     let exception = Exception {
         payload: String::from("0x") + &hex::encode(message),
     };
-    match rollup::rollup_throw_exception(*rollup_fd.lock().await, &exception) {
+    match rollup::rollup_throw_exception(&*rollup_fd.lock().await, &exception) {
         Ok(_) => {
             log::debug!("exception successfully thrown {:#?}", exception);
         }

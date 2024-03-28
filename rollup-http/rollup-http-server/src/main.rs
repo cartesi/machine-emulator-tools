@@ -14,15 +14,12 @@
 // limitations under the License.
 //
 
-use std::fs::File;
 use std::io::ErrorKind;
-#[cfg(unix)]
-use std::os::unix::io::{IntoRawFd, RawFd};
 use std::sync::Arc;
 
 use async_mutex::Mutex;
 use getopts::{Options, ParsingStyle};
-use rollup_http_server::{config::Config, dapp_process, http_service, rollup};
+use rollup_http_server::{config::Config, dapp_process, http_service, rollup::RollupFd};
 use tokio::sync::Notify;
 
 fn print_usage(program: &str, opts: Options) {
@@ -100,16 +97,7 @@ async fn main() -> std::io::Result<()> {
             .unwrap();
     }
 
-    // Open rollup device
-    let rollup_file = match File::open(rollup::ROLLUP_DEVICE_NAME) {
-        Ok(file) => file,
-        Err(e) => {
-            log::error!("error opening rollup device {}", e.to_string());
-            return Err(e);
-        }
-    };
-
-    let rollup_fd: Arc<Mutex<RawFd>> = Arc::new(Mutex::new(rollup_file.into_raw_fd()));
+    let rollup_fd: Arc<Mutex<RollupFd>> = Arc::new(Mutex::new(RollupFd::create().unwrap()));
     let server_ready = Arc::new(Notify::new());
 
     // In another thread, wait until the server is ready and then start the dapp

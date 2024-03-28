@@ -21,10 +21,9 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdvanceMetadata {
     pub msg_sender: String,
-    pub epoch_index: u64,
     pub input_index: u64,
     pub block_number: u64,
-    pub timestamp: u64,
+    pub block_timestamp: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -51,6 +50,7 @@ pub struct Notice {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Voucher {
     pub destination: String,
+    pub value: String,
     pub payload: String,
 }
 

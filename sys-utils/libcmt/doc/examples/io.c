@@ -20,8 +20,8 @@ int exception(union cmt_io_driver *io) {
 
     /* exception -------------------------------------------------------- */
     struct cmt_io_yield req[1] = {{
-        .dev = HTIF_DEVICE_YIELD,
-        .cmd = HTIF_YIELD_MANUAL,
+        .dev = HTIF_YIELD_DEV,
+        .cmd = HTIF_YIELD_CMD_MANUAL,
         .reason = HTIF_YIELD_MANUAL_REASON_TX_EXCEPTION,
         .data = n,
     }};

@@ -21,6 +21,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define CMT_TX_BUF_MAX_LENGTH (2UL * 1024 * 1024) // 2MB
+#define CMT_RX_BUF_MAX_LENGTH (2UL * 1024 * 1024) // 2MB
+
 static int read_whole_file(const char *name, size_t max, void *data, size_t *length);
 static int write_whole_file(const char *name, size_t length, const void *data);
 
@@ -30,10 +33,8 @@ int cmt_io_init(cmt_io_driver_t *_me) {
     }
     cmt_io_driver_mock_t *me = &_me->mock;
 
-    size_t tx_length = 2UL * 1024 * 1024; // 2MB
-    size_t rx_length = 2UL * 1024 * 1024; // 2MB
-    cmt_buf_init(me->tx, tx_length, malloc(tx_length));
-    cmt_buf_init(me->rx, rx_length, malloc(rx_length));
+    cmt_buf_init(me->tx, CMT_TX_BUF_MAX_LENGTH, malloc(CMT_TX_BUF_MAX_LENGTH));
+    cmt_buf_init(me->rx, CMT_RX_BUF_MAX_LENGTH, malloc(CMT_RX_BUF_MAX_LENGTH));
 
     if (!me->tx->begin || !me->rx->begin) {
         free(me->tx->begin);
@@ -75,7 +76,7 @@ cmt_buf_t cmt_io_get_tx(cmt_io_driver_t *me) {
     if (!me) {
         return empty;
     }
-    return *me->ioctl.tx;
+    return *me->mock.tx;
 }
 
 cmt_buf_t cmt_io_get_rx(cmt_io_driver_t *me) {
@@ -83,7 +84,7 @@ cmt_buf_t cmt_io_get_rx(cmt_io_driver_t *me) {
     if (!me) {
         return empty;
     }
-    return *me->ioctl.rx;
+    return *me->mock.rx;
 }
 
 static int load_next_input(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
@@ -98,7 +99,7 @@ static int load_next_input(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
     }
 
     size_t file_length = 0;
-    int rc = read_whole_file(filepath, cmt_buf_length(me->rx), me->rx->begin, &file_length);
+    int rc = read_whole_file(filepath, CMT_RX_BUF_MAX_LENGTH, me->rx->begin, &file_length);
     if (rc) {
         (void) fprintf(stderr, "failed to load \"%s\". %s\n", filepath, strerror(-rc));
         return rc;
@@ -116,6 +117,7 @@ static int load_next_input(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
     me->output_seq = 0;
     me->report_seq = 0;
     me->exception_seq = 0;
+    me->rx->end = me->rx->begin + file_length;
 
     if (getenv("CMT_DEBUG")) {
         (void) fprintf(stderr, "processing filename: \"%s\" (%lu), type: %d\n", filepath, file_length, me->input_type);
@@ -124,7 +126,7 @@ static int load_next_input(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
 }
 
 static int store_output(cmt_io_driver_mock_t *me, const char *filepath, struct cmt_io_yield *rr) {
-    if (rr->data > cmt_buf_length(me->tx)) {
+    if (rr->data > CMT_TX_BUF_MAX_LENGTH) {
         return -ENOBUFS;
     }
 

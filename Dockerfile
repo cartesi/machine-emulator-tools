@@ -38,6 +38,7 @@ apt-get install -y --no-install-recommends \
         wget \
         pkg-config \
         dpkg-cross \
+        libclang-dev \
         gcc-12-riscv64-linux-gnu \
         g++-12-riscv64-linux-gnu
 
@@ -45,6 +46,8 @@ for tool in cpp g++ gcc gcc-ar gcc-nm gcc-ranlib gcov gcov-dump gcov-tool; do
     update-alternatives --install /usr/bin/riscv64-linux-gnu-$tool riscv64-linux-gnu-$tool /usr/bin/riscv64-linux-gnu-$tool-12 12
     update-alternatives --install /usr/bin/$tool $tool /usr/bin/$tool-12 12
 done
+
+ln -s gcc /usr/bin/cc
 
 wget -O ${LINUX_HEADERS_FILEPATH} ${LINUX_HEADERS_URLPATH}
 echo "7d0238324661a3850fe2e07e5c4485a94da5d5162dbb67def0f1541ed1dc3b45  ${LINUX_HEADERS_FILEPATH}" | sha256sum --check
@@ -76,58 +79,59 @@ RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt/ -j$(nproc) install install-moc
     PREFIX=/usr/x86_64-linux-gnu TARGET_PREFIX=/usr/riscv64-linux-gnu
 USER developer
 RUN make -C ${BUILD_BASE}/tools/sys-utils/ -j$(nproc) all
+ENV CPATH="/usr/riscv64-linux-gnu/include/:${CPATH}"
 
 # build rust tools
 # ------------------------------------------------------------------------------
-FROM tools-env as rust-env
+FROM c-builder as rust-env
 ENV PATH="/home/developer/.cargo/bin:${PATH}"
 
 USER developer
 
-#RUN cd  && \
-#    wget https://github.com/rust-lang/rustup/archive/refs/tags/1.26.0.tar.gz && \
-#    echo "6f20ff98f2f1dbde6886f8d133fe0d7aed24bc76c670ea1fca18eb33baadd808  1.26.0.tar.gz" | sha256sum --check && \
-#    tar -xzf 1.26.0.tar.gz && \
-#    bash rustup-1.26.0/rustup-init.sh \
-#        -y \
-#        --default-toolchain 1.74.0 \
-#        --profile minimal \
-#        --target riscv64gc-unknown-linux-gnu && \
-#    rm -rf rustup-1.26.0 1.26.0.tar.gz
-#
-#FROM rust-env as rust-builder
-#COPY --chown=developer:developer rollup-http/rollup-init ${BUILD_BASE}/tools/rollup-http/rollup-init
-#COPY --chown=developer:developer rollup-http/rollup-http-client ${BUILD_BASE}/tools/rollup-http/rollup-http-client
-#COPY --chown=developer:developer rollup-http/.cargo ${BUILD_BASE}/tools/rollup-http/.cargo
-#
-## build rollup-http-server dependencies
-#FROM rust-builder as http-server-dep-builder
-#COPY --chown=developer:developer rollup-http/rollup-http-server/Cargo.toml rollup-http/rollup-http-server/Cargo.lock ${BUILD_BASE}/tools/rollup-http/rollup-http-server/
-#RUN cd ${BUILD_BASE}/tools/rollup-http/rollup-http-server && \
-#    mkdir src/ && \
-#    echo "fn main() {}" > src/main.rs && \
-#    echo "pub fn dummy() {}" > src/lib.rs && \
-#    cargo build --target riscv64gc-unknown-linux-gnu --release
-#
-## build rollup-http-server
-#FROM http-server-dep-builder as http-server-builder
-#COPY --chown=developer:developer rollup-http/rollup-http-server/build.rs ${BUILD_BASE}/tools/rollup-http/rollup-http-server/
-#COPY --chown=developer:developer rollup-http/rollup-http-server/src ${BUILD_BASE}/tools/rollup-http/rollup-http-server/src
-#RUN cd ${BUILD_BASE}/tools/rollup-http/rollup-http-server && touch build.rs src/* && \
-#    cargo build --target riscv64gc-unknown-linux-gnu --release
-#
-## build echo-dapp dependencies
-#FROM rust-builder as echo-dapp-dep-builder
-#COPY --chown=developer:developer rollup-http/echo-dapp/Cargo.toml rollup-http/echo-dapp/Cargo.lock ${BUILD_BASE}/tools/rollup-http/echo-dapp/
-#RUN cd ${BUILD_BASE}/tools/rollup-http/echo-dapp && \
-#    mkdir src/ && echo "fn main() {}" > src/main.rs && \
-#    cargo build --target riscv64gc-unknown-linux-gnu --release
-#
-## build echo-dapp
-#FROM echo-dapp-dep-builder as echo-dapp-builder
-#COPY --chown=developer:developer rollup-http/echo-dapp/src ${BUILD_BASE}/tools/rollup-http/echo-dapp/src
-#RUN cd ${BUILD_BASE}/tools/rollup-http/echo-dapp && touch src/* && \
-#    cargo build --target riscv64gc-unknown-linux-gnu --release
+RUN cd  && \
+    wget https://github.com/rust-lang/rustup/archive/refs/tags/1.26.0.tar.gz && \
+    echo "6f20ff98f2f1dbde6886f8d133fe0d7aed24bc76c670ea1fca18eb33baadd808  1.26.0.tar.gz" | sha256sum --check && \
+    tar -xzf 1.26.0.tar.gz && \
+    bash rustup-1.26.0/rustup-init.sh \
+        -y \
+        --default-toolchain 1.74.0 \
+        --profile minimal \
+        --target riscv64gc-unknown-linux-gnu && \
+    rm -rf rustup-1.26.0 1.26.0.tar.gz
+
+FROM rust-env as rust-builder
+COPY --chown=developer:developer rollup-http/rollup-init ${BUILD_BASE}/tools/rollup-http/rollup-init
+COPY --chown=developer:developer rollup-http/rollup-http-client ${BUILD_BASE}/tools/rollup-http/rollup-http-client
+COPY --chown=developer:developer rollup-http/.cargo ${BUILD_BASE}/tools/rollup-http/.cargo
+
+# build rollup-http-server dependencies
+FROM rust-builder as http-server-dep-builder
+COPY --chown=developer:developer rollup-http/rollup-http-server/Cargo.toml rollup-http/rollup-http-server/Cargo.lock ${BUILD_BASE}/tools/rollup-http/rollup-http-server/
+RUN cd ${BUILD_BASE}/tools/rollup-http/rollup-http-server && \
+    mkdir src/ && \
+    echo "fn main() {}" > src/main.rs && \
+    echo "pub fn dummy() {}" > src/lib.rs && \
+    cargo build --target riscv64gc-unknown-linux-gnu --release
+
+# build rollup-http-server
+FROM http-server-dep-builder as http-server-builder
+COPY --chown=developer:developer rollup-http/rollup-http-server/build.rs ${BUILD_BASE}/tools/rollup-http/rollup-http-server/
+COPY --chown=developer:developer rollup-http/rollup-http-server/src ${BUILD_BASE}/tools/rollup-http/rollup-http-server/src
+RUN cd ${BUILD_BASE}/tools/rollup-http/rollup-http-server && touch build.rs src/* && \
+    cargo build --target riscv64gc-unknown-linux-gnu --release
+
+# build echo-dapp dependencies
+FROM rust-builder as echo-dapp-dep-builder
+COPY --chown=developer:developer rollup-http/echo-dapp/Cargo.toml rollup-http/echo-dapp/Cargo.lock ${BUILD_BASE}/tools/rollup-http/echo-dapp/
+RUN cd ${BUILD_BASE}/tools/rollup-http/echo-dapp && \
+    mkdir src/ && echo "fn main() {}" > src/main.rs && \
+    cargo build --target riscv64gc-unknown-linux-gnu --release
+
+# build echo-dapp
+FROM echo-dapp-dep-builder as echo-dapp-builder
+COPY --chown=developer:developer rollup-http/echo-dapp/src ${BUILD_BASE}/tools/rollup-http/echo-dapp/src
+RUN cd ${BUILD_BASE}/tools/rollup-http/echo-dapp && touch src/* && \
+    cargo build --target riscv64gc-unknown-linux-gnu --release
 
 # pack tools (deb)
 # ------------------------------------------------------------------------------
@@ -151,8 +155,8 @@ COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/rollup/rollup ${STAGING_SBIN
 COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/ioctl-echo-loop/ioctl-echo-loop ${STAGING_BIN}
 COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/yield/yield ${STAGING_SBIN}
 COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/misc/* ${STAGING_BIN}
-#COPY --from=rust-builder ${BUILD_BASE}/tools/rollup-http/rollup-init/rollup-init ${STAGING_SBIN}
-#COPY --from=http-server-builder ${BUILD_BASE}/tools/rollup-http/rollup-http-server/target/riscv64gc-unknown-linux-gnu/release/rollup-http-server ${STAGING_BIN}
-#COPY --from=echo-dapp-builder ${BUILD_BASE}/tools/rollup-http/echo-dapp/target/riscv64gc-unknown-linux-gnu/release/echo-dapp ${STAGING_BIN}
+COPY --from=rust-builder ${BUILD_BASE}/tools/rollup-http/rollup-init/rollup-init ${STAGING_SBIN}
+COPY --from=http-server-builder ${BUILD_BASE}/tools/rollup-http/rollup-http-server/target/riscv64gc-unknown-linux-gnu/release/rollup-http-server ${STAGING_BIN}
+COPY --from=echo-dapp-builder ${BUILD_BASE}/tools/rollup-http/echo-dapp/target/riscv64gc-unknown-linux-gnu/release/echo-dapp ${STAGING_BIN}
 
 RUN dpkg-deb -Zxz --root-owner-group --build ${STAGING_BASE} ${BUILD_BASE}/${TOOLS_DEB}
