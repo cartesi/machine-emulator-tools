@@ -117,11 +117,12 @@ static int write_reports(cmt_rollup_t *me, unsigned count, uint32_t length, cons
     return 0;
 }
 
-static int handle_advance_state_request(cmt_rollup_t *me, struct parsed_args *args) {
+static int handle_advance_state_request(cmt_rollup_t *me, struct parsed_args *args, uint64_t *index) {
     cmt_rollup_advance_t advance;
     int rc = cmt_rollup_read_advance_state(me, &advance);
     if (rc) return rc;
-
+    *index = advance.index;
+fprintf(stderr, "advance with index %d\n", (int) advance.index);
     if (write_vouchers(me, args->voucher_count, advance.msg_sender, advance.payload_length, advance.payload) != 0) {
         return -1;
     }
@@ -145,10 +146,10 @@ static int handle_inspect_state_request(cmt_rollup_t *me, struct parsed_args *ar
     return 0;
 }
 
-static int handle_request(cmt_rollup_t *me, struct parsed_args *args, cmt_rollup_finish_t *finish) {
+static int handle_request(cmt_rollup_t *me, struct parsed_args *args, cmt_rollup_finish_t *finish, uint64_t *index) {
     switch (finish->next_request_type) {
         case HTIF_YIELD_REASON_ADVANCE:
-            return handle_advance_state_request(me, args);
+            return handle_advance_state_request(me, args, index);
         case HTIF_YIELD_REASON_INSPECT:
             return handle_inspect_state_request(me, args);
         default:
@@ -160,8 +161,9 @@ static int handle_request(cmt_rollup_t *me, struct parsed_args *args, cmt_rollup
 }
 
 int main(int argc, char *argv[]) {
-    unsigned input_index = 0;
     cmt_rollup_t rollup;
+    uint64_t advance_index = 0;
+
     if (cmt_rollup_init(&rollup))
         return EXIT_FAILURE;
 
@@ -180,14 +182,14 @@ int main(int argc, char *argv[]) {
     /* handle a request, then wait for next */
     for (;;) {
         bool reject_advance, reject_inspect, throw_exception;
-        if (handle_request(&rollup, &args, &finish) != 0) {
+        if (handle_request(&rollup, &args, &finish, &advance_index) != 0) {
             break;
         }
         reject_advance =
-            (finish.next_request_type == HTIF_YIELD_REASON_ADVANCE) && (args.reject == input_index);
+            (finish.next_request_type == HTIF_YIELD_REASON_ADVANCE) && (args.reject == advance_index);
         reject_inspect = (finish.next_request_type == HTIF_YIELD_REASON_INSPECT) && args.reject_inspects;
         throw_exception =
-            (finish.next_request_type == HTIF_YIELD_REASON_ADVANCE) && (args.exception == input_index);
+            (finish.next_request_type == HTIF_YIELD_REASON_ADVANCE) && (args.exception == advance_index);
         if (throw_exception) {
             const char message[] = "exception";
             cmt_rollup_emit_exception(&rollup, sizeof message -1, message);
