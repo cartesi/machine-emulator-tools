@@ -17,15 +17,50 @@
 use std::env;
 use std::path::PathBuf;
 
-extern crate cc;
+extern crate pkg_config;
 
 fn main() {
+    let mock_build = env::var("MOCK_BUILD").unwrap_or_else(|_| "false".to_string()) == "true";
+
+    let lib_dir = if mock_build {
+        "../../sys-utils/libcmt/build/mock".into()
+    } else {
+        pkg_config::Config::new()
+            .statik(true)
+            .probe("libcmt")
+            .expect("Could not find library")
+            .link_paths
+            .iter()
+            .map(|path| path.to_string_lossy().into_owned())
+            .collect::<Vec<String>>()
+            .get(0)
+            .expect("Library path not found")
+            .clone()
+    };
+
+    let header_path = if mock_build {
+        "../../sys-utils/libcmt/src/rollup.h".into()
+    } else {
+        pkg_config::get_variable("libcmt", "includedir").expect("Could not find include directory")
+            + "/libcmt/rollup.h"
+    };
+
+    let include_path = if mock_build {
+        "-I../../sys-utils/libcmt/src".into()
+    } else {
+        "-I".to_string()
+            + &pkg_config::get_variable("libcmt", "includedir")
+                .expect("Could not find include directory")
+    };
+
     // link the libcmt shared library
-    println!("cargo:rustc-link-lib=cmt");
+    println!("cargo:rustc-link-search=native={}", lib_dir);
+    println!("cargo:rustc-link-lib=static=cmt");
 
     let bindings = bindgen::Builder::default()
         // the input header we would like to generate bindings for
-        .header("src/rollup/wrapper.h")
+        .header(header_path)
+        .clang_arg(include_path)
         // invalidate the built crate whenever any of the included header files changed
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()
