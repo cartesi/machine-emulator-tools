@@ -16,7 +16,7 @@ $ ./build-with-toolchain.sh
 
 ### Run tests
 ```shell
-$ USE_ROLLUP_BINDINGS_MOCK=1 cargo test -- --show-output --test-threads=1
+$ CPATH="<path/to/libcmt/includes>:$CPATH" RUSTFLAGS="-L /path/to/libcmt/lib" cargo test -- --show-output --test-threads=1
 ```
 
 
