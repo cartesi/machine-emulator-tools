@@ -14,12 +14,19 @@
 // limitations under the License.
 //
 
+#![allow(non_upper_case_globals)]
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
+
 use std::io::ErrorKind;
 
 use libc::c_void;
 use serde::{Deserialize, Serialize};
+use validator::Validate;
+use regex::Regex;
+use lazy_static::lazy_static;
 
-use self::bindings::cmt_rollup_t;
+include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 #[derive(Clone)]
 pub struct RollupFd(*mut cmt_rollup_t);
@@ -28,7 +35,7 @@ impl RollupFd {
     pub fn create() -> Result<Self, i32> {
         unsafe {
             let zeroed = Box::leak(Box::new(std::mem::zeroed::<cmt_rollup_t>()));
-            let result = bindings::cmt_rollup_init(zeroed);
+            let result = cmt_rollup_init(zeroed);
             if result != 0 {
                 Err(result)
             } else {
@@ -41,7 +48,7 @@ impl RollupFd {
 impl Drop for RollupFd {
     fn drop(&mut self) {
         unsafe {
-            bindings::cmt_rollup_fini(self.0);
+            cmt_rollup_fini(self.0);
             drop(Box::from_raw(self.0));
         }
     }
@@ -50,11 +57,14 @@ impl Drop for RollupFd {
 unsafe impl Sync for RollupFd {}
 unsafe impl Send for RollupFd {}
 
-mod bindings;
-
-pub const REQUEST_TYPE_ADVANCE_STATE: &str = "advance_state";
-pub const REQUEST_TYPE_INSPECT_STATE: &str = "inspect_state";
+pub const REQUEST_TYPE_ADVANCE_STATE: u32 = 0;
+pub const REQUEST_TYPE_INSPECT_STATE: u32 = 1;
 pub const CARTESI_ROLLUP_ADDRESS_SIZE: u32 = 20;
+
+lazy_static! {
+    static ref ETH_ADDR_REGEXP: Regex = Regex::new(r"0x[0-9a-fA-F]{1,42}$").unwrap();
+    static ref ETH_U256_REGEXP: Regex = Regex::new(r"0x[0-9a-fA-F]{1,64}$").unwrap();
+}
 
 #[derive(Debug, Default)]
 pub struct RollupError {
@@ -84,9 +94,9 @@ pub struct RollupFinish {
     pub next_request_payload_length: usize,
 }
 
-impl From<RollupFinish> for bindings::cmt_rollup_finish_t {
+impl From<RollupFinish> for cmt_rollup_finish_t {
     fn from(other: RollupFinish) -> Self {
-        bindings::cmt_rollup_finish_t {
+        cmt_rollup_finish_t {
             next_request_type: other.next_request_type,
             accept_previous_request: other.accept_previous_request,
             next_request_payload_length: other.next_request_payload_length as u32,
@@ -94,9 +104,9 @@ impl From<RollupFinish> for bindings::cmt_rollup_finish_t {
     }
 }
 
-impl From<&mut RollupFinish> for bindings::cmt_rollup_finish_t {
+impl From<&mut RollupFinish> for cmt_rollup_finish_t {
     fn from(other: &mut RollupFinish) -> Self {
-        bindings::cmt_rollup_finish_t {
+        cmt_rollup_finish_t {
             next_request_type: other.next_request_type,
             accept_previous_request: other.accept_previous_request,
             next_request_payload_length: other.next_request_payload_length as u32,
@@ -107,28 +117,26 @@ impl From<&mut RollupFinish> for bindings::cmt_rollup_finish_t {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdvanceMetadata {
     pub msg_sender: String,
-    pub epoch_index: u64,
     pub input_index: u64,
     pub block_number: u64,
-    pub timestamp: u64,
+    pub block_timestamp: u64,
 }
 
-impl From<bindings::cmt_rollup_advance_t> for AdvanceMetadata {
-    fn from(other: bindings::cmt_rollup_advance_t) -> Self {
+impl From<cmt_rollup_advance_t> for AdvanceMetadata {
+    fn from(other: cmt_rollup_advance_t) -> Self {
         let mut address = "0x".to_string();
-        address.push_str(&hex::encode(&other.sender));
+        address.push_str(&hex::encode(&other.msg_sender));
         AdvanceMetadata {
             input_index: other.index,
-            epoch_index: other.block_number, // TODO: Check if it's correct
-            timestamp: other.block_timestamp,
+            block_timestamp: other.block_timestamp,
             block_number: other.block_number,
             msg_sender: address,
         }
     }
 }
 
-impl From<bindings::cmt_rollup_finish_t> for RollupFinish {
-    fn from(other: bindings::cmt_rollup_finish_t) -> Self {
+impl From<cmt_rollup_finish_t> for RollupFinish {
+    fn from(other: cmt_rollup_finish_t) -> Self {
         RollupFinish {
             next_request_type: other.next_request_type,
             accept_previous_request: other.accept_previous_request,
@@ -153,29 +161,36 @@ pub enum RollupRequest {
     Advance(AdvanceRequest),
 }
 
+#[derive(Debug, Clone, Deserialize, Validate)]
+pub struct FinishRequest {
+    pub status: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InspectReport {
     pub reports: Vec<Report>
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Notice {
     pub payload: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Voucher {
+    #[validate(regex = "ETH_ADDR_REGEXP")]
     pub destination: String,
-    pub data: String,
+    #[validate(regex = "ETH_U256_REGEXP")]
+    pub value: String,
     pub payload: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Report {
     pub payload: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Exception {
     pub payload: String,
 }
@@ -188,11 +203,11 @@ pub fn rollup_finish_request(
     fd: &RollupFd,
     finish: &mut RollupFinish,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut finish_c = Box::new(bindings::cmt_rollup_finish_t::from(&mut *finish));
+    let mut finish_c = Box::new(cmt_rollup_finish_t::from(&mut *finish));
 
     log::debug!("writing rollup finish request, yielding");
 
-    let res = unsafe { bindings::cmt_rollup_finish(fd.0, finish_c.as_mut()) };
+    let res = unsafe { cmt_rollup_finish(fd.0, finish_c.as_mut()) };
 
     if res < 0 {
         log::error!("failed to write finish request, IOCTL error {}", res);
@@ -212,17 +227,19 @@ pub fn rollup_read_advance_state_request(
     fd: &RollupFd,
 ) -> Result<AdvanceRequest, Box<dyn std::error::Error>> {
 
-    let mut advance_request = Box::new(bindings::cmt_rollup_advance_t {
-        sender: Default::default(),
+    let mut advance_request = Box::new(cmt_rollup_advance_t {
+        chain_id: 0,
+        msg_sender: Default::default(),
+        app_contract: Default::default(),
         block_number: 0,
         block_timestamp: 0,
         index: 0,
-        length: 0,
-        data: std::ptr::null::<::std::os::raw::c_uchar>() as *mut c_void,
+        payload_length: 0,
+        payload: std::ptr::null::<::std::os::raw::c_uchar>() as *mut c_void,
     });
 
     let res = unsafe {
-        bindings::cmt_rollup_read_advance_state(fd.0, advance_request.as_mut())
+        cmt_rollup_read_advance_state(fd.0, advance_request.as_mut())
     };
 
     if res != 0 {
@@ -232,15 +249,15 @@ pub fn rollup_read_advance_state_request(
         ))));
     }
 
-    if advance_request.length == 0 {
+    if advance_request.payload_length == 0 {
         log::info!("read zero size payload from advance state request");
     }
 
-    let mut payload: Vec<u8> = Vec::with_capacity(advance_request.length as usize);
-    if advance_request.length > 0 {
+    let mut payload: Vec<u8> = Vec::with_capacity(advance_request.payload_length as usize);
+    if advance_request.payload_length > 0 {
         unsafe {
-            std::ptr::copy(advance_request.data, payload.as_mut_ptr() as *mut c_void, advance_request.length as usize);
-            payload.set_len(advance_request.length as usize);
+            std::ptr::copy(advance_request.payload, payload.as_mut_ptr() as *mut c_void, advance_request.payload_length as usize);
+            payload.set_len(advance_request.payload_length as usize);
         }
     }
 
@@ -257,25 +274,32 @@ pub fn rollup_read_inspect_state_request(
     fd: &RollupFd,
 ) -> Result<InspectRequest, Box<dyn std::error::Error>> {
 
-    let mut inspect_request = Box::new(bindings::cmt_rollup_inspect_t {
-        length: 0,
-        data: std::ptr::null::<::std::os::raw::c_uchar>() as *mut c_void,
+    let mut inspect_request = Box::new(cmt_rollup_inspect_t {
+        payload_length: 0,
+        payload: std::ptr::null::<::std::os::raw::c_uchar>() as *mut c_void,
     });
 
     let res = unsafe {
-        bindings::cmt_rollup_read_inspect_state(fd.0, inspect_request.as_mut())
+        cmt_rollup_read_inspect_state(fd.0, inspect_request.as_mut())
     };
 
+    if res != 0 {
+        return Err(Box::new(RollupError::new(&format!(
+            "IOCTL_ROLLUP_READ_INSPECT_STATE returned error {}",
+            res
+        ))));
+    }
 
-    if inspect_request.length == 0 {
+    if inspect_request.payload_length == 0 {
         log::info!("read zero size payload from inspect state request");
     }
 
-    let mut payload: Vec<u8> = Vec::with_capacity(inspect_request.length as usize);
-    if inspect_request.length > 0 {
+    println!("inspect_request.payload_length: {}", inspect_request.payload_length);
+    let mut payload: Vec<u8> = Vec::with_capacity(inspect_request.payload_length as usize);
+    if inspect_request.payload_length > 0 {
         unsafe {
-            std::ptr::copy(inspect_request.data, payload.as_mut_ptr() as *mut c_void, inspect_request.length as usize);
-            payload.set_len(inspect_request.length as usize);
+            std::ptr::copy(inspect_request.payload, payload.as_mut_ptr() as *mut c_void, inspect_request.payload_length as usize);
+            payload.set_len(inspect_request.payload_length as usize);
         }
     }
 
@@ -312,7 +336,7 @@ pub fn rollup_write_notice(
             binary_payload.len(),
         );
 
-        bindings::cmt_rollup_emit_notice(fd.0, length as u32, buffer.as_mut_ptr() as *mut c_void)
+        cmt_rollup_emit_notice(fd.0, length as u32, buffer.as_mut_ptr() as *mut c_void, &mut notice_index)
     };
 
     if res != 0 {
@@ -338,15 +362,25 @@ pub fn rollup_write_voucher(
         Ok(payload) => payload,
         Err(_err) => {
             return Err(Box::new(RollupError::new(&format!(
-                "Error decoding voucher payload, payload must be in Ethereum hex binary format"
+                "Error decoding voucher payload, it must be in Ethereum hex binary format"
             ))));
         }
     };
+    let mut payload_buffer: Vec<u8> = Vec::with_capacity(binary_payload.len());
+    let payload_data = payload_buffer.as_mut_ptr();
+    let payload_length = binary_payload.len();
 
-    let mut buffer: Vec<u8> = Vec::with_capacity(binary_payload.len());
-
-    let data = buffer.as_mut_ptr();
-    let length = binary_payload.len();
+    let binary_value = match hex::decode(&voucher.value[2..]) {
+        Ok(data) => data,
+        Err(_err) => {
+            return Err(Box::new(RollupError::new(&format!(
+                "Error decoding voucher value, it must be in Ethereum hex binary format"
+            ))));
+        }
+    };
+    let mut value_buffer: Vec<u8> = Vec::with_capacity(binary_value.len());
+    let value_data = value_buffer.as_mut_ptr();
+    let value_length = binary_value.len();
 
     let address_c = match hex::decode(&voucher.destination[2..]) {
         Ok(res) => res,
@@ -358,22 +392,28 @@ pub fn rollup_write_voucher(
         }
     };
 
-    let voucher_index: std::os::raw::c_ulong = 0;
+    let mut voucher_index: std::os::raw::c_ulong = 0;
     let res = unsafe {
         std::ptr::copy(
             binary_payload.as_ptr(),
-            buffer.as_mut_ptr(),
+            payload_buffer.as_mut_ptr(),
             binary_payload.len(),
         );
+        std::ptr::copy(
+            binary_value.as_ptr(),
+            value_buffer.as_mut_ptr(),
+            binary_value.len(),
+        );
 
-        bindings::cmt_rollup_emit_voucher(
+        cmt_rollup_emit_voucher(
             fd.0,
             address_c.len() as u32,
             address_c.as_ptr() as *const c_void,
-            length as u32,
-            data as *mut c_void,
-            length as u32,
-            data as *mut c_void,
+            value_length as u32,
+            value_data as *mut c_void,
+            payload_length as u32,
+            payload_data as *mut c_void,
+            &mut voucher_index,
         )
     };
 
@@ -412,7 +452,7 @@ pub fn rollup_write_report(fd: &RollupFd, report: &Report) -> Result<(), Box<dyn
             buffer.as_mut_ptr(),
             binary_payload.len(),
         );
-        bindings::cmt_rollup_emit_report(fd.0, length as u32, data)
+        cmt_rollup_emit_report(fd.0, length as u32, data)
     };
 
     if res != 0 {
@@ -452,7 +492,7 @@ pub fn rollup_throw_exception(
             buffer.as_mut_ptr(),
             binary_payload.len(),
         );
-        bindings::cmt_rollup_emit_exception(fd.0, length as u32, data)
+        cmt_rollup_emit_exception(fd.0, length as u32, data)
     };
     if res != 0 {
         return Err(Box::new(RollupError::new(&format!(
@@ -472,24 +512,26 @@ pub async fn perform_rollup_finish_request(
     finish_request.accept_previous_request = true;
 
     match rollup_finish_request(fd, &mut finish_request) {
-        Ok(_) => Ok(finish_request),
+        Ok(_) => {
+            dbg!(&finish_request);
+            Ok(finish_request)
+        }
         Err(e) => {
             log::error!("error inserting finish request, details: {}", e.to_string());
             Err(std::io::Error::new(ErrorKind::Other, e.to_string()))
         }
     }
-
 }
 
 /// Read advance/inspect request from rollup device
 pub async fn handle_rollup_requests(
     fd: &RollupFd,
-    mut finish_request: RollupFinish,
+    finish_request: RollupFinish,
 ) -> Result<RollupRequest, std::io::Error> {
     let next_request_type = finish_request.next_request_type as u32;
 
     match next_request_type {
-        0 => {
+        REQUEST_TYPE_ADVANCE_STATE => {
             log::debug!("handle advance state request...");
             let advance_request = {
                 // Read advance request from rollup device
@@ -506,7 +548,7 @@ pub async fn handle_rollup_requests(
             // Send newly read advance request to http service
             Ok(RollupRequest::Advance(advance_request))
         }
-        1 => {
+        REQUEST_TYPE_INSPECT_STATE => {
             log::debug!("handle inspect state request...");
             // Read inspect request from rollup device
             let inspect_request = {
@@ -545,10 +587,9 @@ pub fn print_advance(advance: &AdvanceRequest) {
     advance_request_printout.push_str("advance: {{msg_sender: ");
     format_address_printout(&advance.metadata.msg_sender, &mut advance_request_printout);
     advance_request_printout.push_str(&format!(
-        " block_number: {} timestamp: {} epoch_index: {} input_index: {} }}",
+        " block_number: {} block_timestamp: {} input_index: {} }}",
         advance.metadata.block_number,
-        advance.metadata.timestamp,
-        advance.metadata.epoch_index,
+        advance.metadata.block_timestamp,
         advance.metadata.input_index
     ));
     log::debug!("{}", &advance_request_printout);

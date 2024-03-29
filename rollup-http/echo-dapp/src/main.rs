@@ -44,6 +44,7 @@ pub async fn process_advance_request(
             let voucher_payload = request.payload.clone();
             let voucher = Voucher {
                 destination: request.metadata.msg_sender.clone(),
+                value: "0xdeadbeef".to_string(),
                 payload: voucher_payload,
             };
 

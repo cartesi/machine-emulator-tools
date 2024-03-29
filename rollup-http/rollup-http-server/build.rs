@@ -14,8 +14,25 @@
 // limitations under the License.
 //
 
+use std::env;
+use std::path::PathBuf;
+
 extern crate cc;
 
 fn main() {
+    // link the libcmt shared library
     println!("cargo:rustc-link-lib=cmt");
+
+    let bindings = bindgen::Builder::default()
+        // the input header we would like to generate bindings for
+        .header("src/rollup/wrapper.h")
+        // invalidate the built crate whenever any of the included header files changed
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .generate()
+        .expect("Unable to generate bindings");
+
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    bindings
+        .write_to_file(out_path.join("bindings.rs"))
+        .expect("Couldn't write bindings!");
 }

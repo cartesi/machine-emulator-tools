@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-use std::os::unix::io::RawFd;
 use std::sync::Arc;
 
 use async_mutex::Mutex;

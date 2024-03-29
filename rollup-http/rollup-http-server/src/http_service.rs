@@ -16,7 +16,8 @@
 
 use std::sync::Arc;
 
-use actix_web::{middleware::Logger, web::Data, web::Json, App, HttpResponse, HttpServer};
+use actix_web::{middleware::Logger, web::Data, App, HttpResponse, HttpServer};
+use actix_web_validator::Json;
 use async_mutex::Mutex;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Notify;
@@ -24,7 +25,7 @@ use tokio::sync::Notify;
 use crate::config::Config;
 use crate::rollup::{self, RollupFd};
 use crate::rollup::{
-    AdvanceRequest, Exception, InspectRequest, Notice, Report, RollupRequest, Voucher,
+    AdvanceRequest, Exception, InspectRequest, Notice, Report, RollupRequest, FinishRequest, Voucher,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -234,11 +235,6 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
     HttpResponse::Ok()
         .append_header((hyper::header::CONTENT_TYPE, "application/json"))
         .json(http_rollup_request)
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct FinishRequest {
-    status: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
