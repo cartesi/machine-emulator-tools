@@ -2,21 +2,21 @@
 
 For Cartesi decentralized application to communicate with the client outside of emulator, `/dev/rollup` linux device is used. Rollup HTTP server translates requests read from Linux device to http `advance/inspect` requests and conveys them to the DApp using its HTTP api interface. DApp communicates results of its execution to the outside world by using `voucher/notice/report/finish` API of the Rollup HTTP Server.
 
-Rollup HTTP Server application implements interface defined [here](https://github.com/cartesi/rollups/blob/develop/openapi/rollup.yaml) and DApp application as http client pools Rollup HTTP Server for new requests, and pushes to it results of request processing voucher/notices/reports.  
+Rollup HTTP Server application implements interface defined [here](https://github.com/cartesi/rollups/blob/develop/openapi/rollup.yaml) and DApp application as http client pools Rollup HTTP Server for new requests, and pushes to it results of request processing voucher/notices/reports.
 
 
 ## Getting Started
 This project requires Rust.
 To install Rust follow the instructions [here](https://www.rust-lang.org/tools/install).
 
-###Build using toolchain docker
+### Build using toolchain docker
 ```shell
-$ ./build.sh
+$ ./build-with-toolchain.sh
 ```
 
 ### Run tests
 ```shell
-$ USE_ROLLUP_BINDINGS_MOCK=1 cargo test -- --show-output --test-threads=1
+$ CPATH="<path/to/libcmt/includes>:$CPATH" RUSTFLAGS="-L /path/to/libcmt/lib" cargo test -- --show-output --test-threads=1
 ```
 
 
