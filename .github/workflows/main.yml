@@ -1,7 +1,8 @@
 name: Build
 on: [push]
 jobs:
-  tools:
+  build:
+    needs: [test]
     runs-on: ubuntu-latest-8-cores
     steps:
       - name: Install libarchive-tools
@@ -98,14 +99,18 @@ jobs:
             ${{ env.TOOLS_ROOTFS }}
             ${{ env.TOOLS_ROOTFS }}.sha512
 
-  test-rollup-http-server:
-    runs-on: ubuntu-22.04
+  test:
+    runs-on: ubuntu-latest-8-cores
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - name: Test rollup-http-server and echo-dapp client
+      - name: Test libcmt mock on host
+        run: |
+          make -C sys-utils/libcmt/ -j$(nproc) host test
+
+      - name: Test rollup-http-server and echo-dapp client on host
         run: |
           cd rollup-http/rollup-http-server
-          USE_ROLLUP_BINDINGS_MOCK=1 cargo test -- --show-output --test-threads=1
+          MOCK_BUILD=true cargo test -- --show-output --test-threads=1
