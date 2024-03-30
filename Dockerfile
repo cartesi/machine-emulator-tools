@@ -36,6 +36,7 @@ apt-get install -y --no-install-recommends \
         ca-certificates \
         git \
         wget \
+        libclang-dev \
         pkg-config \
         dpkg-cross \
         gcc-12-riscv64-linux-gnu \
@@ -45,6 +46,7 @@ for tool in cpp g++ gcc gcc-ar gcc-nm gcc-ranlib gcov gcov-dump gcov-tool; do
     update-alternatives --install /usr/bin/riscv64-linux-gnu-$tool riscv64-linux-gnu-$tool /usr/bin/riscv64-linux-gnu-$tool-12 12
     update-alternatives --install /usr/bin/$tool $tool /usr/bin/$tool-12 12
 done
+update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-12 12
 
 wget -O ${LINUX_HEADERS_FILEPATH} ${LINUX_HEADERS_URLPATH}
 echo "2723435e8b45d8fb7a79e9344f6dc517b3dbc08e03ac17baab311300ec475c08  ${LINUX_HEADERS_FILEPATH}" | sha256sum --check
@@ -70,17 +72,18 @@ ARG CMT_BASE=${BUILD_BASE}/tools/sys-utils/libcmt
 ARG BUILD_BASE=/opt/cartesi
 
 USER developer
-RUN make -C ${CMT_BASE} -j$(nproc) libcmt host
+RUN make -C ${CMT_BASE} -j$(nproc) libcmt
 USER root
-RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt/ -j$(nproc) install install-mock \
-    PREFIX=/usr/x86_64-linux-gnu TARGET_PREFIX=/usr/riscv64-linux-gnu
+RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt/ -j$(nproc) install TARGET_PREFIX=/usr/riscv64-linux-gnu
 USER developer
 RUN make -C ${BUILD_BASE}/tools/sys-utils/ -j$(nproc) all
 
 # build rust tools
 # ------------------------------------------------------------------------------
-FROM tools-env as rust-env
+FROM c-builder as rust-env
 ENV PATH="/home/developer/.cargo/bin:${PATH}"
+ENV PKG_CONFIG_PATH_riscv64gc_unknown_linux_gnu="/usr/riscv64-linux-gnu/lib/pkgconfig"
+ENV PKG_CONFIG_riscv64gc_unknown_linux_gnu="/usr/bin/pkg-config"
 
 USER developer
 
