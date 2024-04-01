@@ -17,11 +17,8 @@
 #include <cstdint>
 #include <iostream>
 #include <iterator>
-#include <memory>
 #include <sstream>
 #include <string>
-#include <string_view>
-#include <unordered_map>
 
 #include <fcntl.h>
 #include <stdbool.h>
@@ -40,7 +37,7 @@ public:
     rollup(bool load_merkle = true) {
         if (cmt_rollup_init(&m_rollup))
             throw std::system_error(errno, std::generic_category(),
-                                    "Unable to initialize. Try runnning again with CMT_DEBUG=yes'");
+                "Unable to initialize. Try runnning again with CMT_DEBUG=yes'");
         if (load_merkle)
             cmt_rollup_load_merkle(&m_rollup, "/tmp/merkle.dat");
     }
@@ -51,6 +48,7 @@ public:
     operator cmt_rollup_t *(void) {
         return &m_rollup;
     }
+
 private:
     cmt_rollup_t m_rollup;
 };
@@ -188,14 +186,14 @@ static std::string unhex(const std::string &s) {
 }
 
 static std::string unhex20(const std::string &s) {
-    if (s.size() != 2+40) {
+    if (s.size() != 2 + 40) {
         throw std::invalid_argument{"incorrect address size"};
     }
     return unhex(s);
 }
 
 static std::string unhex32(const std::string &s) {
-    if (s.size() > 2+64) {
+    if (s.size() > 2 + 64) {
         throw std::invalid_argument{"incorrect value size"};
     }
     return unhex(s);
@@ -206,7 +204,7 @@ static std::string hex(const uint8_t *data, uint64_t length) {
     static const char t[] = "0123456789abcdef";
     std::stringstream ss;
     ss << "0x";
-    for (uint64_t i=0; i<length; ++i) {
+    for (uint64_t i = 0; i < length; ++i) {
         char hi = t[(data[i] >> 4) & 0x0f];
         char lo = t[(data[i] >> 0) & 0x0f];
         ss << std::hex << hi << lo;
@@ -222,20 +220,13 @@ static int write_voucher(void) try {
     auto destination = unhex20(ji["destination"].get<std::string>());
     auto value = unhex32(ji["value"].get<std::string>());
     uint64_t index = 0;
-    int ret = cmt_rollup_emit_voucher(r,
-                                      destination.length(),
-                                      reinterpret_cast<unsigned char *>(destination.data()),
-                                      value.length(),
-                                      reinterpret_cast<unsigned char *>(value.data()),
-                                      payload.size(),
-                                      reinterpret_cast<unsigned char *>(payload.data()),
-                                      &index);
+    int ret = cmt_rollup_emit_voucher(r, destination.length(), reinterpret_cast<unsigned char *>(destination.data()),
+        value.length(), reinterpret_cast<unsigned char *>(value.data()), payload.size(),
+        reinterpret_cast<unsigned char *>(payload.data()), &index);
     if (ret)
         return ret;
 
-    nlohmann::json j = {
-        {"index", index }
-    };
+    nlohmann::json j = {{"index", index}};
     std::cout << j.dump(2) << '\n';
 
     return 0;
@@ -254,9 +245,7 @@ static int write_notice(void) try {
     if (ret)
         return ret;
 
-    nlohmann::json j = {
-        {"index", index }
-    };
+    nlohmann::json j = {{"index", index}};
     std::cout << j.dump(2) << '\n';
 
     return 0;
@@ -271,8 +260,7 @@ static int write_report(void) try {
     rollup r;
     auto ji = nlohmann::json::parse(read_input());
     auto payload = unhex(ji["payload"].get<std::string>());
-    return cmt_rollup_emit_report(r, payload.size(),
-                                  reinterpret_cast<uint8_t *>(payload.data()));
+    return cmt_rollup_emit_report(r, payload.size(), reinterpret_cast<uint8_t *>(payload.data()));
 } catch (std::exception &x) {
     std::cerr << x.what() << '\n';
     return 1;
@@ -283,8 +271,7 @@ static int throw_exception(void) try {
     rollup r;
     auto ji = nlohmann::json::parse(read_input());
     auto payload = unhex(ji["payload"].get<std::string>());
-    return cmt_rollup_emit_exception(r, payload.size(),
-                                     reinterpret_cast<uint8_t *>(payload.data()));
+    return cmt_rollup_emit_exception(r, payload.size(), reinterpret_cast<uint8_t *>(payload.data()));
 } catch (std::exception &x) {
     std::cerr << x.what() << '\n';
     return 1;
@@ -292,39 +279,37 @@ static int throw_exception(void) try {
 
 // Read advance state data from driver, write to output
 static void write_advance_state(rollup &r, cmt_rollup_finish_t *f) {
-    (void)f;
+    (void) f;
     cmt_rollup_advance_t advance;
     if (cmt_rollup_read_advance_state(r, &advance))
         return;
 
-    nlohmann::json j = {
-        {"request_type", "advance_state"},
-        {"data", {
-            {"chain_id", advance.chain_id},
-            {"payload", hex(reinterpret_cast<const uint8_t *>(advance.payload), advance.payload_length)},
-            {"app_contract", hex(advance.app_contract, sizeof(advance.app_contract))},
-            {"msg_sender", hex(advance.msg_sender, sizeof(advance.msg_sender))},
-            {"block_number", advance.block_number},
-            {"block_timestamp", advance.block_timestamp},
-            {"index", advance.index},
-        }}
-    };
+    nlohmann::json j = {{"request_type", "advance_state"},
+        {"data",
+            {
+                {"chain_id", advance.chain_id},
+                {"payload", hex(reinterpret_cast<const uint8_t *>(advance.payload), advance.payload_length)},
+                {"app_contract", hex(advance.app_contract, sizeof(advance.app_contract))},
+                {"msg_sender", hex(advance.msg_sender, sizeof(advance.msg_sender))},
+                {"block_number", advance.block_number},
+                {"block_timestamp", advance.block_timestamp},
+                {"index", advance.index},
+            }}};
     std::cout << j.dump(2) << '\n';
 }
 
 // Read inspect state data from driver, write to output
 static void write_inspect_state(rollup &r, cmt_rollup_finish_t *f) {
-    (void)f;
+    (void) f;
     cmt_rollup_inspect_t inspect;
     if (cmt_rollup_read_inspect_state(r, &inspect))
         return;
 
-    nlohmann::json j = {
-        {"request_type", "inspect_state"},
-        {"data", {
-            {"payload", hex(reinterpret_cast<const uint8_t *>(inspect.payload), inspect.payload_length)},
-        }}
-    };
+    nlohmann::json j = {{"request_type", "inspect_state"},
+        {"data",
+            {
+                {"payload", hex(reinterpret_cast<const uint8_t *>(inspect.payload), inspect.payload_length)},
+            }}};
     std::cout << j.dump(2) << '\n';
 }
 
@@ -381,21 +366,19 @@ static int gio(void) try {
     auto id = unhex(ji["id"].get<std::string>());
     auto domain = ji["domain"].get<uint16_t>();
 
-    cmt_gio req {
-        .domain = domain,
+    cmt_gio req{.domain = domain,
         .id_length = static_cast<uint32_t>(id.size()),
         .id = id.data(),
         .response_code = 0,
         .response_data_length = 0,
-        .response_data = nullptr
-    };
+        .response_data = nullptr};
 
     int ret = cmt_gio_request(r, &req);
     if (ret)
         return ret;
 
     nlohmann::json j = {
-        {"code", req.response_code },
+        {"code", req.response_code},
         {"data", hex(reinterpret_cast<const uint8_t *>(req.response_data), req.response_data_length)},
     };
     std::cout << j.dump(2) << '\n';

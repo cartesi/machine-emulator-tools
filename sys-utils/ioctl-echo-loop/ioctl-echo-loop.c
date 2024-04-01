@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-#include <errno.h>
 #include <fcntl.h>
-#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -95,16 +93,18 @@ static int finish_request(cmt_rollup_t *me, cmt_rollup_finish_t *finish, bool ac
 static int write_notices(cmt_rollup_t *me, unsigned count, uint32_t length, const void *data) {
     for (unsigned i = 0; i < count; i++) {
         int rc = cmt_rollup_emit_notice(me, length, data, NULL);
-        if (rc) return rc;
+        if (rc)
+            return rc;
     }
     return 0;
 }
 
-static int write_vouchers(cmt_rollup_t *me, unsigned count, uint8_t destination[CMT_ADDRESS_LENGTH]
-                         ,uint32_t length, const void *data) {
+static int write_vouchers(cmt_rollup_t *me, unsigned count, uint8_t destination[CMT_ADDRESS_LENGTH], uint32_t length,
+    const void *data) {
     for (unsigned i = 0; i < count; i++) {
         int rc = cmt_rollup_emit_voucher(me, CMT_ADDRESS_LENGTH, destination, 0, NULL, length, data, NULL);
-        if (rc) return rc;
+        if (rc)
+            return rc;
     }
     return 0;
 }
@@ -112,7 +112,8 @@ static int write_vouchers(cmt_rollup_t *me, unsigned count, uint8_t destination[
 static int write_reports(cmt_rollup_t *me, unsigned count, uint32_t length, const void *data) {
     for (unsigned i = 0; i < count; i++) {
         int rc = cmt_rollup_emit_report(me, length, data);
-        if (rc) return rc;
+        if (rc)
+            return rc;
     }
     return 0;
 }
@@ -120,9 +121,10 @@ static int write_reports(cmt_rollup_t *me, unsigned count, uint32_t length, cons
 static int handle_advance_state_request(cmt_rollup_t *me, struct parsed_args *args, uint64_t *index) {
     cmt_rollup_advance_t advance;
     int rc = cmt_rollup_read_advance_state(me, &advance);
-    if (rc) return rc;
+    if (rc)
+        return rc;
     *index = advance.index;
-fprintf(stderr, "advance with index %d\n", (int) advance.index);
+    fprintf(stderr, "advance with index %d\n", (int) advance.index);
     if (write_vouchers(me, args->voucher_count, advance.msg_sender, advance.payload_length, advance.payload) != 0) {
         return -1;
     }
@@ -138,7 +140,8 @@ fprintf(stderr, "advance with index %d\n", (int) advance.index);
 static int handle_inspect_state_request(cmt_rollup_t *me, struct parsed_args *args) {
     cmt_rollup_inspect_t inspect;
     int rc = cmt_rollup_read_inspect_state(me, &inspect);
-    if (rc) return rc;
+    if (rc)
+        return rc;
 
     if (write_reports(me, args->report_count, inspect.payload_length, inspect.payload) != 0) {
         return -1;
@@ -185,14 +188,12 @@ int main(int argc, char *argv[]) {
         if (handle_request(&rollup, &args, &finish, &advance_index) != 0) {
             break;
         }
-        reject_advance =
-            (finish.next_request_type == HTIF_YIELD_REASON_ADVANCE) && (args.reject == advance_index);
+        reject_advance = (finish.next_request_type == HTIF_YIELD_REASON_ADVANCE) && (args.reject == advance_index);
         reject_inspect = (finish.next_request_type == HTIF_YIELD_REASON_INSPECT) && args.reject_inspects;
-        throw_exception =
-            (finish.next_request_type == HTIF_YIELD_REASON_ADVANCE) && (args.exception == advance_index);
+        throw_exception = (finish.next_request_type == HTIF_YIELD_REASON_ADVANCE) && (args.exception == advance_index);
         if (throw_exception) {
             const char message[] = "exception";
-            cmt_rollup_emit_exception(&rollup, sizeof message -1, message);
+            cmt_rollup_emit_exception(&rollup, sizeof message - 1, message);
         }
         if (finish_request(&rollup, &finish, !(reject_advance || reject_inspect)) != 0) {
             break;
