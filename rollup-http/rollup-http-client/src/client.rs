@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-use crate::rollup::{AdvanceRequest, Exception, IndexResponse, InspectRequest, Notice, Report, RollupRequest, RollupResponse, Voucher};
+use crate::rollup::{AdvanceRequest, Exception, IndexResponse, InspectRequest, Notice, Report, RollupRequest, RollupResponse, Voucher, GIORequest};
+use hyper::Response;
 use serde::{Deserialize, Serialize};
 use std::io::ErrorKind;
 
@@ -95,6 +96,27 @@ pub async fn send_report(rollup_http_server_addr: &str, report: Report) {
         .expect("report request");
     if let Err(e) = client.request(req).await {
         log::error!("failed to send report request to rollup http server: {}", e);
+    }
+}
+
+pub async fn send_gio_request(rollup_http_server_addr: &str, gio_request: GIORequest) -> Response<hyper::Body> {
+    log::debug!("sending gio request to {}", rollup_http_server_addr);
+    let client = hyper::Client::new();
+    let req = hyper::Request::builder()
+        .method(hyper::Method::POST)
+        .header(hyper::header::CONTENT_TYPE, "application/json")
+        .uri(rollup_http_server_addr.to_string() + "/gio")
+        .body(hyper::Body::from(serde_json::to_string(&gio_request).unwrap()))
+        .expect("gio request");
+    match client.request(req).await {
+        Ok(res) => {
+            log::info!("got gio response: {:?}", res);
+            res
+        }
+        Err(e) => {
+            log::error!("failed to send gio request to rollup http server: {}", e);
+            Response::builder().status(500).body(hyper::Body::empty()).unwrap()
+        }
     }
 }
 

@@ -21,9 +21,10 @@ use actix_web_validator::Json;
 use async_mutex::Mutex;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Notify;
+use serde_json::json;
 
 use crate::config::Config;
-use crate::rollup::{self, RollupFd};
+use crate::rollup::{self, RollupFd, GIORequest};
 use crate::rollup::{
     AdvanceRequest, Exception, InspectRequest, Notice, Report, RollupRequest, FinishRequest, Voucher,
 };
@@ -52,6 +53,7 @@ pub fn create_server(
             .service(voucher)
             .service(notice)
             .service(report)
+            .service(gio)
             .service(exception)
             .service(finish)
     })
@@ -144,6 +146,25 @@ async fn report(report: Json<Report>, data: Data<Mutex<Context>>) -> HttpRespons
             log::error!("unable to insert report, error details: '{}'", e);
             HttpResponse::BadRequest()
                 .body(format!("unable to insert notice, error details: '{}'", e))
+        }
+    };
+}
+
+/// Process gio request and return the result
+#[actix_web::post("/gio")]
+async fn gio(request: Json<GIORequest>, data: Data<Mutex<Context>>) -> HttpResponse {
+    log::debug!("received gio request {:#?}", request);
+    let context = data.lock().await;
+    // Write report to linux rollup device
+    return match rollup::gio_request(&*context.rollup_fd.lock().await, &request.0) {
+        Ok(result) => {
+            log::debug!("gio successfully processed, response: {:#?}", result);
+            HttpResponse::Accepted().body(json!(result).to_string())
+        }
+        Err(e) => {
+            log::error!("unable to process gio request, error details: '{}'", e);
+            HttpResponse::BadRequest()
+                .body(format!("unable to process gio request, error details: '{}'", e))
         }
     };
 }

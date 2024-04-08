@@ -114,6 +114,19 @@ impl From<&mut RollupFinish> for cmt_rollup_finish_t {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct GIORequest {
+    #[validate(range(min = 0x10))]   // avoid overlapping with our HTIF_YIELD_MANUAL_REASON_*
+    pub domain: u16,
+    pub payload: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GIOResponse {
+    pub response_code: u16,
+    pub response: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdvanceMetadata {
     pub msg_sender: String,
@@ -465,6 +478,70 @@ pub fn rollup_write_report(fd: &RollupFd, report: &Report) -> Result<(), Box<dyn
     }
 
     Ok(())
+}
+
+pub fn gio_request(fd: &RollupFd, gio: &GIORequest) -> Result<GIOResponse, Box<dyn std::error::Error>> {
+    println!("going to do gio_request");
+    let binary_payload = match hex::decode(&gio.payload[2..]) {
+        Ok(payload) => payload,
+        Err(_err) => {
+            return Err(Box::new(RollupError::new(&format!(
+                "Error decoding gio request payload, payload must be in Ethereum hex binary format"
+            ))));
+        }
+    };
+
+    let mut buffer: Vec<u8> = Vec::with_capacity(binary_payload.len());
+    let data = buffer.as_mut_ptr() as *mut c_void;
+    unsafe {
+        std::ptr::copy(
+            binary_payload.as_ptr(),
+            buffer.as_mut_ptr(),
+            binary_payload.len(),
+        );
+    };
+
+    let mut gio_request = Box::new(cmt_gio_t {
+        domain: gio.domain,
+        id_length: binary_payload.len() as u32,
+        id: data,
+        response_code: 0,
+        response_data_length: 0,
+        response_data: std::ptr::null::<::std::os::raw::c_uchar>() as *mut c_void,
+    });
+
+    let res = unsafe {
+        cmt_gio_request(fd.0, gio_request.as_mut())
+    };
+
+    if res != 0 {
+        return Err(Box::new(RollupError::new(&format!(
+            "GIO request returned error {}",
+            res
+        ))));
+    }
+
+    let mut gio_response: Vec<u8> = Vec::with_capacity(gio_request.response_data_length as usize);
+    if gio_request.response_data_length == 0 {
+        log::info!("read zero size response from gio request");
+    } else {
+        unsafe {
+            std::ptr::copy(
+                gio_request.response_data,
+                gio_response.as_mut_ptr() as *mut c_void,
+                gio_request.response_data_length as usize,
+            );
+            gio_response.set_len(gio_request.response_data_length as usize);
+        }
+    }
+
+    let result = GIOResponse {
+        response_code: gio_request.response_code,
+        response: "0x".to_string() + &hex::encode(&gio_response),
+    };
+    dbg!(result.clone());
+
+    Ok(result)
 }
 
 pub fn rollup_throw_exception(

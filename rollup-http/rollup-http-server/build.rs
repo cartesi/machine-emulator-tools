@@ -55,6 +55,7 @@ fn main() {
 
     // link the libcmt shared library
     println!("cargo:rustc-link-search=native={}", lib_dir);
+    println!("cargo:rerun-if-changed={}/libcmt.a", lib_dir);
     println!("cargo:rustc-link-lib=static=cmt");
 
     let bindings = bindgen::Builder::default()

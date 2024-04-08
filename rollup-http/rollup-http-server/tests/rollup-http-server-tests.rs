@@ -20,7 +20,7 @@ extern crate rollup_http_server;
 use actix_server::ServerHandle;
 use async_mutex::Mutex;
 use rollup_http_client::rollup::{
-    Exception, Notice, Report, RollupRequest, RollupResponse, Voucher,
+    Exception, Notice, Report, RollupRequest, RollupResponse, Voucher, GIORequest,
 };
 use rollup_http_server::config::Config;
 use rollup_http_server::rollup::RollupFd;
@@ -329,6 +329,33 @@ async fn test_write_report(
         "report test payload 01"
     );
     std::fs::remove_file("none.report-0.bin")?;
+
+    Ok(())
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_gio_request(
+    context_future: impl Future<Output = Context>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let context = context_future.await;
+    // Set the global log level
+    println!("Sending gio request");
+    let test_gio_request = GIORequest {
+        domain: 0x100,
+        payload: "0x".to_string() + &hex::encode("gio test payload 01"),
+    };
+    rollup_http_client::client::send_gio_request(&context.address, test_gio_request.clone()).await;
+    context.server_handle.stop(true).await;
+
+    //Read text file with results
+    let gio =
+        std::fs::read_to_string("none.gio-0.bin").expect("error reading test gio file");
+    assert_eq!(
+        gio,
+        "gio test payload 01"
+    );
+    std::fs::remove_file("none.gio-0.bin")?;
 
     Ok(())
 }
