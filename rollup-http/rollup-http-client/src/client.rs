@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
-use crate::rollup::{AdvanceRequest, Exception, IndexResponse, InspectRequest, Notice, Report, RollupRequest, RollupResponse, Voucher, GIORequest};
+use crate::rollup::{
+    AdvanceRequest, Exception, GIORequest, IndexResponse, InspectRequest, Notice, Report,
+    RollupRequest, RollupResponse, Voucher,
+};
 use hyper::Response;
 use serde::{Deserialize, Serialize};
 use std::io::ErrorKind;
@@ -23,13 +26,9 @@ use std::io::ErrorKind;
 #[serde(tag = "request_type")]
 enum RollupHttpRequest {
     #[serde(rename = "advance_state")]
-    Advance {
-        data: AdvanceRequest,
-    },
+    Advance { data: AdvanceRequest },
     #[serde(rename = "inspect_state")]
-    Inspect {
-        data: InspectRequest,
-    },
+    Inspect { data: InspectRequest },
 }
 
 pub async fn send_voucher(rollup_http_server_addr: &str, voucher: Voucher) {
@@ -99,14 +98,19 @@ pub async fn send_report(rollup_http_server_addr: &str, report: Report) {
     }
 }
 
-pub async fn send_gio_request(rollup_http_server_addr: &str, gio_request: GIORequest) -> Response<hyper::Body> {
+pub async fn send_gio_request(
+    rollup_http_server_addr: &str,
+    gio_request: GIORequest,
+) -> Response<hyper::Body> {
     log::debug!("sending gio request to {}", rollup_http_server_addr);
     let client = hyper::Client::new();
     let req = hyper::Request::builder()
         .method(hyper::Method::POST)
         .header(hyper::header::CONTENT_TYPE, "application/json")
         .uri(rollup_http_server_addr.to_string() + "/gio")
-        .body(hyper::Body::from(serde_json::to_string(&gio_request).unwrap()))
+        .body(hyper::Body::from(
+            serde_json::to_string(&gio_request).unwrap(),
+        ))
         .expect("gio request");
     match client.request(req).await {
         Ok(res) => {
@@ -115,16 +119,16 @@ pub async fn send_gio_request(rollup_http_server_addr: &str, gio_request: GIOReq
         }
         Err(e) => {
             log::error!("failed to send gio request to rollup http server: {}", e);
-            Response::builder().status(500).body(hyper::Body::empty()).unwrap()
+            Response::builder()
+                .status(500)
+                .body(hyper::Body::empty())
+                .unwrap()
         }
     }
 }
 
 pub async fn throw_exception(rollup_http_server_addr: &str, exception: Exception) {
-    log::debug!(
-        "throwing exception request to {}",
-        rollup_http_server_addr
-    );
+    log::debug!("throwing exception request to {}", rollup_http_server_addr);
     let client = hyper::Client::new();
     let req = hyper::Request::builder()
         .method(hyper::Method::POST)

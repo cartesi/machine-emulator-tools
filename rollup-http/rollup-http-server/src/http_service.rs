@@ -20,13 +20,14 @@ use actix_web::{middleware::Logger, web::Data, App, HttpResponse, HttpServer};
 use actix_web_validator::Json;
 use async_mutex::Mutex;
 use serde::{Deserialize, Serialize};
-use tokio::sync::Notify;
 use serde_json::json;
+use tokio::sync::Notify;
 
 use crate::config::Config;
-use crate::rollup::{self, RollupFd, GIORequest};
+use crate::rollup::{self, GIORequest, RollupFd};
 use crate::rollup::{
-    AdvanceRequest, Exception, InspectRequest, Notice, Report, RollupRequest, FinishRequest, Voucher,
+    AdvanceRequest, Exception, FinishRequest, InspectRequest, Notice, Report, RollupRequest,
+    Voucher,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -155,7 +156,6 @@ async fn report(report: Json<Report>, data: Data<Mutex<Context>>) -> HttpRespons
 async fn gio(request: Json<GIORequest>, data: Data<Mutex<Context>>) -> HttpResponse {
     log::debug!("received gio request {:#?}", request);
     let context = data.lock().await;
-    // Write report to linux rollup device
     return match rollup::gio_request(&*context.rollup_fd.lock().await, &request.0) {
         Ok(result) => {
             log::debug!("gio successfully processed, response: {:#?}", result);
@@ -163,8 +163,10 @@ async fn gio(request: Json<GIORequest>, data: Data<Mutex<Context>>) -> HttpRespo
         }
         Err(e) => {
             log::error!("unable to process gio request, error details: '{}'", e);
-            HttpResponse::BadRequest()
-                .body(format!("unable to process gio request, error details: '{}'", e))
+            HttpResponse::BadRequest().body(format!(
+                "unable to process gio request, error details: '{}'",
+                e
+            ))
         }
     };
 }

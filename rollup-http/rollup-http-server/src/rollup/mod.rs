@@ -20,11 +20,11 @@
 
 use std::io::ErrorKind;
 
+use lazy_static::lazy_static;
 use libc::c_void;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
-use regex::Regex;
-use lazy_static::lazy_static;
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
@@ -116,7 +116,7 @@ impl From<&mut RollupFinish> for cmt_rollup_finish_t {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct GIORequest {
-    #[validate(range(min = 0x10))]   // avoid overlapping with our HTIF_YIELD_MANUAL_REASON_*
+    #[validate(range(min = 0x10))] // avoid overlapping with our HTIF_YIELD_MANUAL_REASON_*
     pub domain: u16,
     pub payload: String,
 }
@@ -181,7 +181,7 @@ pub struct FinishRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InspectReport {
-    pub reports: Vec<Report>
+    pub reports: Vec<Report>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
@@ -239,7 +239,6 @@ pub fn rollup_finish_request(
 pub fn rollup_read_advance_state_request(
     fd: &RollupFd,
 ) -> Result<AdvanceRequest, Box<dyn std::error::Error>> {
-
     let mut advance_request = Box::new(cmt_rollup_advance_t {
         chain_id: 0,
         msg_sender: Default::default(),
@@ -251,9 +250,7 @@ pub fn rollup_read_advance_state_request(
         payload: std::ptr::null::<::std::os::raw::c_uchar>() as *mut c_void,
     });
 
-    let res = unsafe {
-        cmt_rollup_read_advance_state(fd.0, advance_request.as_mut())
-    };
+    let res = unsafe { cmt_rollup_read_advance_state(fd.0, advance_request.as_mut()) };
 
     if res != 0 {
         return Err(Box::new(RollupError::new(&format!(
@@ -269,7 +266,11 @@ pub fn rollup_read_advance_state_request(
     let mut payload: Vec<u8> = Vec::with_capacity(advance_request.payload_length as usize);
     if advance_request.payload_length > 0 {
         unsafe {
-            std::ptr::copy(advance_request.payload, payload.as_mut_ptr() as *mut c_void, advance_request.payload_length as usize);
+            std::ptr::copy(
+                advance_request.payload,
+                payload.as_mut_ptr() as *mut c_void,
+                advance_request.payload_length as usize,
+            );
             payload.set_len(advance_request.payload_length as usize);
         }
     }
@@ -282,19 +283,15 @@ pub fn rollup_read_advance_state_request(
     Ok(result)
 }
 
-
 pub fn rollup_read_inspect_state_request(
     fd: &RollupFd,
 ) -> Result<InspectRequest, Box<dyn std::error::Error>> {
-
     let mut inspect_request = Box::new(cmt_rollup_inspect_t {
         payload_length: 0,
         payload: std::ptr::null::<::std::os::raw::c_uchar>() as *mut c_void,
     });
 
-    let res = unsafe {
-        cmt_rollup_read_inspect_state(fd.0, inspect_request.as_mut())
-    };
+    let res = unsafe { cmt_rollup_read_inspect_state(fd.0, inspect_request.as_mut()) };
 
     if res != 0 {
         return Err(Box::new(RollupError::new(&format!(
@@ -307,11 +304,18 @@ pub fn rollup_read_inspect_state_request(
         log::info!("read zero size payload from inspect state request");
     }
 
-    println!("inspect_request.payload_length: {}", inspect_request.payload_length);
+    println!(
+        "inspect_request.payload_length: {}",
+        inspect_request.payload_length
+    );
     let mut payload: Vec<u8> = Vec::with_capacity(inspect_request.payload_length as usize);
     if inspect_request.payload_length > 0 {
         unsafe {
-            std::ptr::copy(inspect_request.payload, payload.as_mut_ptr() as *mut c_void, inspect_request.payload_length as usize);
+            std::ptr::copy(
+                inspect_request.payload,
+                payload.as_mut_ptr() as *mut c_void,
+                inspect_request.payload_length as usize,
+            );
             payload.set_len(inspect_request.payload_length as usize);
         }
     }
@@ -349,7 +353,12 @@ pub fn rollup_write_notice(
             binary_payload.len(),
         );
 
-        cmt_rollup_emit_notice(fd.0, length as u32, buffer.as_mut_ptr() as *mut c_void, &mut notice_index)
+        cmt_rollup_emit_notice(
+            fd.0,
+            length as u32,
+            buffer.as_mut_ptr() as *mut c_void,
+            &mut notice_index,
+        )
     };
 
     if res != 0 {
@@ -363,7 +372,6 @@ pub fn rollup_write_notice(
 
     Ok(notice_index as u64)
 }
-
 
 pub fn rollup_write_voucher(
     fd: &RollupFd,
@@ -442,7 +450,10 @@ pub fn rollup_write_voucher(
     Ok(voucher_index as u64)
 }
 
-pub fn rollup_write_report(fd: &RollupFd, report: &Report) -> Result<(), Box<dyn std::error::Error>> {
+pub fn rollup_write_report(
+    fd: &RollupFd,
+    report: &Report,
+) -> Result<(), Box<dyn std::error::Error>> {
     print_report(report);
 
     let binary_payload = match hex::decode(&report.payload[2..]) {
@@ -480,7 +491,10 @@ pub fn rollup_write_report(fd: &RollupFd, report: &Report) -> Result<(), Box<dyn
     Ok(())
 }
 
-pub fn gio_request(fd: &RollupFd, gio: &GIORequest) -> Result<GIOResponse, Box<dyn std::error::Error>> {
+pub fn gio_request(
+    fd: &RollupFd,
+    gio: &GIORequest,
+) -> Result<GIOResponse, Box<dyn std::error::Error>> {
     println!("going to do gio_request");
     let binary_payload = match hex::decode(&gio.payload[2..]) {
         Ok(payload) => payload,
@@ -510,9 +524,7 @@ pub fn gio_request(fd: &RollupFd, gio: &GIORequest) -> Result<GIOResponse, Box<d
         response_data: std::ptr::null::<::std::os::raw::c_uchar>() as *mut c_void,
     });
 
-    let res = unsafe {
-        cmt_gio_request(fd.0, gio_request.as_mut())
-    };
+    let res = unsafe { cmt_gio_request(fd.0, gio_request.as_mut()) };
 
     if res != 0 {
         return Err(Box::new(RollupError::new(&format!(
@@ -688,7 +700,6 @@ pub fn print_notice(notice: &Notice) {
         notice.payload
     );
 }
-
 
 pub fn print_voucher(voucher: &Voucher) {
     let mut voucher_request_printout = String::new();
