@@ -1,4 +1,3 @@
-Language: Cpp
 BasedOnStyle: LLVM
 AccessModifierOffset: -4
 AlignAfterOpenBracket: DontAlign
@@ -16,4 +15,4 @@ ConstructorInitializerAllOnOneLineOrOnePerLine: true
 IndentCaseLabels: true
 IndentWidth: 4
 SpaceAfterCStyleCast: true
-Standard: c++17
+Standard: Cpp03

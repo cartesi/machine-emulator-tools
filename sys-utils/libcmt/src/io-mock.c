@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 #include "io.h"
+#include "util.h"
 
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define CMT_TX_BUF_MAX_LENGTH (2UL * 1024 * 1024) // 2MB
-#define CMT_RX_BUF_MAX_LENGTH (2UL * 1024 * 1024) // 2MB
 
 static int read_whole_file(const char *name, size_t max, void *data, size_t *length);
 static int write_whole_file(const char *name, size_t length, const void *data);
@@ -33,8 +31,10 @@ int cmt_io_init(cmt_io_driver_t *_me) {
     }
     cmt_io_driver_mock_t *me = &_me->mock;
 
-    cmt_buf_init(me->tx, CMT_TX_BUF_MAX_LENGTH, malloc(CMT_TX_BUF_MAX_LENGTH));
-    cmt_buf_init(me->rx, CMT_RX_BUF_MAX_LENGTH, malloc(CMT_RX_BUF_MAX_LENGTH));
+    size_t tx_length = 2U << 20; // 2MB
+    size_t rx_length = 2U << 20; // 2MB
+    cmt_buf_init(me->tx, tx_length, malloc(tx_length));
+    cmt_buf_init(me->rx, rx_length, malloc(rx_length));
 
     if (!me->tx->begin || !me->rx->begin) {
         free(me->tx->begin);
@@ -99,7 +99,7 @@ static int load_next_input(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
     }
 
     size_t file_length = 0;
-    int rc = read_whole_file(filepath, CMT_RX_BUF_MAX_LENGTH, me->rx->begin, &file_length);
+    int rc = read_whole_file(filepath, cmt_buf_length(me->rx), me->rx->begin, &file_length);
     if (rc) {
         (void) fprintf(stderr, "failed to load \"%s\". %s\n", filepath, strerror(-rc));
         return rc;
@@ -117,32 +117,26 @@ static int load_next_input(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
     me->output_seq = 0;
     me->report_seq = 0;
     me->exception_seq = 0;
-    me->rx->end = me->rx->begin + file_length;
 
-    if (getenv("CMT_DEBUG")) {
+    if (cmt_util_debug_enabled()) {
         (void) fprintf(stderr, "processing filename: \"%s\" (%lu), type: %d\n", filepath, file_length, me->input_type);
     }
     return 0;
 }
 
 static int store_output(cmt_io_driver_mock_t *me, const char *filepath, struct cmt_io_yield *rr) {
-    if (rr->data > CMT_TX_BUF_MAX_LENGTH) {
+    if (rr->data > cmt_buf_length(me->rx)) {
         return -ENOBUFS;
     }
-
-    // char filepath[128 + 1 + 8 + 16];
-    // snprintf(filepath, sizeof filepath, "%s.%s%d%s", me->input_filename, ns, *seq, me->input_fileext);
 
     int rc = write_whole_file(filepath, rr->data, me->tx->begin);
     if (rc) {
         (void) fprintf(stderr, "failed to store \"%s\". %s\n", filepath, strerror(-rc));
         return rc;
     }
-    if (getenv("CMT_DEBUG")) {
+    if (cmt_util_debug_enabled()) {
         (void) fprintf(stderr, "wrote filename: \"%s\" (%u)\n", filepath, rr->data);
     }
-
-    // seq[0] += 1;
     return 0;
 }
 
@@ -220,22 +214,11 @@ static int mock_tx_exception(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) 
 }
 
 /* These behaviours are defined by the cartesi-machine emulator */
-int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
+static int cmt_io_yield_inner(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
     if (!_me) {
         return -EINVAL;
     }
     cmt_io_driver_mock_t *me = &_me->mock;
-
-    if (getenv("CMT_DEBUG")) {
-        (void) fprintf(stderr,
-            "yield {\n"
-            "\t.dev = %d,\n"
-            "\t.cmd = %d,\n"
-            "\t.reason = %d,\n"
-            "\t.data = %d,\n"
-            "};\n",
-            rr->dev, rr->cmd, rr->reason, rr->data);
-    }
 
     if (rr->cmd == HTIF_YIELD_CMD_MANUAL) {
         switch (rr->reason) {
@@ -264,6 +247,44 @@ int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
     }
 
     return 0;
+}
+
+/* emulate io.c:cmt_io_yield behavior (go and check it does if you change it) */
+int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
+    if (!_me) {
+        return -EINVAL;
+    }
+    if (!rr) {
+        return -EINVAL;
+    }
+
+    bool debug = cmt_util_debug_enabled();
+    if (debug) {
+        (void) fprintf(stderr,
+            "tohost {\n"
+            "\t.dev = %d,\n"
+            "\t.cmd = %d,\n"
+            "\t.reason = %d,\n"
+            "\t.data = %d,\n"
+            "};\n",
+            rr->dev, rr->cmd, rr->reason, rr->data);
+    }
+    int rc = cmt_io_yield_inner(_me, rr);
+    if (rc) {
+        return rc;
+    }
+
+    if (debug) {
+        (void) fprintf(stderr,
+            "fromhost {\n"
+            "\t.dev = %d,\n"
+            "\t.cmd = %d,\n"
+            "\t.reason = %d,\n"
+            "\t.data = %d,\n"
+            "};\n",
+            rr->dev, rr->cmd, rr->reason, rr->data);
+    }
+    return rc;
 }
 
 static int read_whole_file(const char *name, size_t max, void *data, size_t *length) {

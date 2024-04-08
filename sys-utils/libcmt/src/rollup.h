@@ -37,6 +37,7 @@
 
 typedef struct cmt_rollup {
     union cmt_io_driver io[1];
+    uint32_t fromhost_data;
     cmt_merkle_t merkle[1];
 } cmt_rollup_t;
 

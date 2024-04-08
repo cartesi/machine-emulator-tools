@@ -42,11 +42,13 @@ int cmt_buf_split(const cmt_buf_t *me, size_t lhs_length, cmt_buf_t *lhs, cmt_bu
         return -EINVAL;
     }
 
-    lhs->begin = me->begin;
-    lhs->end = rhs->begin = me->begin + lhs_length;
-    rhs->end = me->end;
+    // handle aliasing
+    cmt_buf_t tmp[1] = {*me};
+    lhs->begin = tmp->begin;
+    lhs->end = rhs->begin = tmp->begin + lhs_length;
+    rhs->end = tmp->end;
 
-    return lhs->end > me->end ? -ENOBUFS : 0;
+    return lhs->end > tmp->end ? -ENOBUFS : 0;
 }
 
 static int comma(const uint8_t *s, const uint8_t *end) {

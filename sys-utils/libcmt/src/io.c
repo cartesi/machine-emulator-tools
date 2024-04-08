@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #include "io.h"
+#include "util.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -60,9 +61,6 @@ int cmt_io_init(cmt_io_driver_t *_me) {
         goto do_unmap;
     }
 
-    me->rx_max_length = setup.rx.length;
-    me->rx_fromhost_length = 0;
-
     cmt_buf_init(me->tx, setup.tx.length, tx);
     cmt_buf_init(me->rx, setup.rx.length, rx);
     return 0;
@@ -89,42 +87,43 @@ void cmt_io_fini(cmt_io_driver_t *_me) {
 }
 
 cmt_buf_t cmt_io_get_tx(cmt_io_driver_t *me) {
-    static const cmt_buf_t empty = {NULL, NULL};
+    const cmt_buf_t empty = {NULL, NULL};
     if (!me) {
         return empty;
     }
     return *me->ioctl.tx;
 }
 
-static uint32_t min(uint32_t a, uint32_t b) {
-    return a < b ? a : b;
-}
-
 cmt_buf_t cmt_io_get_rx(cmt_io_driver_t *me) {
-    static const cmt_buf_t empty = {NULL, NULL};
+    const cmt_buf_t empty = {NULL, NULL};
     if (!me) {
         return empty;
     }
-    cmt_buf_t rx = *me->ioctl.rx;
-    rx.end = rx.begin + min(me->ioctl.rx_max_length, me->ioctl.rx_fromhost_length);
-    return rx;
+    return *me->ioctl.rx;
 }
 
 static uint64_t pack(struct cmt_io_yield *rr) {
-    return ((uint64_t) rr->dev << 56) | ((uint64_t) rr->cmd << 56 >> 8) | ((uint64_t) rr->reason << 48 >> 16) |
-        ((uint64_t) rr->data << 32 >> 32);
+    // clang-format off
+    return ((uint64_t) rr->dev    << 56)
+    |      ((uint64_t) rr->cmd    << 56 >>  8)
+    |      ((uint64_t) rr->reason << 48 >> 16)
+    |      ((uint64_t) rr->data   << 32 >> 32);
+    // clang-format on
 }
 
 static struct cmt_io_yield unpack(uint64_t x) {
+    // clang-format off
     struct cmt_io_yield out = {
-        x >> 56,
-        x << 8 >> 56,
+        x       >> 56,
+        x <<  8 >> 56,
         x << 16 >> 48,
         x << 32 >> 32,
     };
+    // clang-format on
     return out;
 }
 
+/* io-mock.c:cmt_io_yield emulates this behavior (go and check it does if you change it) */
 int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
     if (!_me) {
         return -EINVAL;
@@ -134,15 +133,8 @@ int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
     }
     cmt_io_driver_ioctl_t *me = &_me->ioctl;
 
-    static bool checked = false;
-    static bool enabled = false;
-
-    if (!checked) {
-        enabled = getenv("CMT_DEBUG") != NULL;
-        checked = true;
-    }
-
-    if (enabled) {
+    bool debug = cmt_util_debug_enabled();
+    if (debug) {
         (void) fprintf(stderr,
             "tohost {\n"
             "\t.dev = %d,\n"
@@ -158,9 +150,7 @@ int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
     }
     *rr = unpack(req);
 
-    me->rx_fromhost_length = rr->data;
-
-    if (enabled) {
+    if (debug) {
         (void) fprintf(stderr,
             "fromhost {\n"
             "\t.dev = %d,\n"

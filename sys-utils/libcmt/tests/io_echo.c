@@ -78,6 +78,12 @@ int main(void) {
 
     uint32_t n = 0;
     while (next(io, &n) >= 0) {
+        if (n > cmt_buf_length(&tx)) {
+            return -1;
+        }
+        if (n > cmt_buf_length(&rx)) {
+            return -1;
+        }
         memcpy(tx.begin, rx.begin, n);
         voucher(io, n);
         report(io, n);

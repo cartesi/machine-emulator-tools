@@ -16,10 +16,10 @@
 #include "rollup.h"
 #include "abi.h"
 #include "merkle.h"
+#include "util.h"
 
 #include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 // Voucher(address,uint256,bytes)
@@ -36,18 +36,11 @@
 
 #define DBG(X) debug(X, #X, __FILE__, __LINE__)
 static int debug(int rc, const char *expr, const char *file, int line) {
-    static bool checked = false;
-    static bool enabled = false;
-
     if (rc == 0) {
         return 0;
     }
 
-    if (!checked) {
-        enabled = getenv("CMT_DEBUG") != NULL;
-        checked = true;
-    }
-    if (enabled) {
+    if (cmt_util_debug_enabled()) {
         (void) fprintf(stderr, "%s:%d Error %s on `%s'\n", file, line, expr, strerror(-rc));
     }
     return rc;
@@ -90,13 +83,17 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint32_t address_length, const voi
     cmt_buf_t of[1];
     void *params_base = tx->begin + 4; // after funsel
 
-    if (DBG(cmt_abi_put_funsel(wr, VOUCHER)) || DBG(cmt_abi_put_uint_be(wr, address_length, address_data)) ||
-        DBG(cmt_abi_put_uint_be(wr, value_length, value_data)) || DBG(cmt_abi_put_bytes_s(wr, of)) ||
-        DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base))) {
+    // clang-format off
+    if (DBG(cmt_abi_put_funsel(wr, VOUCHER))
+    ||  DBG(cmt_abi_put_uint_be(wr, address_length, address_data))
+    ||  DBG(cmt_abi_put_uint_be(wr, value_length, value_data))
+    ||  DBG(cmt_abi_put_bytes_s(wr, of))
+    ||  DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base))) {
         return -ENOBUFS;
     }
+    // clang-format on
 
-    size_t m = wr->begin - tx->begin;
+    size_t m = cmt_buf_length(wr);
     struct cmt_io_yield req[1] = {{
         .dev = HTIF_DEVICE_YIELD,
         .cmd = HTIF_YIELD_CMD_AUTOMATIC,
@@ -135,12 +132,15 @@ int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data, 
     cmt_buf_t of[1];
     void *params_base = tx->begin + 4; // after funsel
 
-    if (DBG(cmt_abi_put_funsel(wr, NOTICE)) || DBG(cmt_abi_put_bytes_s(wr, of)) ||
-        DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base))) {
+    // clang-format off
+    if (DBG(cmt_abi_put_funsel(wr, NOTICE))
+    ||  DBG(cmt_abi_put_bytes_s(wr, of))
+    ||  DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base))) {
         return -ENOBUFS;
     }
+    // clang-format on
 
-    size_t m = wr->begin - tx->begin;
+    size_t m = cmt_buf_length(wr);
     struct cmt_io_yield req[1] = {{
         .dev = HTIF_DEVICE_YIELD,
         .cmd = HTIF_YIELD_CMD_AUTOMATIC,
@@ -180,7 +180,9 @@ int cmt_rollup_emit_report(cmt_rollup_t *me, uint32_t length, const void *data) 
         return -ENOBUFS;
     }
 
-    memcpy(wr->begin, data, length);
+    if (data) {
+        memcpy(wr->begin, data, length);
+    }
     struct cmt_io_yield req[1] = {{
         .dev = HTIF_DEVICE_YIELD,
         .cmd = HTIF_YIELD_CMD_AUTOMATIC,
@@ -204,7 +206,9 @@ int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t length, const void *dat
         return -ENOBUFS;
     }
 
-    memcpy(tx->begin, data, length);
+    if (data) {
+        memcpy(tx->begin, data, length);
+    }
     struct cmt_io_yield req[1] = {{
         .dev = HTIF_DEVICE_YIELD,
         .cmd = HTIF_YIELD_CMD_MANUAL,
@@ -212,6 +216,12 @@ int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t length, const void *dat
         .data = length,
     }};
     return DBG(cmt_io_yield(me->io, req));
+}
+
+static int cmt_rollup_get_rx(cmt_rollup_t *me, cmt_buf_t *lhs) {
+    cmt_buf_t rx[1] = {cmt_io_get_rx(me->io)};
+    cmt_buf_t _[1];
+    return cmt_buf_split(rx, me->fromhost_data, lhs, _);
 }
 
 int cmt_rollup_read_advance_state(cmt_rollup_t *me, cmt_rollup_advance_t *advance) {
@@ -222,20 +232,29 @@ int cmt_rollup_read_advance_state(cmt_rollup_t *me, cmt_rollup_advance_t *advanc
         return -EINVAL;
     }
 
-    cmt_buf_t rd[1] = {cmt_io_get_rx(me->io)};
-    cmt_buf_t st[1] = {{rd->begin + 4, rd->end}}; // EVM offsets are from after funsel
+    cmt_buf_t rd[1];
     cmt_buf_t of[1];
 
-    size_t payload_length = 0;
-    if (DBG(cmt_abi_check_funsel(rd, EVM_ADVANCE)) ||
-        DBG(cmt_abi_get_uint(rd, sizeof(advance->chain_id), &advance->chain_id)) ||
-        DBG(cmt_abi_get_address(rd, advance->app_contract)) || DBG(cmt_abi_get_address(rd, advance->msg_sender)) ||
-        DBG(cmt_abi_get_uint(rd, sizeof(advance->block_number), &advance->block_number)) ||
-        DBG(cmt_abi_get_uint(rd, sizeof(advance->block_timestamp), &advance->block_timestamp)) ||
-        DBG(cmt_abi_get_uint(rd, sizeof(advance->index), &advance->index)) || DBG(cmt_abi_get_bytes_s(rd, of)) ||
-        DBG(cmt_abi_get_bytes_d(st, of, &payload_length, &advance->payload))) {
+    if (cmt_rollup_get_rx(me, rd)) {
         return -ENOBUFS;
     }
+
+    size_t payload_length = 0;
+
+    // clang-format off
+    if (DBG(cmt_abi_check_funsel(rd, EVM_ADVANCE))
+    ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->chain_id), &advance->chain_id))
+    ||  DBG(cmt_abi_get_address(rd, advance->app_contract))
+    ||  DBG(cmt_abi_get_address(rd, advance->msg_sender))
+    ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->block_number), &advance->block_number))
+    ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->block_timestamp), &advance->block_timestamp))
+    ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->index), &advance->index))
+    ||  DBG(cmt_abi_get_bytes_s(rd, of))
+    ||  DBG(cmt_abi_get_bytes_d(rd, of, &payload_length, &advance->payload))) {
+        return -ENOBUFS;
+    }
+    // clang-format on
+
     advance->payload_length = payload_length;
     return 0;
 }
@@ -247,9 +266,14 @@ int cmt_rollup_read_inspect_state(cmt_rollup_t *me, cmt_rollup_inspect_t *inspec
     if (!inspect) {
         return -EINVAL;
     }
-    cmt_buf_t rx[1] = {cmt_io_get_rx(me->io)};
-    inspect->payload_length = cmt_buf_length(rx);
-    inspect->payload = rx->begin;
+
+    cmt_buf_t rd[1];
+    if (DBG(cmt_rollup_get_rx(me, rd))) {
+        return -ENOBUFS;
+    }
+
+    inspect->payload_length = cmt_buf_length(rd);
+    inspect->payload = rd->begin;
     return 0;
 }
 
@@ -310,40 +334,46 @@ int cmt_gio_request(cmt_rollup_t *me, cmt_gio_t *req) {
         return -EINVAL;
     }
 
-    cmt_buf_t tx[1] = {cmt_io_get_tx(me->io)};
-    size_t tx_length = tx->end - tx->begin;
-    if (req->id_length > tx_length || req->id_length > UINT32_MAX) {
+    /* Accept empty id */
+    if (!req->id && req->id_length) {
+        return -EINVAL;
+    }
+
+    cmt_buf_t wr[1] = {cmt_io_get_tx(me->io)};
+    cmt_buf_t _[1];
+    if (cmt_buf_split(wr, req->id_length, wr, _)) {
         return -ENOBUFS;
     }
-
-    if (req->id_length > 0) {
-        if (!req->id) {
-            return -EINVAL;
-        }
-        memcpy(tx->begin, req->id, req->id_length);
+    if (req->id) {
+        memcpy(wr->begin, req->id,
+            req->id_length); // NOLINT(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
     }
 
-    struct cmt_io_yield y[1] = {{
+    struct cmt_io_yield rr[1] = {{
         .dev = HTIF_DEVICE_YIELD,
         .cmd = HTIF_YIELD_CMD_MANUAL,
         .reason = req->domain,
         .data = req->id_length,
     }};
 
-    int rc = DBG(cmt_io_yield(me->io, y));
+    int rc = DBG(cmt_io_yield(me->io, rr));
     if (rc != 0) {
         return rc;
     }
 
-    cmt_buf_t rx[1] = {cmt_io_get_rx(me->io)};
-    size_t rx_length = rx->end - rx->begin;
-    if (rx_length != y->data) {
+    cmt_buf_t rd[1];
+    if (cmt_rollup_get_rx(me, rd)) {
+        return -ENOBUFS;
+    }
+
+    size_t rd_length = cmt_buf_length(rd);
+    if (rd_length != rr->data) {
         return -EINVAL;
     }
 
-    req->response_data = rx->begin;
-    req->response_code = y->reason;
-    req->response_data_length = y->data;
+    req->response_data = rd->begin;
+    req->response_code = rr->reason;
+    req->response_data_length = rr->data;
     return 0;
 }
 

@@ -5,6 +5,7 @@ Checks: >-
   -bugprone-easily-swappable-parameters,
   cert*,
   clang-analyzer*,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
   cppcoreguidelines*,
   -cppcoreguidelines-avoid-magic-numbers,
   -cppcoreguidelines-non-private-member-variables-in-classes,

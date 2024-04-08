@@ -55,6 +55,7 @@ libcmt_SRC := \
 	src/keccak.c \
 	src/merkle.c \
 	src/rollup.c \
+	src/util.c \
 	src/io.c
 
 libcmt_OBJDIR    := build/lib
@@ -90,6 +91,7 @@ mock_SRC := \
 	src/keccak.c \
 	src/merkle.c \
 	src/rollup.c \
+	src/util.c \
 	src/io-mock.c
 
 mock_OBJDIR := build/mock

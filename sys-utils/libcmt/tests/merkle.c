@@ -132,7 +132,9 @@ void test_cmt_merkle_save_load(void) {
     cmt_merkle_init(&merkle1);
     uint8_t data[CMT_KECCAK_LENGTH] = {0};
     for (int i = 0; i < 5; ++i) {
-        memset(data, i, CMT_KECCAK_LENGTH); // Fill data with i
+        // Fill data with i
+        memset(data, i,
+            CMT_KECCAK_LENGTH); // NOLINT(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
         assert(cmt_merkle_push_back_data(&merkle1, CMT_KECCAK_LENGTH, data) == 0);
     }
 

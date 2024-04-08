@@ -19,6 +19,7 @@
 #include <iterator>
 #include <sstream>
 #include <string>
+#include <errno.h>
 
 #include <fcntl.h>
 #include <stdbool.h>
@@ -278,11 +279,14 @@ static int throw_exception(void) try {
 }
 
 // Read advance state data from driver, write to output
-static void write_advance_state(rollup &r, cmt_rollup_finish_t *f) {
+static int write_advance_state(rollup &r, const cmt_rollup_finish_t *f) {
     (void) f;
     cmt_rollup_advance_t advance;
-    if (cmt_rollup_read_advance_state(r, &advance))
-        return;
+    int rc = cmt_rollup_read_advance_state(r, &advance);
+
+    if (rc != 0) {
+        return 1;
+    }
 
     nlohmann::json j = {{"request_type", "advance_state"},
         {"data",
@@ -296,14 +300,18 @@ static void write_advance_state(rollup &r, cmt_rollup_finish_t *f) {
                 {"index", advance.index},
             }}};
     std::cout << j.dump(2) << '\n';
+    return 0;
 }
 
 // Read inspect state data from driver, write to output
-static void write_inspect_state(rollup &r, cmt_rollup_finish_t *f) {
+static int write_inspect_state(rollup &r, const cmt_rollup_finish_t *f) {
     (void) f;
     cmt_rollup_inspect_t inspect;
-    if (cmt_rollup_read_inspect_state(r, &inspect))
-        return;
+    int rc = cmt_rollup_read_inspect_state(r, &inspect);
+
+    if (rc != 0) {
+        return 1;
+    }
 
     nlohmann::json j = {{"request_type", "inspect_state"},
         {"data",
@@ -311,6 +319,7 @@ static void write_inspect_state(rollup &r, cmt_rollup_finish_t *f) {
                 {"payload", hex(reinterpret_cast<const uint8_t *>(inspect.payload), inspect.payload_length)},
             }}};
     std::cout << j.dump(2) << '\n';
+    return 0;
 }
 
 // Finish current request and get next
@@ -322,9 +331,9 @@ static int finish_request_and_get_next(bool accept) try {
         return 1;
     if (f.next_request_type == HTIF_YIELD_REASON_ADVANCE) {
         cmt_rollup_reset_merkle(r);
-        write_advance_state(r, &f);
+        return write_advance_state(r, &f);
     } else if (f.next_request_type == HTIF_YIELD_REASON_INSPECT) {
-        write_inspect_state(r, &f);
+        return write_inspect_state(r, &f);
     }
     return 0;
 } catch (std::exception &x) {

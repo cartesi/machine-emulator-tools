@@ -90,8 +90,6 @@ enum {
 typedef struct {
     cmt_buf_t tx[1];
     cmt_buf_t rx[1];
-    uint32_t rx_max_length;
-    uint32_t rx_fromhost_length;
     int fd;
 } cmt_io_driver_ioctl_t;
 
@@ -127,9 +125,12 @@ typedef struct cmt_io_yield {
 /** Open the io device and initialize the driver. Release its resources with @ref cmt_io_fini.
  *
  * @param [in] me A uninitialized @ref cmt_io_driver state
- * @returns
- * - 0 on success
- * - negative errno code on error */
+ *
+ * @return
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
 int cmt_io_init(cmt_io_driver_t *me);
 
 /** Release the driver resources and close the io device.
@@ -142,7 +143,7 @@ void cmt_io_fini(cmt_io_driver_t *me);
  *
  * @param [in] me A successfully initialized state by @ref cmt_io_init
  * @return
- * - writable memory region (check @ref cmt_buf_t)
+ * - writable memory region as defined in the setup structure (check @ref cmt_buf_t)
  * @note memory is valid until @ref cmt_io_fini is called. */
 cmt_buf_t cmt_io_get_tx(cmt_io_driver_t *me);
 
@@ -150,7 +151,7 @@ cmt_buf_t cmt_io_get_tx(cmt_io_driver_t *me);
  *
  * @param [in] me A successfully initialized state by @ref cmt_io_init
  * @return
- * - readable memory region (check @ref cmt_buf_t)
+ * - readable memory region as defined in the setup structure (check @ref cmt_buf_t)
  * @note memory is valid until @ref cmt_io_fini is called. */
 cmt_buf_t cmt_io_get_rx(cmt_io_driver_t *me);
 

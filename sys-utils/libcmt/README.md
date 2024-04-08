@@ -78,18 +78,19 @@ simple way to generate testing data is to use the @p cast tool from
 
 Encoding an @p EvmAdvance:
 ```
-cast calldata "EvmAdvance(address,uint256,uint256,uint256,bytes)" \
-	0x0000000000000000000000000000000000000000 \
-	0x0000000000000000000000000000000000000000 \
-	0x0000000000000000000000000000000000000000 \
-	0x0000000000000000000000000000000000000000 \
+cast calldata "EvmAdvance(uint256,address,address,uint256,uint256,uint256,bytes)" \
+	0x0000000000000000000000000000000000000001 \
+	0x0000000000000000000000000000000000000002 \
+	0x0000000000000000000000000000000000000003 \
+	0x0000000000000000000000000000000000000004 \
+	0x0000000000000000000000000000000000000005 \
+	0x0000000000000000000000000000000000000006 \
 	0x`echo "advance-0" | xxd -p -c0` | xxd -r -p > 0.bin
 ```
 
-Encoding an @p EvmInspect:
+Inspect states require no encoding.
 ```
-cast calldata "EvmInspect(bytes)" \
-	0x`echo "inspect-0" | xxd -p -c0` | xxd -r -p > 1.bin
+echo -en "inspect-0" > 1.bin
 ```
 
 ## parsing outputs
