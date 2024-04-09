@@ -290,6 +290,22 @@ static void get_uint(void) {
     assert(x == ex);
 }
 
+static void get_bool(void) {
+    bool x = 0;
+    bool ex = 1;
+    uint8_t be[CMT_WORD_LENGTH] = {
+        // clang-format off
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        // clang-format on
+    };
+    CMT_BUF_DECL3(b, sizeof(be), be);
+    cmt_buf_t rd[1] = {*b};
+
+    assert(cmt_abi_get_uint(rd, sizeof(x), &x) == 0);
+    assert(x == ex);
+}
+
 static void get_address(void) {
     uint8_t x[CMT_ADDRESS_LENGTH];
     uint8_t ex[CMT_ADDRESS_LENGTH] = {
@@ -354,6 +370,7 @@ int main(void) {
 
     get_funsel();
     get_uint();
+    get_bool();
     get_address();
     get_bytes();
 
