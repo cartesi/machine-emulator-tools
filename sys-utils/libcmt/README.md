@@ -1,4 +1,6 @@
-This is a C library to facilitate the development of applications running on the cartesi-machine.
+# Cartesi Machine Tools
+
+Is a C library to facilitate the development of applications running on the cartesi-machine.
 It handles the IO and communication protocol with the machine-emulator.
 
 The high level @ref libcmt\_rollup API provides functions for common operations, such as generating vouchers, notices, retrieving the next input, etc.
@@ -18,18 +20,18 @@ We also provide `.pc` (pkg-config) files to facilitate linking.
 # mock and testing
 
 This library provides a mock implementation of @ref libcmt\_io\_driver that is
-able to simulate requests and replies on the host machine.
+able to simulate requests and replies via files on the host machine.
 
-- Build it with: `make mock.build`.
-- Install it with: `make mock.install`, use `PREFIX` to specify the installation path:
+- Build it with: `make mock`.
+- Install it with: `make install-mock`, use `PREFIX` to specify the installation path:
     (The command below will install the library and headers on `$PWD/_install` directory)
 ```
-make mock.install PREFIX=_install
+make install-mock PREFIX=$PWD/_install
 ```
 
 ## testing
 
-Use the environment variable @p CMT\_INPUTS to inject inputs into the application compiled with the mock.
+Use the environment variable @p CMT\_INPUTS to inject inputs into applications compiled with the mock.
 Outputs will be written to files with names derived from the input name.
 
 example:
@@ -62,8 +64,10 @@ inputs must follow this syntax, a comma separated list of reason number followed
 CMT_INPUTS="<reason-number> ':' <filepath> ( ',' <reason-number> ':' <filepath> ) *"
 ```
 
-In addition to @p CMT\_INPUTS, there is also the @p CMT\_DEBUG variable. Enable it
-for a verbose version of the low level calls.
+For rollup, available reasons are: `0` is advance and `1` is inspect.
+
+In addition to @p CMT\_INPUTS, there is also the @p CMT\_DEBUG variable.
+Enabling it will cause additional debug messages to be displayed.
 
 ```
 CMT_DEBUG=yes ./application
@@ -132,10 +136,20 @@ They acheive this by different means.
 
 ## Go
 
-Go is able to include C headers directly.
+Go is able to include C headers directly with cgo.
 
-The application can be compiled with: `go build main.go`. Assuming that the
-mock was installed at `./libcmt-0.1.0`.
+The application can be compiled with: `go build main.go`.
+Assuming that the mock was installed at `./libcmt-0.1.0`.
+For the actual risc-v binaries, use:
+```
+CC=riscv64-linux-gnu-gcc-12 CGO_ENABLED=1 GOOS=linux GOARCH=riscv64 go build
+```
+
+In Debian, the cross compiler can be obtained with: 
+```
+apt-get install crossbuild-essential-riscv64 gcc-12-riscv64-linux-gnu g++-12-riscv64-linux-gnu
+```
+
 (Code below is for demonstration purposes and not intended for production)
 
 ```

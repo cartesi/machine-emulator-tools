@@ -55,16 +55,24 @@ void cmt_merkle_fini(cmt_merkle_t *me);
  *
  * @param [in] me       either a initialized or uninitialized state
  * @param [in] filepath which file to save the merkle state
+ *
  * @return
- * - 0 on success */
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
 int cmt_merkle_load(cmt_merkle_t *me, const char *filepath);
 
 /** Save the a @ref cmt_merkle_t tree to a @p file handle.
  *
  * @param [in] me       either a initialized or uninitialized state
  * @param [in] filepath which file to save the merkle state
+ *
  * @return
- * - 0 on success */
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
 int cmt_merkle_save(cmt_merkle_t *me, const char *filepath);
 
 /** Return number of leaves already in tree
@@ -78,9 +86,13 @@ uint64_t cmt_merkle_get_leaf_count(cmt_merkle_t *me);
  *
  * @param [in,out] me initialized state
  * @param [in] hash   value of the new leaf
+ *
  * @return
- * - 0        success
- * - -ENOBUFS indicates the tree is full */
+ * |          |                                 |
+ * |---------:|---------------------------------|
+ * |         0| success                         |
+ * | -ENOBUFS | indicates that the tree is full |
+ * |       < 0| failure with a -errno value     | */
 int cmt_merkle_push_back(cmt_merkle_t *me, const uint8_t hash[CMT_KECCAK_LENGTH]);
 
 /** Compute the keccak-256 hash of @p data and append it as a leaf node
@@ -88,9 +100,13 @@ int cmt_merkle_push_back(cmt_merkle_t *me, const uint8_t hash[CMT_KECCAK_LENGTH]
  * @param [in,out] me     initialized state
  * @param [in]     length size of @p data in bytes
  * @param [in]     data   array of bytes
+ *
  * @return
- * - 0        success
- * - -ENOBUFS indicates that the tree is full */
+ * |          |                                 |
+ * |---------:|---------------------------------|
+ * |         0| success                         |
+ * | -ENOBUFS | indicates that the tree is full |
+ * |       < 0| failure with a -errno value     | */
 int cmt_merkle_push_back_data(cmt_merkle_t *me, size_t length, const void *data);
 
 /** Compute the root hash of the merkle tree

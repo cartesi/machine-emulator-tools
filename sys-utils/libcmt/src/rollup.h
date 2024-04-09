@@ -157,7 +157,7 @@ int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t data_length, const void
 /** Read advance state
  *
  * @param [in,out] me      initialized cmt_rollup_t instance
- * @param [in,out] advance cmt_rollup_advance_t instance (maybe uninitialized)
+ * @param [out]    advance cmt_rollup_advance_t instance (may be uninitialized)
  *
  * @return
  * |   |                             |
@@ -169,7 +169,7 @@ int cmt_rollup_read_advance_state(cmt_rollup_t *me, cmt_rollup_advance_t *advanc
 /** Read inspect state
  *
  * @param [in,out] me      initialized cmt_rollup_t instance
- * @param [in,out] inspect cmt_rollup_inspect_t instance (maybe uninitialized)
+ * @param [out]    inspect cmt_rollup_inspect_t instance (may be uninitialized)
  *
  * @return
  * |   |                             |
@@ -229,6 +229,6 @@ int cmt_rollup_save_merkle(cmt_rollup_t *me, const char *path);
 /** Resets the merkle tree to pristine conditions
  *
  * @param [in,out] me      initialized cmt_rollup_t instance */
-int cmt_rollup_reset_merkle(cmt_rollup_t *me);
+void cmt_rollup_reset_merkle(cmt_rollup_t *me);
 
 #endif /* CMT_ROLLUP_H */
