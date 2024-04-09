@@ -69,13 +69,7 @@ $(libcmt_OBJ): $(libcmt_OBJDIR)/%.o: %.c
 $(libcmt_LIB): $(libcmt_OBJ)
 	$(TARGET_AR) rcs $@ $^
 
-$(libcmt_OBJDIR)/io_echo: tests/io_echo.c $(libcmt_LIB)
-	$(TARGET_CC) $(TARGET_CFLAGS) -o $@ $^
-
-$(libcmt_OBJDIR)/rollup_echo: tests/rollup_echo.c $(libcmt_LIB)
-	$(TARGET_CC) $(TARGET_CFLAGS) -o $@ $^
-
-libcmt: $(libcmt_LIB) $(libcmt_OBJDIR)/io_echo $(libcmt_OBJDIR)/rollup_echo
+libcmt: $(libcmt_LIB)
 install: $(libcmt_LIB)
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
 	cp -f $< $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
@@ -105,7 +99,7 @@ $(mock_OBJ): $(mock_OBJDIR)/%.o: %.c
 $(mock_LIB): $(mock_OBJ)
 	$(AR) rcs $@ $^
 
-mock: $(mock_LIB) $(mock_OBJDIR)/io_echo $(mock_OBJDIR)/rollup_echo
+mock: $(mock_LIB)
 
 install-mock: $(mock_LIB)
 	mkdir -p $(DESTDIR)$(PREFIX)/lib
@@ -116,30 +110,11 @@ install-mock: $(mock_LIB)
 	sed -e 's|@ARG_PREFIX@|$(PREFIX)|g' src/libcmt_mock.pc > $(DESTDIR)$(PREFIX)/lib/pkgconfig/libcmt.pc
 
 #-------------------------------------------------------------------------------
-testdata:
-	cast calldata "EvmAdvance(address,uint256,uint256,uint256,bytes)" \
-		`cast address-zero` 1 2 3 0xdeadbeef | xxd -r -p > dat/C.bin
-	cast calldata "Voucher(address,bytes)" \
-		`cast address-zero` 0xdeadbeef | xxd -r -p > dat/C.v0.bin
-	cast calldata "Notice(bytes)" \
-		0xdeadbeef | xxd -r -p > dat/C.n0.bin
-	xxd -n advance -i dat/C.bin    > dat/C.h
-	xxd -n voucher -i dat/C.v0.bin > dat/C.v0.h
-	xxd -n notice  -i dat/C.n0.bin > dat/C.n0.h
-
 unittests_BINS := \
 	$(mock_OBJDIR)/abi-multi \
 	$(mock_OBJDIR)/abi-single \
 	$(mock_OBJDIR)/keccak \
-	$(mock_OBJDIR)/merkle \
-	$(mock_OBJDIR)/io_echo \
-	$(mock_OBJDIR)/rollup_echo
-
-$(mock_OBJDIR)/io_echo: tests/io_echo.c $(mock_LIB)
-	$(CC) $(CFLAGS) -o $@ $^
-
-$(mock_OBJDIR)/rollup_echo: tests/rollup_echo.c $(mock_LIB)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(mock_OBJDIR)/merkle
 
 $(mock_OBJDIR)/abi-multi: tests/abi-multi.c $(mock_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
@@ -153,7 +128,7 @@ $(mock_OBJDIR)/keccak: tests/keccak.c $(mock_LIB)
 $(mock_OBJDIR)/merkle: tests/merkle.c $(mock_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
 
-test: $(unittests_BINS) $(mock_OBJDIR)/io_echo
+test: $(unittests_BINS)
 	$(foreach test,$(unittests_BINS),$(test) &&) true
 
 #-------------------------------------------------------------------------------
