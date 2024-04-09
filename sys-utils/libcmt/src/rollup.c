@@ -202,12 +202,13 @@ int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t length, const void *dat
 
     cmt_buf_t tx[1] = {cmt_io_get_tx(me->io)};
     cmt_buf_t wr[1] = {*tx};
-    if (cmt_buf_split(tx, length, wr, tx)) {
+    cmt_buf_t _[1];
+    if (cmt_buf_split(tx, length, wr, _)) {
         return -ENOBUFS;
     }
 
     if (data) {
-        memcpy(tx->begin, data, length);
+        memcpy(wr->begin, data, length);
     }
     struct cmt_io_yield req[1] = {{
         .dev = HTIF_DEVICE_YIELD,
@@ -233,11 +234,11 @@ int cmt_rollup_read_advance_state(cmt_rollup_t *me, cmt_rollup_advance_t *advanc
     }
 
     cmt_buf_t rd[1];
-    cmt_buf_t of[1];
-
     if (cmt_rollup_get_rx(me, rd)) {
         return -ENOBUFS;
     }
+    cmt_buf_t anchor[1] = {{rd->begin + 4, rd->end}};
+    cmt_buf_t of[1];
 
     size_t payload_length = 0;
 
@@ -250,7 +251,7 @@ int cmt_rollup_read_advance_state(cmt_rollup_t *me, cmt_rollup_advance_t *advanc
     ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->block_timestamp), &advance->block_timestamp))
     ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->index), &advance->index))
     ||  DBG(cmt_abi_get_bytes_s(rd, of))
-    ||  DBG(cmt_abi_get_bytes_d(rd, of, &payload_length, &advance->payload))) {
+    ||  DBG(cmt_abi_get_bytes_d(anchor, of, &payload_length, &advance->payload))) {
         return -ENOBUFS;
     }
     // clang-format on
@@ -317,11 +318,12 @@ int cmt_rollup_finish(cmt_rollup_t *me, cmt_rollup_finish_t *finish) {
 
     cmt_merkle_get_root_hash(me->merkle, cmt_io_get_tx(me->io).begin);
     finish->next_request_payload_length = CMT_WORD_LENGTH;
-    int reason = accepted(me->io, &finish->next_request_payload_length);
+    int reason = accepted(me->io, &me->fromhost_data);
     if (reason < 0) {
         return reason;
     }
     finish->next_request_type = reason;
+    finish->next_request_payload_length = me->fromhost_data;
     cmt_merkle_init(me->merkle);
     return 0;
 }

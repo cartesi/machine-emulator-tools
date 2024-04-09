@@ -120,30 +120,38 @@ async fn test_finish_request(
     context_future: impl Future<Output = Context>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     /*
-     * cast calldata 'EvmAdvance(uint256,address,address,uint256,uint256,uint256,bytes)' \
-     *      0 $(cast address-zero) $(printf 0x%040x 1) 0 0 0 0xdeadbeef | xxd -r -p
+     * cast calldata "EvmAdvance(uint256,address,address,uint256,uint256,uint256,bytes)" \
+     *     0x0000000000000000000000000000000000000001 \
+     *     0x0000000000000000000000000000000000000002 \
+     *     0x0000000000000000000000000000000000000003 \
+     *     0x0000000000000000000000000000000000000004 \
+     *     0x0000000000000000000000000000000000000005 \
+     *     0x0000000000000000000000000000000000000006 \
+     *     0x`echo "advance-0" | xxd -p -c0`
      */
-    let advance_payload_data = "cc7dee1f00000000000000000000000000000000000000000000000000000000000\
-                                0000000000000000000000000000000000000000000000000000000000000000000\
-                                0000000000000000000000000000000000000000000000000000000000000000010\
-                                0000000000000000000000000000000000000000000000000000000000000000000\
-                                0000000000000000000000000000000000000000000000000000000000000000000\
-                                0000000000000000000000000000000000000000000000000000000000000000000\
-                                0000000000000000000000000000000000000000000000000000e00000000000000\
-                                000000000000000000000000000000000000000000000000004deadbeef00000000\
-                                000000000000000000000000000000000000000000000000";
+    let advance_payload_field = "advance-0\n"; // must match `cast` invocation!
+    let advance_payload_data = "cc7dee1f\
+                                0000000000000000000000000000000000000000000000000000000000000001\
+                                0000000000000000000000000000000000000000000000000000000000000002\
+                                0000000000000000000000000000000000000000000000000000000000000003\
+                                0000000000000000000000000000000000000000000000000000000000000004\
+                                0000000000000000000000000000000000000000000000000000000000000005\
+                                0000000000000000000000000000000000000000000000000000000000000006\
+                                00000000000000000000000000000000000000000000000000000000000000e0\
+                                000000000000000000000000000000000000000000000000000000000000000a\
+                                616476616e63652d300a00000000000000000000000000000000000000000000";
 
     /*
      * inspect requests are not evm encoded
      */
-    let inspect_payload_data = "deadbeef";
+    let inspect_payload_data = "inspect-0";
 
     let advance_binary_data = hex::decode(advance_payload_data).unwrap();
     let advance_path = "advance_payload.bin";
     let mut advance_file = File::create(advance_path)?;
     advance_file.write_all(&advance_binary_data)?;
 
-    let inspect_binary_data = hex::decode(inspect_payload_data).unwrap();
+    let inspect_binary_data = inspect_payload_data.as_bytes();
     let inspect_path = "inspect_payload.bin";
     let mut inspect_file = File::create(inspect_path)?;
     inspect_file.write_all(&inspect_binary_data)?;
@@ -164,15 +172,14 @@ async fn test_finish_request(
             }
             RollupRequest::Advance(advance_request) => {
                 println!("Got new advance request: {:?}", advance_request);
-                assert_eq!(advance_request.payload.len(), 10);
                 assert_eq!(
                     advance_request.metadata.msg_sender,
-                    "0x0000000000000000000000000000000000000001"
+                    "0x0000000000000000000000000000000000000003"
                 );
-                assert_eq!(
-                    &advance_request.payload[2..],
-                    "deadbeef"
-                );
+
+                let payload_bytes = hex::decode(&advance_request.payload[2..]).unwrap();
+                let payload_string = String::from_utf8(payload_bytes).unwrap();
+                assert_eq!(payload_string, advance_payload_field);
             }
         },
         Err(err) => {
@@ -186,11 +193,10 @@ async fn test_finish_request(
             RollupRequest::Inspect(inspect_request) => {
                 println!("Got new inspect request: {:?}", inspect_request);
                 context.server_handle.stop(true).await;
-                assert_eq!(inspect_request.payload.len(), 10);
-                assert_eq!(
-                    &inspect_request.payload[2..],
-                    "deadbeef"
-                );
+
+                let payload_bytes = hex::decode(&inspect_request.payload[2..]).unwrap();
+                let payload_string = String::from_utf8(payload_bytes).unwrap();
+                assert_eq!(payload_string, inspect_payload_data);
             }
             RollupRequest::Advance(_advance_request) => {
                 context.server_handle.stop(true).await;
@@ -335,8 +341,9 @@ async fn test_exception_throw(
     let context = context_future.await;
     // Set the global log level
     println!("Throwing exception");
+    let contents = "exception test payload 01";
     let test_exception = Exception {
-        payload: "0x".to_string() + &hex::encode("exception test payload 01"),
+        payload: "0x".to_string() + &hex::encode(contents),
     };
     rollup_http_client::client::throw_exception(&context.address, test_exception).await;
     println!("Closing server after throw exception");
@@ -346,8 +353,8 @@ async fn test_exception_throw(
     let exception =
         std::fs::read("none.exception-0.bin").expect("error reading test exception file");
     assert_eq!(
-        exception,
-        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        String::from_utf8(exception).unwrap(),
+        contents,
     );
     println!("Removing exception text file");
     std::fs::remove_file("none.exception-0.bin")?;
