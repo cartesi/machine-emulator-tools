@@ -78,6 +78,17 @@ RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt/ -j$(nproc) install TARGET_PREF
 USER developer
 RUN make -C ${BUILD_BASE}/tools/sys-utils/ -j$(nproc) all
 
+# build libcmt debian package
+# ------------------------------------------------------------------------------
+FROM c-builder as libcmt-debian-packager
+ARG CMT_BASE=${BUILD_BASE}/tools/sys-utils/libcmt
+ARG TOOLS_LIBCMT=libcmt.deb
+USER root
+RUN make -C ${CMT_BASE} debian-package \
+    TARGET_DESTDIR=${BUILD_BASE}/_install \
+    TARGET_PREFIX=/usr/riscv64-linux-gnu \
+    LIBCMT_DEB_FILENAME=${BUILD_BASE}/${TOOLS_LIBCMT}
+
 # build rust tools
 # ------------------------------------------------------------------------------
 FROM c-builder as rust-env

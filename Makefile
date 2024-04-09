@@ -23,6 +23,7 @@ VERSION := $(MAJOR).$(MINOR).$(PATCH)$(LABEL)
 TOOLS_DEB    := machine-emulator-tools-v$(VERSION).deb
 TOOLS_IMAGE  := cartesi/machine-emulator-tools:$(VERSION)
 TOOLS_ROOTFS := rootfs-tools-v$(VERSION).ext2
+TOOLS_LIBCMT := libcmt-v$(VERSION).deb
 
 IMAGE_KERNEL_VERSION ?= v0.20.0
 LINUX_VERSION ?= 6.5.13-ctsi-1
@@ -51,7 +52,6 @@ $(TOOLS_DEB) deb: build
 control: Makefile control.template
 	@sed 's|ARG_VERSION|$(VERSION)|g' control.template > control
 
-
 $(TOOLS_ROOTFS) fs: $(TOOLS_DEB)
 	@docker buildx build --platform=linux/riscv64 \
 	  --build-arg TOOLS_DEB=$(TOOLS_DEB) \
@@ -62,10 +62,25 @@ $(TOOLS_ROOTFS) fs: $(TOOLS_DEB)
 	xgenext2fs -fzB 4096 -b 25600 -i 4096 -a rootfs.gnutar -L rootfs $(TOOLS_ROOTFS) && \
 	rm -f rootfs.gnutar rootfs.tar
 
+$(TOOLS_LIBCMT) libcmt:
+	@docker buildx build --load \
+		--target libcmt-debian-packager \
+		--build-arg TOOLS_LIBCMT=$(TOOLS_LIBCMT) \
+		-t $(TOOLS_IMAGE)-libcmt \
+		-f Dockerfile \
+		.
+	$(MAKE) copy-libcmt
+
+copy-libcmt:
+	@ID=`docker create $(TOOLS_IMAGE)-libcmt` && \
+	   docker cp $$ID:/opt/cartesi/$(TOOLS_LIBCMT) . && \
+	   docker rm $$ID
+
 env:
 	@echo TOOLS_DEB=$(TOOLS_DEB)
 	@echo TOOLS_ROOTFS=$(TOOLS_ROOTFS)
 	@echo TOOLS_IMAGE=$(TOOLS_IMAGE)
+	@echo TOOLS_LIBCMT=$(TOOLS_LIBCMT)
 	@echo IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION)
 	@echo LINUX_VERSION=$(LINUX_VERSION)
 	@echo LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH)

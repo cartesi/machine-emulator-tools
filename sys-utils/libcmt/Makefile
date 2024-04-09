@@ -14,6 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+LIBCMT_VERSION ?=0.0.0
+
+INSTALL_FILE= install -m0644
+INSTALL_EXEC= install -m0755
+
 # paths
 PREFIX = /usr
 TARGET_PREFIX ?= $(PREFIX)
@@ -78,6 +83,11 @@ install: $(libcmt_LIB)
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig
 	sed -e 's|@ARG_PREFIX@|$(TARGET_PREFIX)|g' src/libcmt.pc > $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig/libcmt.pc
 
+debian-package: install
+	mkdir -p $(TARGET_DESTDIR)/DEBIAN
+	sed 's|ARG_VERSION|$(LIBCMT_VERSION)|g;' tools/template/cross-control.template > $(TARGET_DESTDIR)/DEBIAN/control
+	dpkg-deb -Zxz --root-owner-group --build $(TARGET_DESTDIR) $(LIBCMT_DEB_FILENAME)
+
 #-------------------------------------------------------------------------------
 mock_SRC := \
 	src/abi.c \
@@ -104,7 +114,6 @@ mock: $(mock_LIB)
 install-mock: $(mock_LIB)
 	mkdir -p $(DESTDIR)$(PREFIX)/lib
 	cp -f $< $(DESTDIR)$(PREFIX)/lib
-	mkdir -p $(DESTDIR)$(PREFIX)/include/libcmt/mock
 	cp -f src/*.h $(DESTDIR)$(PREFIX)/include/libcmt/
 	mkdir -p $(DESTDIR)$(PREFIX)/lib/pkgconfig
 	sed -e 's|@ARG_PREFIX@|$(PREFIX)|g' src/libcmt_mock.pc > $(DESTDIR)$(PREFIX)/lib/pkgconfig/libcmt.pc
