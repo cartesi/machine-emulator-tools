@@ -93,12 +93,12 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint32_t address_length, const voi
     }
     // clang-format on
 
-    size_t m = cmt_buf_length(wr);
+    size_t used_space = wr->begin - tx->begin;
     struct cmt_io_yield req[1] = {{
         .dev = HTIF_DEVICE_YIELD,
         .cmd = HTIF_YIELD_CMD_AUTOMATIC,
         .reason = HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT,
-        .data = m,
+        .data = used_space,
     }};
     int rc = DBG(cmt_io_yield(me->io, req));
     if (rc) {
@@ -107,7 +107,7 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint32_t address_length, const voi
 
     uint64_t count = cmt_merkle_get_leaf_count(me->merkle);
 
-    rc = cmt_merkle_push_back_data(me->merkle, m, tx->begin);
+    rc = cmt_merkle_push_back_data(me->merkle, used_space, tx->begin);
     if (rc) {
         return rc;
     }
@@ -140,12 +140,12 @@ int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data, 
     }
     // clang-format on
 
-    size_t m = cmt_buf_length(wr);
+    size_t used_space = wr->begin - tx->begin;
     struct cmt_io_yield req[1] = {{
         .dev = HTIF_DEVICE_YIELD,
         .cmd = HTIF_YIELD_CMD_AUTOMATIC,
         .reason = HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT,
-        .data = m,
+        .data = used_space,
     }};
     int rc = DBG(cmt_io_yield(me->io, req));
     if (rc) {
@@ -154,7 +154,7 @@ int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data, 
 
     uint64_t count = cmt_merkle_get_leaf_count(me->merkle);
 
-    rc = cmt_merkle_push_back_data(me->merkle, m, tx->begin);
+    rc = cmt_merkle_push_back_data(me->merkle, used_space, tx->begin);
     if (rc) {
         return rc;
     }
@@ -317,7 +317,7 @@ int cmt_rollup_finish(cmt_rollup_t *me, cmt_rollup_finish_t *finish) {
     }
 
     cmt_merkle_get_root_hash(me->merkle, cmt_io_get_tx(me->io).begin);
-    finish->next_request_payload_length = CMT_WORD_LENGTH;
+    me->fromhost_data = CMT_WORD_LENGTH;
     int reason = accepted(me->io, &me->fromhost_data);
     if (reason < 0) {
         return reason;
@@ -347,8 +347,7 @@ int cmt_gio_request(cmt_rollup_t *me, cmt_gio_t *req) {
         return -ENOBUFS;
     }
     if (req->id) {
-        memcpy(wr->begin, req->id,
-            req->id_length); // NOLINT(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
+        memcpy(wr->begin, req->id, req->id_length);
     }
 
     struct cmt_io_yield rr[1] = {{
