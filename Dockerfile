@@ -25,6 +25,8 @@ ARG BUILD_BASE=/opt/cartesi
 ENV LINUX_HEADERS_FILEPATH=/tmp/linux-libc-dev-riscv64-cross-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
 
 RUN <<EOF
+set -e
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get upgrade -y
