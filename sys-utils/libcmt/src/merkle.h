@@ -24,7 +24,7 @@
 #include "keccak.h"
 
 enum {
-    CMT_MERKLE_TREE_HEIGHT = 64, /**< merkle tree height */
+    CMT_MERKLE_TREE_HEIGHT = 16, /**< merkle tree height */
 };
 
 /** Opaque Merkle tree state.
