@@ -65,15 +65,15 @@ ENV PATH="/home/developer/.cargo/bin:${PATH}"
 USER developer
 
 RUN cd  && \
-    wget https://github.com/rust-lang/rustup/archive/refs/tags/1.26.0.tar.gz && \
-    echo "6f20ff98f2f1dbde6886f8d133fe0d7aed24bc76c670ea1fca18eb33baadd808  1.26.0.tar.gz" | sha256sum --check && \
-    tar -xzf 1.26.0.tar.gz && \
-    bash rustup-1.26.0/rustup-init.sh \
+    wget https://github.com/rust-lang/rustup/archive/refs/tags/1.27.0.tar.gz && \
+    echo "3d331ab97d75b03a1cc2b36b2f26cd0a16d681b79677512603f2262991950ad1  1.27.0.tar.gz" | sha256sum --check && \
+    tar -xzf 1.27.0.tar.gz && \
+    bash rustup-1.27.0/rustup-init.sh \
         -y \
-        --default-toolchain 1.74.0 \
+        --default-toolchain 1.77.2 \
         --profile minimal \
         --target riscv64gc-unknown-linux-gnu && \
-    rm -rf rustup-1.26.0 1.26.0.tar.gz
+    rm -rf rustup-1.27.0 1.27.0.tar.gz
 
 FROM rust-env as rust-builder
 COPY --chown=developer:developer rollup-http/rollup-init ${BUILD_BASE}/tools/rollup-http/rollup-init
