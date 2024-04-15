@@ -40,10 +40,10 @@ int f(cmt_buf_t *wr, cmt_buf_t *rd)
 		return -ENOBUFS;
 	switch (cmt_abi_peek_funsel(rd)) {
 	case ECHO:
-		rc = decode_echo(rd, CALL, &length, &data);
+		rc = decode_echo(rd, ECHO, &length, &data);
 		if (rc) return rc;
 
-		rc = encode_echo(wr, CALL, length, data);
+		rc = encode_echo(wr, ECHO, length, data);
 		if (rc) return rc;
 
 		break;
