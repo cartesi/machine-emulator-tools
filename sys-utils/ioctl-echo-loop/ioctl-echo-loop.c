@@ -101,8 +101,9 @@ static int write_notices(cmt_rollup_t *me, unsigned count, uint32_t length, cons
 
 static int write_vouchers(cmt_rollup_t *me, unsigned count, uint8_t destination[CMT_ADDRESS_LENGTH], uint32_t length,
     const void *data) {
+    uint8_t value[] = {0xde, 0xad, 0xbe, 0xef};
     for (unsigned i = 0; i < count; i++) {
-        int rc = cmt_rollup_emit_voucher(me, CMT_ADDRESS_LENGTH, destination, 0, NULL, length, data, NULL);
+        int rc = cmt_rollup_emit_voucher(me, CMT_ADDRESS_LENGTH, destination, sizeof(value), value, length, data, NULL);
         if (rc)
             return rc;
     }
