@@ -507,9 +507,10 @@ pub fn rollup_throw_exception(
 
 pub async fn perform_rollup_finish_request(
     fd: &RollupFd,
+    accept: bool,
 ) -> std::io::Result<RollupFinish> {
     let mut finish_request = RollupFinish::default();
-    finish_request.accept_previous_request = true;
+    finish_request.accept_previous_request = accept;
 
     match rollup_finish_request(fd, &mut finish_request) {
         Ok(_) => {

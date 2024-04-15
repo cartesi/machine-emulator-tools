@@ -190,7 +190,7 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
     let context = data.lock().await;
     let rollup_fd = context.rollup_fd.lock().await;
     // Write finish request, read indicator for next request
-    let new_rollup_request = match rollup::perform_rollup_finish_request(&*rollup_fd).await {
+    let new_rollup_request = match rollup::perform_rollup_finish_request(&*rollup_fd, accept).await {
         Ok(finish_request) => {
             // Received new request, process it
             log::info!(
