@@ -22,7 +22,7 @@ busybox mount -o nosuid,nodev,mode=0755       -t tmpfs tmpfs /run
 
 # source environment
 [ -f /etc/environment ] && . /etc/environment
-export PATH="$PATH:/opt/cartesi/bin"
+export PATH
 
 # execute init from device tree when available
 [ -f /proc/device-tree/cartesi-machine/init ] && . /proc/device-tree/cartesi-machine/init
