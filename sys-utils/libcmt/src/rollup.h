@@ -87,7 +87,7 @@ typedef struct cmt_gio {
  * |< 0| failure with a -errno value | */
 int cmt_rollup_init(cmt_rollup_t *me);
 
-/** Finalize a @ref cmt_rollup_t statate previously initialized with @ref
+/** Finalize a @ref cmt_rollup_t state previously initialized with @ref
  * cmt_rollup_init
  *
  * @param [in] me    initialized state
@@ -153,6 +153,18 @@ int cmt_rollup_emit_report(cmt_rollup_t *me, uint32_t data_length, const void *d
  * |  0| success                     |
  * |< 0| failure with a -errno value | */
 int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t data_length, const void *data);
+
+/** Report progress
+ *
+ * @param [in,out] me        initialized cmt_rollup_t instance
+ * @param [in]     progress  progress value to be set
+ *
+ * @return
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
+int cmt_rollup_progress(cmt_rollup_t *me, uint32_t progress);
 
 /** Read advance state
  *

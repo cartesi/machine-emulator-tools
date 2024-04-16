@@ -156,6 +156,6 @@ int main(void) {
     test_cmt_merkle_push_back();
     test_cmt_merkle_push_back_data();
     test_cmt_merkle_save_load();
-    printf("All tests passed!\n");
+    printf("All merkle tests passed!\n");
     return 0;
 }

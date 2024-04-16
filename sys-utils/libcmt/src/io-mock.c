@@ -31,6 +31,9 @@ int cmt_io_init(cmt_io_driver_t *_me) {
     }
     cmt_io_driver_mock_t *me = &_me->mock;
 
+    if (me->tx->begin || me->rx->begin) {
+        return -EBUSY;
+    }
     size_t tx_length = 2U << 20; // 2MB
     size_t rx_length = 2U << 20; // 2MB
     cmt_buf_init(me->tx, tx_length, malloc(tx_length));

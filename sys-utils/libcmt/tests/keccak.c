@@ -17,63 +17,48 @@
 #include "abi.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
 
-static void inits(void) {
-    uint8_t md[3][CMT_KECCAK_LENGTH];
-    uint8_t data[] = {
-        0x00,
-        0x01,
-        0x02,
-        0x03,
-        0x04,
-        0x05,
-        0x06,
-        0x07,
-        0x08,
-        0x09,
-        0x0a,
-        0x0b,
-        0x0c,
-        0x0d,
-        0x0e,
-        0x0f,
-        0x10,
-        0x11,
-        0x12,
-        0x13,
-        0x14,
-        0x15,
-        0x16,
-        0x17,
-        0x18,
-        0x19,
-        0x1a,
-        0x1b,
-        0x1c,
-        0x1d,
-        0x1e,
-        0x1f,
-    };
-
-    // from init
-    cmt_keccak_t t[1];
-    cmt_keccak_init(t);
-    cmt_keccak_update(t, sizeof(data), data);
-    cmt_keccak_final(t, md[0]);
-
-    // from data
-    cmt_keccak_data(sizeof(data), data, md[1]);
-    assert(memcmp(md[0], md[1], CMT_KECCAK_LENGTH) == 0);
+void test_cmt_keccak_init(void) {
+    cmt_keccak_t state;
+    cmt_keccak_init(&state);
+    printf("Test cmt_keccak_init: Passed\n");
 }
 
-static void funsel(void) {
+void test_cmt_keccak_hash_operations(void) {
+    const char *input = "The quick brown fox jumps over the lazy dog";
+    uint8_t result[CMT_KECCAK_LENGTH] = {0};
+    uint8_t expected[CMT_KECCAK_LENGTH] = {0x4d, 0x74, 0x1b, 0x6f, 0x1e, 0xb2, 0x9c, 0xb2, 0xa9, 0xb9, 0x91, 0x1c, 0x82,
+        0xf5, 0x6f, 0xa8, 0xd7, 0x3b, 0x04, 0x95, 0x9d, 0x3d, 0x9d, 0x22, 0x28, 0x95, 0xdf, 0x6c, 0x0b, 0x28, 0xaa,
+        0x15};
+
+    cmt_keccak_t state;
+    cmt_keccak_init(&state);
+    cmt_keccak_update(&state, strlen(input), input);
+    cmt_keccak_final(&state, result);
+
+    // Compare result with expected
+    assert(memcmp(result, expected, CMT_KECCAK_LENGTH) == 0);
+    printf("Test cmt_keccak_update and cmt_keccak_final: Passed\n");
+
+    cmt_keccak_data(strlen(input), input, result);
+
+    // Compare result with expected
+    assert(memcmp(result, expected, CMT_KECCAK_LENGTH) == 0);
+    printf("Test cmt_keccak_data: Passed\n");
+}
+
+void test_cmt_keccak_funsel(void) {
     const char s[] = "baz(uint32,bool)";
     assert(cmt_keccak_funsel(s) == CMT_ABI_FUNSEL(0xcd, 0xcd, 0x77, 0xc0));
+    printf("Test cmt_keccak_funsel: Passed\n");
 }
 
 int main(void) {
-    funsel();
-    inits();
+    test_cmt_keccak_init();
+    test_cmt_keccak_hash_operations();
+    test_cmt_keccak_funsel();
+    printf("All keccak tests passed!\n");
     return 0;
 }
