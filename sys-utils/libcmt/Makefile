@@ -26,8 +26,10 @@ TARGET_PREFIX ?= $(PREFIX)
 TOOLCHAIN_PREFIX ?= riscv64-linux-gnu-
 TARGET_CC := $(TOOLCHAIN_PREFIX)gcc
 TARGET_AR := $(TOOLCHAIN_PREFIX)ar
-TARGET_CFLAGS := -Wvla -O2 -g -Wall -pedantic -Wextra -Isrc
-CFLAGS := -fsanitize=address,undefined -pedantic -fstrict-aliasing -Wstrict-aliasing=3 -Wvla -O2 -g -Wall -pedantic -Wextra -Isrc
+COMMON_CFLAGS := -Wvla -O2 -g -Wall -pedantic -Wextra -Isrc \
+                 -fno-strict-aliasing -fno-strict-overflow
+TARGET_CFLAGS := $(COMMON_CFLAGS) -ftrivial-auto-var-init=zero -Wstrict-aliasing=3
+CFLAGS := $(COMMON_CFLAGS)
 CC := gcc
 
 all: libcmt host
