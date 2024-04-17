@@ -122,8 +122,10 @@ install-mock: $(mock_LIB)
 unittests_BINS := \
 	$(mock_OBJDIR)/abi-multi \
 	$(mock_OBJDIR)/abi-single \
+	$(mock_OBJDIR)/buf \
 	$(mock_OBJDIR)/keccak \
-	$(mock_OBJDIR)/merkle
+	$(mock_OBJDIR)/merkle \
+	$(mock_OBJDIR)/rollup
 
 $(mock_OBJDIR)/abi-multi: tests/abi-multi.c $(mock_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
@@ -131,10 +133,16 @@ $(mock_OBJDIR)/abi-multi: tests/abi-multi.c $(mock_LIB)
 $(mock_OBJDIR)/abi-single: tests/abi-single.c $(mock_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
 
+$(mock_OBJDIR)/buf: tests/buf.c $(mock_LIB)
+	$(CC) $(CFLAGS) -o $@ $^
+
 $(mock_OBJDIR)/keccak: tests/keccak.c $(mock_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
 
 $(mock_OBJDIR)/merkle: tests/merkle.c $(mock_LIB)
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(mock_OBJDIR)/rollup: tests/rollup.c $(mock_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
 
 test: $(unittests_BINS)
