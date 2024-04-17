@@ -22,6 +22,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+/** track the number of open "devices". Mimic the kernel driver behavior by limiting it to 1 */
+static int open_count = 0;
+
 static int read_whole_file(const char *name, size_t max, void *data, size_t *length);
 static int write_whole_file(const char *name, size_t length, const void *data);
 
@@ -29,11 +32,13 @@ int cmt_io_init(cmt_io_driver_t *_me) {
     if (!_me) {
         return -EINVAL;
     }
-    cmt_io_driver_mock_t *me = &_me->mock;
-
-    if (me->tx->begin || me->rx->begin) {
+    if (open_count) {
         return -EBUSY;
     }
+
+    open_count++;
+    cmt_io_driver_mock_t *me = &_me->mock;
+
     size_t tx_length = 2U << 20; // 2MB
     size_t rx_length = 2U << 20; // 2MB
     cmt_buf_init(me->tx, tx_length, malloc(tx_length));
@@ -68,10 +73,18 @@ void cmt_io_fini(cmt_io_driver_t *_me) {
     if (!_me) {
         return;
     }
+
+    if (open_count == 0) {
+        return;
+    }
+
+    open_count--;
     cmt_io_driver_mock_t *me = &_me->mock;
 
     free(me->tx->begin);
     free(me->rx->begin);
+
+    memset(_me, 0, sizeof(*_me));
 }
 
 cmt_buf_t cmt_io_get_tx(cmt_io_driver_t *me) {
@@ -104,12 +117,16 @@ static int load_next_input(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
     size_t file_length = 0;
     int rc = read_whole_file(filepath, cmt_buf_length(me->rx), me->rx->begin, &file_length);
     if (rc) {
-        (void) fprintf(stderr, "failed to load \"%s\". %s\n", filepath, strerror(-rc));
+        if (cmt_util_debug_enabled()) {
+            (void) fprintf(stderr, "failed to load \"%s\". %s\n", filepath, strerror(-rc));
+        }
         return rc;
     }
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
     if (sscanf(filepath, " %127[^.]%15s", me->input_filename, me->input_fileext) != 2) {
-        (void) fprintf(stderr, "failed to parse filename: \"%s\"\n", filepath);
+        if (cmt_util_debug_enabled()) {
+            (void) fprintf(stderr, "failed to parse filename: \"%s\"\n", filepath);
+        }
         return -EINVAL;
     }
 
@@ -146,7 +163,7 @@ static int store_output(cmt_io_driver_mock_t *me, const char *filepath, struct c
 static int store_next_output(cmt_io_driver_mock_t *me, char *ns, int *seq, struct cmt_io_yield *rr) {
     char filepath[128 + 32 + 8 + 16];
     // NOLINTNEXTLINE(cert-err33-c, clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
-    snprintf(filepath, sizeof filepath, "%s.%s%d%s", me->input_filename, ns, *seq++, me->input_fileext);
+    snprintf(filepath, sizeof filepath, "%s.%s%d%s", me->input_filename, ns, (*seq)++, me->input_fileext);
     return store_output(me, filepath, rr);
 }
 

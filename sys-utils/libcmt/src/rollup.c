@@ -83,9 +83,12 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint32_t address_length, const voi
     cmt_buf_t of[1];
     void *params_base = tx->begin + 4; // after funsel
 
+    if (address_length != CMT_ADDRESS_LENGTH)
+        return -EINVAL;
+
     // clang-format off
     if (DBG(cmt_abi_put_funsel(wr, VOUCHER))
-    ||  DBG(cmt_abi_put_uint_be(wr, address_length, address_data))
+    ||  DBG(cmt_abi_put_address(wr, address_data))
     ||  DBG(cmt_abi_put_uint_be(wr, value_length, value_data))
     ||  DBG(cmt_abi_put_bytes_s(wr, of))
     ||  DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base))) {
@@ -365,11 +368,6 @@ int cmt_gio_request(cmt_rollup_t *me, cmt_gio_t *req) {
     cmt_buf_t rd[1];
     if (cmt_rollup_get_rx(me, rd)) {
         return -ENOBUFS;
-    }
-
-    size_t rd_length = cmt_buf_length(rd);
-    if (rd_length != rr->data) {
-        return -EINVAL;
     }
 
     req->response_data = rd->begin;

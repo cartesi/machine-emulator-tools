@@ -27,7 +27,7 @@ TOOLCHAIN_PREFIX ?= riscv64-linux-gnu-
 TARGET_CC := $(TOOLCHAIN_PREFIX)gcc
 TARGET_AR := $(TOOLCHAIN_PREFIX)ar
 TARGET_CFLAGS := -Wvla -O2 -g -Wall -pedantic -Wextra -Isrc
-CFLAGS := -Wvla -O2 -g -Wall -pedantic -Wextra -Isrc
+CFLAGS := -fsanitize=address,undefined -pedantic -fstrict-aliasing -Wstrict-aliasing=3 -Wvla -O2 -g -Wall -pedantic -Wextra -Isrc
 CC := gcc
 
 all: libcmt host
@@ -142,11 +142,14 @@ $(mock_OBJDIR)/keccak: tests/keccak.c $(mock_LIB)
 $(mock_OBJDIR)/merkle: tests/merkle.c $(mock_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
 
-$(mock_OBJDIR)/rollup: tests/rollup.c $(mock_LIB)
-	$(CC) $(CFLAGS) -o $@ $^
+$(mock_OBJDIR)/rollup: tests/rollup.c tests/data.h $(mock_LIB)
+	$(CC) -Itests $(CFLAGS) -o $@ $^
 
 test: $(unittests_BINS)
 	$(foreach test,$(unittests_BINS),$(test) &&) true
+
+tests/data.h: tests/create-data.sh
+	$< > $@
 
 #-------------------------------------------------------------------------------
 tools_OBJDIR := build/tools

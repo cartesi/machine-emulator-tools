@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <assert.h>
-#include <stdio.h>
-#include <errno.h>
 #include "buf.h"
+#include <assert.h>
+#include <errno.h>
+#include <stdio.h>
 
-void split_in_bounds_must_succeed()
-{
+void split_in_bounds_must_succeed() {
     uint8_t _[8];
     cmt_buf_t b;
     cmt_buf_init(&b, sizeof _, _);
@@ -63,8 +62,7 @@ void split_in_bounds_must_succeed()
     printf("test_buf_split_in_bounds_must_succeed passed\n");
 }
 
-void split_out_of_bounds_must_fail(void)
-{
+void split_out_of_bounds_must_fail(void) {
     uint8_t _[8];
     cmt_buf_t b;
     cmt_buf_t lhs;
@@ -74,13 +72,10 @@ void split_out_of_bounds_must_fail(void)
     assert(cmt_buf_split(&b, 9, &lhs, &rhs) == -ENOBUFS);
     assert(cmt_buf_split(&b, SIZE_MAX, &lhs, &rhs) == -ENOBUFS);
     printf("test_buf_split_out_of_bounds_must_fail passed\n");
-
 }
 
-int main(void)
-{
+int main(void) {
     split_in_bounds_must_succeed();
     split_out_of_bounds_must_fail();
     return 0;
 }
-
