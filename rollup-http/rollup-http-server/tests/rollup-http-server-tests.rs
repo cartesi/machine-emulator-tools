@@ -270,8 +270,8 @@ async fn test_write_voucher(
     rollup_http_client::client::send_voucher(&context.address, test_voucher_02.clone()).await;
     context.server_handle.stop(true).await;
 
-    check_voucher_or_fail(test_voucher_02, "none.output-0.bin");
-    std::fs::remove_file("none.output-0.bin")?;
+    check_voucher_or_fail(test_voucher_02, "none.output-1.bin");
+    std::fs::remove_file("none.output-1.bin")?;
 
     Ok(())
 }

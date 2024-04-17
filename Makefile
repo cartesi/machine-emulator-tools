@@ -85,6 +85,11 @@ env:
 	@echo LINUX_VERSION=$(LINUX_VERSION)
 	@echo LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH)
 
+test:
+	make -C sys-utils/libcmt/ test
+	cd rollup-http/rollup-http-server && \
+	MOCK_BUILD=true cargo test -- --show-output --test-threads=1
+
 setup:
 	@docker run --privileged --rm  linuxkit/binfmt:bebbae0c1100ebf7bf2ad4dfb9dfd719cf0ef132
 
