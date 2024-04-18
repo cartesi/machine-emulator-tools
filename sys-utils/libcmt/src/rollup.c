@@ -361,6 +361,7 @@ int cmt_gio_request(cmt_rollup_t *me, cmt_gio_t *req) {
     if (rc != 0) {
         return rc;
     }
+    me->fromhost_data = rr->data;
 
     cmt_buf_t rd[1];
     if (cmt_rollup_get_rx(me, rd)) {

@@ -39,4 +39,10 @@ echo "uint8_t valid_notice_0[] = {"
 cast calldata "Notice(bytes)" \
 	0x`echo -en "notice-0" | xxd -p -c0` | xxd -r -p | xxd -i
 echo "};"
+
+echo "uint8_t valid_gio_reply_0[] = {"
+echo -en "gio-reply-0" | xxd -i
+echo "};"
+
+
 echo "#endif /* DATA_H */"
