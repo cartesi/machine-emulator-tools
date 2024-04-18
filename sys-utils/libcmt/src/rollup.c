@@ -31,9 +31,6 @@
 // EvmAdvance(uint256,address,address,uint256,uint256,uint256,bytes)
 #define EVM_ADVANCE CMT_ABI_FUNSEL(0xcc, 0x7d, 0xee, 0x1f)
 
-// EvmInspect(bytes)
-#define EVM_INSPECT CMT_ABI_FUNSEL(0x73, 0xd4, 0x41, 0x43)
-
 #define DBG(X) debug(X, #X, __FILE__, __LINE__)
 static int debug(int rc, const char *expr, const char *file, int line) {
     if (rc == 0) {

@@ -18,7 +18,7 @@
 #include <errno.h>
 #include <stdio.h>
 
-void split_in_bounds_must_succeed() {
+void split_in_bounds_must_succeed(void) {
     uint8_t _[8];
     cmt_buf_t b;
     cmt_buf_init(&b, sizeof _, _);

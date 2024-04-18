@@ -233,6 +233,7 @@ clean:
 	@rm -rf src/*.clang-tidy src/*.d
 	@rm -rf tests/*.clang-tidy tests/*.d
 	@rm -rf tools/*.clang-tidy tools/*.d
+	@rm -rf *.bin
 
 distclean: clean
 	@rm -rf doc/html doc/theme

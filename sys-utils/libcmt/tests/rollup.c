@@ -16,9 +16,9 @@
 #include "rollup.h"
 #include "data.h"
 #include <assert.h>
-#include <stdlib.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -82,7 +82,6 @@ static void check_first_input(cmt_rollup_t *rollup) {
     cmt_rollup_advance_t advance;
 
     assert(cmt_rollup_read_advance_state(rollup, &advance) == 0);
-    assert(advance.chain_id == 1);
     // clang-format off
     uint8_t expected_app_contract[CMT_ADDRESS_LENGTH] = {
         0x00, 0x00, 0x00, 0x00,
@@ -102,6 +101,7 @@ static void check_first_input(cmt_rollup_t *rollup) {
     // clang-format on
 
     // verify the parsed data
+    assert(advance.chain_id == 1);
     assert(memcmp(advance.app_contract, expected_app_contract, CMT_ADDRESS_LENGTH) == 0);
     assert(memcmp(advance.msg_sender, expected_msg_sender, CMT_ADDRESS_LENGTH) == 0);
     assert(advance.block_number == 4);

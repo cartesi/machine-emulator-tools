@@ -1,7 +1,7 @@
+#include "rollup.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "rollup.h"
 
 int main(void) {
     cmt_rollup_t rollup;
