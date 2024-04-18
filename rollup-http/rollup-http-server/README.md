@@ -9,14 +9,30 @@ Rollup HTTP Server application implements interface defined [here](https://githu
 This project requires Rust.
 To install Rust follow the instructions [here](https://www.rust-lang.org/tools/install).
 
-### Build using toolchain docker
+### Build 
+This service is built within the docker build step when building all other tools: 
+
 ```shell
-$ ./build-with-toolchain.sh
+cd machine-emulator-tools
+make
+```
+
+### Build using the libcmt mock version (for development and tests)
+First build libcmt mock on host:
+
+```shell
+cd machine-emulator-tools/sys-utils/libcmt/
+make host
+```
+
+Then build this project with:
+```shell
+MOCK_BUILD=true cargo build
 ```
 
 ### Run tests
 ```shell
-$ CPATH="<path/to/libcmt/includes>:$CPATH" RUSTFLAGS="-L /path/to/libcmt/lib" cargo test -- --show-output --test-threads=1
+MOCK_BUILD=true cargo test -- --show-output --test-threads=1
 ```
 
 

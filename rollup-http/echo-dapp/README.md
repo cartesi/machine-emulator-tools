@@ -14,9 +14,12 @@ To install Rust follow the instructions [here](https://www.rust-lang.org/tools/i
 
 ## Build for risc-v cpu
 
-###Build using toolchain docker
+### Build 
+This DApp is built during the docker build process: 
+
 ```shell
-$ ./build.sh
+$ cd machine-emulator-tools
+$ make
 ```
 
 ## Execution 
