@@ -135,7 +135,7 @@ int cmt_merkle_load(cmt_merkle_t *me, const char *filepath) {
     size_t read = fread(me, 1, sizeof(*me), fin);
     int rc = 0;
     if (read < sizeof(*me)) {
-        rc = -EIO;
+        rc = -ENOBUFS;
     }
     if (fclose(fin) != 0 && rc == 0) {
         return -errno;

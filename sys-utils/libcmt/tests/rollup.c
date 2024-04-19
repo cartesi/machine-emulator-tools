@@ -35,7 +35,7 @@ static int read_whole_file(const char *name, size_t max, void *data, size_t *len
         rc = -ENOBUFS;
     }
     if (fclose(file) != 0) {
-        perror("fclose failed");
+        rc = -errno;
     }
     return rc;
 }
@@ -49,10 +49,10 @@ static int write_whole_file(const char *name, size_t length, const void *data) {
     }
 
     if (fwrite(data, 1, length, file) != length) {
-        rc = -errno;
+        rc = -EIO;
     }
     if (fclose(file) != 0) {
-        perror("fclose failed");
+        rc = -errno;
     }
     return rc;
 }
