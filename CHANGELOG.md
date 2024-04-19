@@ -5,10 +5,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.15.0] - 2024-04-19
+### Added
+- Implemented a new libcmt library to interface with the Cartesi machine device
+- Added generic IO entrypoint to libcmt
+- Added generic IO endpoint on rollup-http-server
+- Allowed customization of init with `/etc/cartesi-init.d`
+- Allowed init to run in empty filesystems
+- Introduced a new libcmt development Debian package as a regular artifact in releases
+
 ### Changed
+- Added `stty -onlcr` to cartesi-init
+- Set default USER to dapp in init script
+- Created dapp user when installing tools package
+- Removed unnecessary PATH change from init script
 - Added a value field to vouchers
-- Tools are now implemented in terms of libcmt
-- Added libcmt
+- Updated kernel to v6.5.13-ctsi-1
+- Renamed kernel device
+- Implemented Rollup-HTTP based on libcmt
+- Rewrote yield with libcmt
+- Rewrote Rollup with libcmt
+- Updated Rollup-HTTP Rust dependencies
+- Bumped Rustc to 1.77.2
+- Updated the version of some workflow actions
+- Added BusyBox dependency to Deb package
+- Updated xgenext2fs to v1.5.5
+
+### Removed
+- Removed old build-with-toolchain script
+
+### Fixed
+- Fixed a bug where Docker builds would incorrectly succeed even when commands in the `RUN` directive failed.
 
 ## [0.14.1] - 2023-12-18
 ### Fixed
@@ -81,7 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Improved error handling in rollup command line tool
 - Fixed indentation in rollup command line tool
-- Removed explict strip feature from Cargo.toml files
+- Removed explicit strip feature from Cargo.toml files
 - Moved dapp initialization from rollup-init to rollup-http-server
 - Simplified rollup-init script to only call rollup-http-server
 - Handled rollup-http-server exit status in rollup-init
@@ -135,7 +163,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [0.2.0]
 - [0.1.0]
 
-[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.14.1...HEAD
+[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.15.0
 [0.14.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.14.1
 [0.14.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.14.0
 [0.13.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.13.0
