@@ -355,6 +355,28 @@ int cmt_abi_get_uint(cmt_buf_t *me, size_t n, void *data);
  * |   -EDOM| integer not representable in @p data_length bytes | */
 int cmt_abi_get_uint_be(cmt_buf_t *me, size_t n, void *data);
 
+/** Consume and decode a bool from the buffer
+ *
+ * @param [in,out] me    a initialized buffer working as iterator
+ * @param [out]    value boolean value
+ *
+ * @return
+ * |        |                        |
+ * |-------:|------------------------|
+ * |       0| success                |
+ * |-ENOBUFS| no space left in @p me |
+ *
+ * @code
+ * ...
+ * cmt_buf_t it = ...;
+ * bool value;
+ * int rc = cmt_abi_put_bool(&it, &value);
+ * assert(rc == 0);
+ * ...
+ * @endcode
+ * @note This function takes care of endianness conversions */
+int cmt_abi_get_bool(cmt_buf_t *me, bool *value);
+
 /** Consume and decode @b address from the buffer
  *
  * @param [in,out] me      initialized buffer

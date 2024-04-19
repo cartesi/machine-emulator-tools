@@ -239,7 +239,7 @@ int cmt_abi_get_uint_be(cmt_buf_t *me, size_t n, void *data) {
 }
 
 int cmt_abi_get_bool(cmt_buf_t *me, bool *value) {
-    uint8_t boolean = 0;
+    bool boolean = 0;
     int rc = cmt_abi_get_uint(me, sizeof(boolean), &boolean);
     if (rc) {
         return rc;

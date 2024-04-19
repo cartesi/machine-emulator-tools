@@ -33,6 +33,13 @@
     cmt_buf_t S[1] = {                                                                                                 \
         {.begin = (P), .end = (S)->begin + (L)}} // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
 
+// funsel(address)
+#define FUNSEL CMT_ABI_FUNSEL(0xe6, 0x36, 0xe3, 0x33)
+
+static void abi_funsel(void) {
+    assert(cmt_abi_funsel(0xe6, 0x36, 0xe3, 0x33) == FUNSEL);
+}
+
 static void encode_u8(void) {
     uint8_t x = 0x01;
     uint8_t en[CMT_WORD_LENGTH];
@@ -223,6 +230,20 @@ static void put_uint(void) {
     assert(memcmp(b->begin, be, sizeof(be)) == 0);
 }
 
+static void put_bool(void) {
+    uint8_t be[CMT_WORD_LENGTH] = {
+        // clang-format off
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        // clang-format on
+    };
+    CMT_BUF_DECL(b, 64);
+    cmt_buf_t it[1] = {*b};
+
+    assert(cmt_abi_put_bool(it, true) == 0);
+    assert(memcmp(b->begin, be, sizeof(be)) == 0);
+}
+
 static void put_address(void) {
     uint8_t x[CMT_ADDRESS_LENGTH] = {
         // clang-format off
@@ -290,9 +311,25 @@ static void get_uint(void) {
     assert(x == ex);
 }
 
+static void get_uint_be(void) {
+    uint64_t x = 0;
+    uint64_t ex = UINT64_C(0x0123456789abcdef);
+    uint8_t be[CMT_WORD_LENGTH] = {
+        // clang-format off
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0x23, 0x01,
+        // clang-format on
+    };
+    CMT_BUF_DECL3(b, sizeof(be), be);
+    cmt_buf_t rd[1] = {*b};
+
+    assert(cmt_abi_get_uint_be(rd, sizeof(x), &x) == 0);
+    assert(x == ex);
+}
+
 static void get_bool(void) {
-    bool x = 0;
-    bool ex = 1;
+    bool x = false;
+    bool ex = true;
     uint8_t be[CMT_WORD_LENGTH] = {
         // clang-format off
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -302,7 +339,7 @@ static void get_bool(void) {
     CMT_BUF_DECL3(b, sizeof(be), be);
     cmt_buf_t rd[1] = {*b};
 
-    assert(cmt_abi_get_uint(rd, sizeof(x), &x) == 0);
+    assert(cmt_abi_get_bool(rd, &x) == 0);
     assert(x == ex);
 }
 
@@ -349,6 +386,8 @@ static void get_bytes(void) {
 }
 
 int main(void) {
+    abi_funsel();
+
     encode_u8();
     encode_u16();
     encode_u32();
@@ -365,11 +404,13 @@ int main(void) {
 
     put_funsel();
     put_uint();
+    put_bool();
     put_address();
     put_bytes();
 
     get_funsel();
     get_uint();
+    get_uint_be();
     get_bool();
     get_address();
     get_bytes();
