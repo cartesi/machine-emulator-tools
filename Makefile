@@ -23,7 +23,7 @@ VERSION := $(MAJOR).$(MINOR).$(PATCH)$(LABEL)
 TOOLS_DEB    := machine-emulator-tools-v$(VERSION).deb
 TOOLS_IMAGE  := cartesi/machine-emulator-tools:$(VERSION)
 TOOLS_ROOTFS := rootfs-tools-v$(VERSION).ext2
-TOOLS_LIBCMT := libcmt-v$(VERSION).deb
+TOOLS_LIBCMT := libcmt-v$(VERSION)-dev.deb
 
 IMAGE_KERNEL_VERSION ?= v0.20.0
 LINUX_VERSION ?= 6.5.13-ctsi-1
