@@ -17,8 +17,17 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
-void split_in_bounds_must_succeed(void) {
+static void passing_null(void) {
+    uint8_t _[8];
+
+    // just test if it crashes
+    cmt_buf_init(NULL, sizeof _, _);
+    assert(cmt_buf_length(NULL) == 0);
+}
+
+static void split_in_bounds_must_succeed(void) {
     uint8_t _[8];
     cmt_buf_t b;
     cmt_buf_init(&b, sizeof _, _);
@@ -62,7 +71,7 @@ void split_in_bounds_must_succeed(void) {
     printf("test_buf_split_in_bounds_must_succeed passed\n");
 }
 
-void split_out_of_bounds_must_fail(void) {
+static void split_out_of_bounds_must_fail(void) {
     uint8_t _[8];
     cmt_buf_t b;
     cmt_buf_t lhs;
@@ -74,8 +83,51 @@ void split_out_of_bounds_must_fail(void) {
     printf("test_buf_split_out_of_bounds_must_fail passed\n");
 }
 
+static void split_invalid_parameters(void) {
+    uint8_t _[8];
+    cmt_buf_t b;
+    cmt_buf_t lhs;
+    cmt_buf_t rhs;
+    cmt_buf_init(&b, sizeof _, _);
+
+    assert(cmt_buf_split(NULL, 8, &lhs, &rhs) == -EINVAL);
+    assert(cmt_buf_split(&b, 8, NULL, &rhs) == -EINVAL);
+    assert(cmt_buf_split(&b, 8, &lhs, NULL) == -EINVAL);
+}
+
+static void split_by_comma_until_the_end(void) {
+    uint8_t _[] = "a,b,c";
+    cmt_buf_t x;
+    cmt_buf_t xs;
+
+    cmt_buf_init(&x, sizeof _ - 1, _);
+    cmt_buf_init(&xs, sizeof _ - 1, _);
+    assert(cmt_buf_split_by_comma(&x, &xs) == true);
+    assert(strncmp((char *)x.begin, "a", 1UL) == 0);
+    assert(cmt_buf_split_by_comma(&x, &xs) == true);
+    assert(strncmp((char *)x.begin, "b", 1UL) == 0);
+    assert(cmt_buf_split_by_comma(&x, &xs) == true);
+    assert(strncmp((char *)x.begin, "c", 1UL) == 0);
+    assert(cmt_buf_split_by_comma(&x, &xs) == false);
+}
+
+static void xxd(void)
+{
+    uint8_t _[] = "";
+    cmt_buf_xxd(_, _ + sizeof _, 0);
+    cmt_buf_xxd(_, _ + sizeof _, 1);
+    cmt_buf_xxd(_, _ + sizeof _, 3);
+    cmt_buf_xxd(NULL, _ + sizeof _, 1);
+    cmt_buf_xxd(_, NULL, 1);
+    cmt_buf_xxd(_, _, 1);
+}
+
 int main(void) {
+    passing_null();
     split_in_bounds_must_succeed();
     split_out_of_bounds_must_fail();
+    split_invalid_parameters();
+    split_by_comma_until_the_end();
+    xxd();
     return 0;
 }

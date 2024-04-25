@@ -39,7 +39,7 @@ int cmt_abi_put_funsel(cmt_buf_t *me, uint32_t funsel) {
 
 int cmt_abi_encode_uint_nr(size_t n, const uint8_t *data, uint8_t out[CMT_WORD_LENGTH]) {
     if (n > CMT_WORD_LENGTH) {
-        return EDOM;
+        return -EDOM;
     }
     for (size_t i = 0; i < n; ++i) {
         out[CMT_WORD_LENGTH - 1 - i] = data[i];
@@ -52,7 +52,7 @@ int cmt_abi_encode_uint_nr(size_t n, const uint8_t *data, uint8_t out[CMT_WORD_L
 
 int cmt_abi_encode_uint_nn(size_t n, const uint8_t *data, uint8_t out[CMT_WORD_LENGTH]) {
     if (n > CMT_WORD_LENGTH) {
-        return EDOM;
+        return -EDOM;
     }
     for (size_t i = 0; i < CMT_WORD_LENGTH - n; ++i) {
         out[i] = 0;
@@ -73,7 +73,7 @@ int cmt_abi_encode_uint(size_t n, const void *data, uint8_t out[CMT_WORD_LENGTH]
 
 int cmt_abi_decode_uint_nr(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_t *out) {
     if (n > CMT_WORD_LENGTH) {
-        return EDOM;
+        return -EDOM;
     }
     for (size_t i = 0; i < CMT_WORD_LENGTH - n; ++i) {
         if (data[i]) {
@@ -88,7 +88,7 @@ int cmt_abi_decode_uint_nr(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_
 
 int cmt_abi_decode_uint_nn(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_t *out) {
     if (n > CMT_WORD_LENGTH) {
-        return EDOM;
+        return -EDOM;
     }
     for (size_t i = 0; i < CMT_WORD_LENGTH - n; ++i) {
         if (data[i]) {

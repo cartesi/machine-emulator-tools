@@ -13,49 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "rollup.h"
-#include "data.h"
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "rollup.h"
+#include "util.h"
+#include "data.h"
 
-static int read_whole_file(const char *name, size_t max, void *data, size_t *length) {
-    int rc = 0;
-
-    FILE *file = fopen(name, "rb");
-    if (!file) {
-        return -errno;
-    }
-
-    *length = fread(data, 1, max, file);
-    if (!feof(file)) {
-        rc = -ENOBUFS;
-    }
-    if (fclose(file) != 0) {
-        rc = -errno;
-    }
-    return rc;
-}
-
-static int write_whole_file(const char *name, size_t length, const void *data) {
-    int rc = 0;
-
-    FILE *file = fopen(name, "wb");
-    if (!file) {
-        return -errno;
-    }
-
-    if (fwrite(data, 1, length, file) != length) {
-        rc = -EIO;
-    }
-    if (fclose(file) != 0) {
-        rc = -errno;
-    }
-    return rc;
-}
 void test_rollup_init_and_fini(void) {
     cmt_rollup_t rollup;
 
@@ -127,11 +94,11 @@ void test_rollup_parse_inputs(void) {
     uint8_t data[] = {0};
 
     // synthesize inputs and feed them to io-mock via CMT_INPUTS env.
-    assert(write_whole_file("build/0.bin", sizeof valid_advance_0, valid_advance_0) == 0);
-    assert(write_whole_file("build/1.bin", sizeof valid_inspect_0, valid_inspect_0) == 0);
-    assert(write_whole_file("build/2.bin", sizeof data, data) == 0);
-    assert(truncate("build/2.bin", 3 << 20) == 0);
-    assert(setenv("CMT_INPUTS", "0:build/0.bin,1:build/1.bin,0:build/2.bin", 1) == 0);
+    assert(cmt_util_write_whole_file("0.bin", sizeof valid_advance_0, valid_advance_0) == 0);
+    assert(cmt_util_write_whole_file("1.bin", sizeof valid_inspect_0, valid_inspect_0) == 0);
+    assert(cmt_util_write_whole_file("2.bin", sizeof data, data) == 0);
+    assert(truncate("2.bin", 3 << 20) == 0);
+    assert(setenv("CMT_INPUTS", "0:0.bin,1:1.bin,0:2.bin", 1) == 0);
 
     assert(cmt_rollup_init(&rollup) == 0);
     assert(cmt_rollup_finish(&rollup, &finish) == 0);
@@ -141,6 +108,9 @@ void test_rollup_parse_inputs(void) {
     check_second_input(&rollup);
 
     assert(cmt_rollup_finish(&rollup, &finish) == -ENODATA);
+
+    finish.accept_previous_request = false;
+    assert(cmt_rollup_finish(&rollup, &finish) == -ENOSYS);
 
     cmt_rollup_fini(&rollup);
     printf("test_rollup_parse_inputs passed!\n");
@@ -172,37 +142,63 @@ void test_rollup_outputs_reports_and_exceptions(void) {
     assert(cmt_rollup_emit_voucher(&rollup, sizeof address, address, sizeof value, value, strlen(voucher_data),
                voucher_data, &index) == 0);
     assert(index == 0);
-    assert(read_whole_file("none.output-0.bin", sizeof buffer, buffer, &read_size) == 0);
+    assert(cmt_util_read_whole_file("none.output-0.bin", sizeof buffer, buffer, &read_size) == 0);
     assert(sizeof valid_voucher_0 == read_size);
     assert(memcmp(valid_voucher_0, buffer, sizeof valid_voucher_0) == 0);
+
+    // voucher (invalid)
+    assert(cmt_rollup_emit_voucher(NULL, sizeof address, address, sizeof value, value, strlen(voucher_data),
+               voucher_data, &index) == -EINVAL);
+    assert(cmt_rollup_emit_voucher(&rollup, sizeof address - 1, address, sizeof value, value, strlen(voucher_data),
+               NULL, &index) == -EINVAL);
+    assert(cmt_rollup_emit_voucher(&rollup, sizeof address - 1, address, sizeof value, value, strlen(voucher_data),
+               voucher_data, &index) == -EINVAL);
+    assert(cmt_rollup_emit_voucher(&rollup, sizeof address, address, sizeof value, value, UINT32_MAX,
+               voucher_data, &index) == -ENOBUFS);
 
     // notice
     char notice_data[] = "notice-0";
     assert(cmt_rollup_emit_notice(&rollup, strlen(notice_data), notice_data, &index) == 0);
-    assert(read_whole_file("none.output-1.bin", sizeof buffer, buffer, &read_size) == 0);
+    assert(cmt_util_read_whole_file("none.output-1.bin", sizeof buffer, buffer, &read_size) == 0);
     assert(sizeof valid_notice_0 == read_size);
     assert(memcmp(valid_notice_0, buffer, sizeof valid_notice_0) == 0);
     assert(index == 1);
 
+    // notice (invalid)
+    assert(cmt_rollup_emit_notice(NULL, strlen(notice_data), notice_data, &index) == -EINVAL);
+    assert(cmt_rollup_emit_notice(&rollup, strlen(notice_data), NULL, &index) == -EINVAL);
+    assert(cmt_rollup_emit_notice(&rollup, UINT32_MAX, notice_data, &index) == -ENOBUFS);
+
     // report
     char report_data[] = "report-0";
     assert(cmt_rollup_emit_report(&rollup, strlen(report_data), report_data) == 0);
-    assert(read_whole_file("none.report-0.bin", sizeof buffer, buffer, &read_size) == 0);
+    assert(cmt_util_read_whole_file("none.report-0.bin", sizeof buffer, buffer, &read_size) == 0);
     assert(sizeof valid_report_0 == read_size);
     assert(memcmp(valid_report_0, buffer, sizeof valid_report_0) == 0);
+
+    // report (invalid)
+    assert(cmt_rollup_emit_report(NULL, strlen(report_data), report_data) == -EINVAL);
+    assert(cmt_rollup_emit_report(&rollup, strlen(report_data), NULL) == -EINVAL);
+    assert(cmt_rollup_emit_report(&rollup, UINT32_MAX, report_data) == -ENOBUFS);
 
     // exception
     char exception_data[] = "exception-0";
     assert(cmt_rollup_emit_exception(&rollup, strlen(exception_data), exception_data) == 0);
-    assert(read_whole_file("none.exception-0.bin", sizeof buffer, buffer, &read_size) == 0);
+    assert(cmt_util_read_whole_file("none.exception-0.bin", sizeof buffer, buffer, &read_size) == 0);
     assert(sizeof valid_exception_0 == read_size);
     assert(memcmp(valid_exception_0, buffer, sizeof valid_exception_0) == 0);
+
+    // exception (invalid)
+    assert(cmt_rollup_emit_exception(NULL, strlen(exception_data), exception_data) == -EINVAL);
+    assert(cmt_rollup_emit_exception(&rollup, strlen(exception_data), NULL) == -EINVAL);
+    assert(cmt_rollup_emit_exception(&rollup, UINT32_MAX, exception_data) == -ENOBUFS);
 
     cmt_rollup_fini(&rollup);
     printf("test_rollup_outputs_reports_and_exceptions passed!\n");
 }
 
 int main(void) {
+    setenv("CMT_DEBUG", "yes", 1);
     test_rollup_init_and_fini();
     test_rollup_parse_inputs();
     test_rollup_outputs_reports_and_exceptions();

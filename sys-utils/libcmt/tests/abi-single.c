@@ -119,8 +119,8 @@ static void encode_edom(void) {
         // clang-format on
     };
     uint8_t en[CMT_WORD_LENGTH];
-    assert(cmt_abi_encode_uint_nr(sizeof(x), x, en) == EDOM);
-    assert(cmt_abi_encode_uint_nn(sizeof(x), x, en) == EDOM);
+    assert(cmt_abi_encode_uint_nr(sizeof(x), x, en) == -EDOM);
+    assert(cmt_abi_encode_uint_nn(sizeof(x), x, en) == -EDOM);
 }
 
 static void decode_u8(void) {
@@ -193,16 +193,32 @@ static void decode_u256(void) {
     assert(memcmp(x, ex, sizeof(ex)) == 0);
 }
 
-/* encoded value can't be represented in a uint64_t. */
-static void decode_edom(void) {
-    uint64_t x = 0;
+static void decode_uint_edom(void) {
     uint8_t be[CMT_WORD_LENGTH] = {
         // clang-format off
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xAA, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
         // clang-format on
     };
-    assert(cmt_abi_decode_uint(be, sizeof(x), (void *) &x) == -EDOM);
+    {
+        uint8_t x[8] = {0};
+        assert(cmt_abi_decode_uint_nr(be, sizeof(x), x) == -EDOM);
+    }
+
+    {
+        uint8_t x[8] = {0};
+        assert(cmt_abi_decode_uint_nn(be, sizeof(x), x) == -EDOM);
+    }
+
+    {
+        uint8_t x [CMT_WORD_LENGTH+1] = {0};
+        assert(cmt_abi_decode_uint_nr(be, sizeof(x), x) == -EDOM);
+    }
+
+    {
+        uint8_t x [CMT_WORD_LENGTH+1] = {0};
+        assert(cmt_abi_decode_uint_nn(be, sizeof(x), x) == -EDOM);
+    }
 }
 
 static void put_funsel(void) {
@@ -213,6 +229,15 @@ static void put_funsel(void) {
 
     assert(cmt_abi_put_funsel(it, funsel) == 0);
     assert(memcmp(b->begin, data, 4) == 0);
+}
+
+static void put_funsel_enobufs(void) {
+    uint8_t data[] = {0xcd, 0xcd, 0x77, 0xc0};
+    uint32_t funsel = CMT_ABI_FUNSEL(data[0], data[1], data[2], data[3]);
+    CMT_BUF_DECL(b, 1);
+    cmt_buf_t it[1] = {*b};
+
+    assert(cmt_abi_put_funsel(it, funsel) == -ENOBUFS);
 }
 
 static void put_uint(void) {
@@ -228,6 +253,24 @@ static void put_uint(void) {
 
     assert(cmt_abi_put_uint(it, sizeof(x), &x) == 0);
     assert(memcmp(b->begin, be, sizeof(be)) == 0);
+}
+
+static void put_uint_enobufs(void) {
+    uint64_t x = UINT64_C(0x0123456789abcdef);
+    CMT_BUF_DECL(b, 31);
+    cmt_buf_t it[1] = {*b};
+
+    assert(cmt_abi_put_uint(it, sizeof(x), &x) == -ENOBUFS);
+    assert(cmt_abi_put_uint_be(it, sizeof(x), &x) == -ENOBUFS);
+}
+
+static void put_uint_edom(void) {
+    uint64_t x[CMT_WORD_LENGTH+1] = {0};
+    CMT_BUF_DECL(b, CMT_WORD_LENGTH);
+    cmt_buf_t it[1] = {*b};
+
+    assert(cmt_abi_put_uint(it, sizeof(x), &x) == -EDOM);
+    assert(cmt_abi_put_uint_be(it, sizeof(x), &x) == -EDOM);
 }
 
 static void put_bool(void) {
@@ -264,6 +307,14 @@ static void put_address(void) {
     assert(memcmp(b->begin, be, sizeof(be)) == 0);
 }
 
+static void put_address_enobufs(void) {
+    uint8_t x[CMT_ADDRESS_LENGTH] = {0};
+    CMT_BUF_DECL(b, CMT_WORD_LENGTH-1);
+    cmt_buf_t it[1] = {*b};
+
+    assert(cmt_abi_put_address(it, x) == -ENOBUFS);
+}
+
 static void put_bytes(void) {
     uint64_t x = UINT64_C(0x0123456789abcdef);
     uint8_t be[] = {
@@ -284,15 +335,38 @@ static void put_bytes(void) {
     assert(memcmp(b->begin, be, sizeof(be)) == 0);
 }
 
+static void put_bytes_enobufs(void) {
+    uint64_t x = UINT64_C(0x0123456789abcdef);
+    cmt_buf_t of[1];
+
+    {
+        CMT_BUF_DECL(b, 3 * 32 - 1);
+        cmt_buf_t it[1] = {*b};
+        assert(cmt_abi_put_bytes_s(it, of) == 0);
+        assert(cmt_abi_put_bytes_d(it, of, sizeof(x), &x, b->begin) == -ENOBUFS);
+    }
+}
+
 static void get_funsel(void) {
     CMT_BUF_DECL(b, 64);
     cmt_buf_t wr[1] = {*b};
     cmt_buf_t rd[1] = {*b};
-    uint32_t funsel = CMT_ABI_FUNSEL(1, 2, 3, 4);
+    uint32_t right = CMT_ABI_FUNSEL(1, 2, 3, 4);
+    uint32_t wrong = CMT_ABI_FUNSEL(1, 2, 3, 3);
 
-    assert(cmt_abi_put_funsel(wr, funsel) == 0);
-    assert(cmt_abi_peek_funsel(rd) == funsel);
-    assert(cmt_abi_check_funsel(rd, funsel) == 0);
+    assert(cmt_abi_put_funsel(wr, right) == 0);
+    assert(cmt_abi_peek_funsel(rd) == right);
+    assert(cmt_abi_check_funsel(rd, wrong) == -EBADMSG); // don't advance
+    assert(cmt_abi_check_funsel(rd, right) == 0);
+}
+
+static void peek_funsel_error(void) {
+    CMT_BUF_DECL(b, 3);
+    uint32_t wrong = 0; // value doesn't matter
+    cmt_buf_t rd[1] = {*b};
+
+    assert(cmt_abi_peek_funsel(rd) == 0);
+    assert(cmt_abi_check_funsel(rd, wrong) == -ENOBUFS); // don't advance
 }
 
 static void get_uint(void) {
@@ -309,6 +383,24 @@ static void get_uint(void) {
 
     assert(cmt_abi_get_uint(rd, sizeof(x), &x) == 0);
     assert(x == ex);
+}
+
+static void get_uint_enobufs(void) {
+    uint64_t x = UINT64_C(0x0123456789abcdef);
+    CMT_BUF_DECL(b, 31);
+    cmt_buf_t it[1] = {*b};
+
+    assert(cmt_abi_get_uint(it, sizeof(x), &x) == -ENOBUFS);
+    assert(cmt_abi_get_uint_be(it, sizeof(x), &x) == -ENOBUFS);
+}
+
+static void get_uint_edom(void) {
+    uint64_t x[CMT_WORD_LENGTH+1] = {0};
+    CMT_BUF_DECL(b, CMT_WORD_LENGTH);
+    cmt_buf_t it[1] = {*b};
+
+    assert(cmt_abi_get_uint(it, sizeof(x), &x) == -EDOM);
+    assert(cmt_abi_get_uint_be(it, sizeof(x), &x) == -EDOM);
 }
 
 static void get_uint_be(void) {
@@ -343,6 +435,20 @@ static void get_bool(void) {
     assert(x == ex);
 }
 
+static void get_bool_enobufs(void) {
+    bool x = false;
+    uint8_t be[CMT_WORD_LENGTH-1] = {
+        // clang-format off
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        // clang-format on
+    };
+    CMT_BUF_DECL3(b, sizeof(be), be);
+    cmt_buf_t rd[1] = {*b};
+
+    assert(cmt_abi_get_bool(rd, &x) == -ENOBUFS);
+}
+
 static void get_address(void) {
     uint8_t x[CMT_ADDRESS_LENGTH];
     uint8_t ex[CMT_ADDRESS_LENGTH] = {
@@ -362,6 +468,19 @@ static void get_address(void) {
 
     assert(cmt_abi_get_address(it, x) == 0);
     assert(memcmp(x, ex, sizeof(ex)) == 0);
+}
+
+static void get_address_enobufs(void) {
+    uint8_t x[CMT_ADDRESS_LENGTH];
+    uint8_t be[CMT_WORD_LENGTH-1] = {
+        // clang-format off
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x23, 0x45, 0x67,
+        0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45,
+        // clang-format on
+    };
+    CMT_BUF_DECL3(b, sizeof(be), be);
+    cmt_buf_t it[1] = {*b};
+    assert(cmt_abi_get_address(it, x) == -ENOBUFS);
 }
 
 static void get_bytes(void) {
@@ -385,6 +504,48 @@ static void get_bytes(void) {
     assert(memcmp(bytes->begin, &ex, sizeof(ex)) == 0);
 }
 
+static void get_bytes_enobufs(void) {
+    uint8_t be[] = {
+        // clang-format off
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08,
+        0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0x23, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        // clang-format on
+    };
+
+    {   // when offset of dynamic reagion failed
+        CMT_BUF_DECL3(b, 1 * CMT_WORD_LENGTH - 1, be);
+        cmt_buf_t it[1] = {*b};
+        cmt_buf_t of[1] = {0};
+        cmt_buf_t bytes[1];
+
+        assert(cmt_abi_peek_bytes_d(it, of, bytes) == -ENOBUFS);
+    }
+
+    {   // dynamic reagion is too small to peek bytes
+        CMT_BUF_DECL3(b, 3 * CMT_WORD_LENGTH - 1, be);
+        cmt_buf_t it[1] = {*b};
+        cmt_buf_t of[1] = {0};
+        cmt_buf_t bytes[1];
+
+        assert(cmt_abi_get_bytes_s(it, of) == 0);
+        assert(cmt_abi_peek_bytes_d(it, of, bytes) == -ENOBUFS);
+    }
+
+    {   // dynamic reagion is too small to copy bytes
+        CMT_BUF_DECL3(b, 3 * CMT_WORD_LENGTH - 1, be);
+        cmt_buf_t it[1] = {*b};
+        cmt_buf_t of[1] = {0};
+
+        size_t n;
+        void *data;
+        assert(cmt_abi_get_bytes_s(it, of) == 0);
+        assert(cmt_abi_get_bytes_d(it, of, &n, &data) == -ENOBUFS);
+    }
+}
+
 int main(void) {
     abi_funsel();
 
@@ -400,20 +561,31 @@ int main(void) {
     decode_u32();
     decode_u64();
     decode_u256();
-    decode_edom();
+    decode_uint_edom();
 
     put_funsel();
+    put_funsel_enobufs();
     put_uint();
+    put_uint_enobufs();
+    put_uint_edom();
     put_bool();
     put_address();
+    put_address_enobufs();
     put_bytes();
+    put_bytes_enobufs();
 
     get_funsel();
+    peek_funsel_error();
     get_uint();
     get_uint_be();
+    get_uint_enobufs();
+    get_uint_edom();
     get_bool();
+    get_bool_enobufs();
     get_address();
+    get_address_enobufs();
     get_bytes();
+    get_bytes_enobufs();
 
     return 0;
 }

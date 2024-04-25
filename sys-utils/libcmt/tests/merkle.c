@@ -17,8 +17,10 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/errno.h>
+#include <unistd.h>
 
 #if 0 // NOLINT
 static void print(int m, uint8_t md[CMT_KECCAK_LENGTH]) {
@@ -124,9 +126,14 @@ void test_cmt_merkle_push_back_data(void) {
 }
 
 void test_cmt_merkle_save_load(void) {
-    const char *test_file = "/tmp/cmt_merkle_test.bin";
     cmt_merkle_t merkle1;
     cmt_merkle_t merkle2;
+    char valid[] = "/tmp/tmp.XXXXXX";
+    char invalid[] = "/tmp/tmp.XXXXXX/invalid.bin";
+
+    // create a unique file and an invalid file from it.
+    mkstemp(valid);
+    memcpy(invalid, valid, strlen(valid));
 
     // Initialize merkle1 and add some data
     cmt_merkle_init(&merkle1);
@@ -138,24 +145,52 @@ void test_cmt_merkle_save_load(void) {
         assert(cmt_merkle_push_back_data(&merkle1, CMT_KECCAK_LENGTH, data) == 0);
     }
 
-    assert(cmt_merkle_save(&merkle1, test_file) == 0);
-    assert(cmt_merkle_load(&merkle2, test_file) == 0);
-    assert(memcmp(&merkle1, &merkle2, sizeof(cmt_merkle_t)) == 0);
+    // succeed with normal usage
+    assert(cmt_merkle_save(&merkle1, valid) == 0);
+    assert(cmt_merkle_load(&merkle2, valid) == 0);
+    assert(memcmp(&merkle1, &merkle2, sizeof(merkle1)) == 0);
 
-    // Cleanup
-    if (remove(test_file) != 0) {
-        (void) fprintf(stderr, "Error deleting file %s: %s\n", test_file, strerror(errno));
-    }
+    // fail to load smaller file
+    (void)truncate(valid, sizeof(merkle1) - 1);
+    assert(cmt_merkle_load(&merkle2, valid) != 0);
+    (void)remove(valid);
+
+    // fail to save/load invalid filepath
+    assert(cmt_merkle_save(&merkle1, invalid) != 0);
+    assert(cmt_merkle_load(&merkle2, invalid) != 0);
+
+    // invalid state
+    assert(cmt_merkle_save(NULL, valid) == -EINVAL);
+    assert(cmt_merkle_load(NULL, valid) == -EINVAL);
+
     printf("test_cmt_merkle_save_load passed\n");
 }
 
+void test_cmt_merkle_full(void) {
+    const uint64_t max_count =
+        (CMT_MERKLE_TREE_HEIGHT < 8 * sizeof(uint64_t))?
+        (UINT64_C(1) << CMT_MERKLE_TREE_HEIGHT):
+        UINT64_MAX;
+    cmt_merkle_t merkle = {
+        .leaf_count = max_count - 1,
+    };
+    assert(cmt_merkle_get_leaf_count(&merkle) == max_count - 1);
+
+    uint8_t data[] = {0};
+    assert(cmt_merkle_push_back_data(&merkle, sizeof(data), data) == 0);
+    assert(cmt_merkle_push_back_data(&merkle, sizeof(data), data) == -ENOBUFS);
+    assert(cmt_merkle_get_leaf_count(&merkle) == max_count);
+}
+
 int main(void) {
+    setenv("CMT_DEBUG", "yes", 1);
     test_merkle_init_and_reset();
     test_merkle_push_back_and_get_root();
     test_cmt_merkle_push_back_data_and_get_root();
     test_cmt_merkle_push_back();
     test_cmt_merkle_push_back_data();
     test_cmt_merkle_save_load();
+    test_cmt_merkle_full();
     printf("All merkle tests passed!\n");
     return 0;
 }

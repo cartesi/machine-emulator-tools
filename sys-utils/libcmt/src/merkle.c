@@ -128,6 +128,9 @@ void cmt_merkle_fini(cmt_merkle_t *me) {
 }
 
 int cmt_merkle_load(cmt_merkle_t *me, const char *filepath) {
+    if (!me) {
+        return -EINVAL;
+    }
     FILE *fin = fopen(filepath, "rb");
     if (!fin) {
         return -errno;
@@ -144,6 +147,9 @@ int cmt_merkle_load(cmt_merkle_t *me, const char *filepath) {
 }
 
 int cmt_merkle_save(cmt_merkle_t *me, const char *filepath) {
+    if (!me) {
+        return -EINVAL;
+    }
     FILE *fout = fopen(filepath, "wb");
     if (!fout) {
         return -errno;

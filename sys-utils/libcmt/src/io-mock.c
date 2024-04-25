@@ -16,7 +16,6 @@
 #include "io.h"
 #include "util.h"
 
-#include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,9 +23,6 @@
 
 /** track the number of open "devices". Mimic the kernel driver behavior by limiting it to 1 */
 static int open_count = 0;
-
-static int read_whole_file(const char *name, size_t max, void *data, size_t *length);
-static int write_whole_file(const char *name, size_t length, const void *data);
 
 int cmt_io_init(cmt_io_driver_t *_me) {
     if (!_me) {
@@ -116,7 +112,7 @@ static int load_next_input(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
     }
 
     size_t file_length = 0;
-    int rc = read_whole_file(filepath, cmt_buf_length(me->rx), me->rx->begin, &file_length);
+    int rc = cmt_util_read_whole_file(filepath, cmt_buf_length(me->rx), me->rx->begin, &file_length);
     if (rc) {
         if (cmt_util_debug_enabled()) {
             (void) fprintf(stderr, "failed to load \"%s\". %s\n", filepath, strerror(-rc));
@@ -130,8 +126,6 @@ static int load_next_input(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
         }
         return -EINVAL;
     }
-
-    assert(file_length <= INT32_MAX);
     rr->reason = me->input_type;
     rr->data = file_length;
 
@@ -150,7 +144,7 @@ static int store_output(cmt_io_driver_mock_t *me, const char *filepath, struct c
         return -ENOBUFS;
     }
 
-    int rc = write_whole_file(filepath, rr->data, me->tx->begin);
+    int rc = cmt_util_write_whole_file(filepath, rr->data, me->tx->begin);
     if (rc) {
         (void) fprintf(stderr, "failed to store \"%s\". %s\n", filepath, strerror(-rc));
         return rc;
@@ -205,7 +199,7 @@ static int mock_rx_rejected(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
     }
     (void) fprintf(stderr, "%s:%d no revert for the mock implementation\n", __FILE__, __LINE__);
     if (load_next_input(me, rr)) {
-        return -1;
+        return -ENOSYS;
     }
     return 0;
 }
@@ -255,9 +249,6 @@ static int mock_tx_gio(cmt_io_driver_mock_t *me, struct cmt_io_yield *rr) {
 
 /* These behaviours are defined by the cartesi-machine emulator */
 static int cmt_io_yield_inner(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
-    if (!_me) {
-        return -EINVAL;
-    }
     cmt_io_driver_mock_t *me = &_me->mock;
 
     if (rr->cmd == HTIF_YIELD_CMD_MANUAL) {
@@ -327,37 +318,3 @@ int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
     return rc;
 }
 
-static int read_whole_file(const char *name, size_t max, void *data, size_t *length) {
-    int rc = 0;
-
-    FILE *file = fopen(name, "rb");
-    if (!file) {
-        return -errno;
-    }
-
-    *length = fread(data, 1, max, file);
-    if (!feof(file)) {
-        rc = -ENOBUFS;
-    }
-    if (fclose(file) != 0) {
-        rc = -errno;
-    }
-    return rc;
-}
-
-static int write_whole_file(const char *name, size_t length, const void *data) {
-    int rc = 0;
-
-    FILE *file = fopen(name, "wb");
-    if (!file) {
-        return -errno;
-    }
-
-    if (fwrite(data, 1, length, file) != length) {
-        rc = -EIO;
-    }
-    if (fclose(file) != 0) {
-        rc = -errno;
-    }
-    return rc;
-}
