@@ -14,15 +14,15 @@ jobs:
       # Building from source cause the provided debian package is for Debian Bookworm
       - name: Download, build and install xgenext2fs
         run: |
-          wget https://github.com/cartesi/genext2fs/archive/refs/tags/v1.5.5.tar.gz
-          echo "ea648aa2a149c732aa07cd44218cdf63e881cfdfbb7e5cad3ecc6963661e31e2  v1.5.5.tar.gz" | sha256sum -c -
-          tar -xzf v1.5.5.tar.gz
-          cd genext2fs-1.5.5
+          wget https://github.com/cartesi/genext2fs/archive/refs/tags/v1.5.6.tar.gz
+          echo "34bfc26a037def23b85b676912462a3d126a87ef15c66c212b3500650da44f9e  v1.5.6.tar.gz" | sha256sum -c -
+          tar -xzf v1.5.6.tar.gz
+          cd genext2fs-1.5.6
           ./autogen.sh
           ./configure
           make
           sudo make install
-          rm -rf genext2fs-1.5.5 v1.5.5.tar.gz
+          rm -rf genext2fs-1.5.6 v1.5.6.tar.gz
 
       - name: Login to GHCR
         uses: docker/login-action@v3
