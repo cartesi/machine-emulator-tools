@@ -1,7 +1,6 @@
-#include <stdlib.h>
 #include <errno.h>
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,10 +23,10 @@ int cmt_util_read_whole_file(const char *name, size_t max, void *data, size_t *l
     if (!file) {
         return -errno;
     }
-
     *length = fread(data, 1, max, file);
-    if (!feof(file)) {
-        rc = -ENOBUFS;
+    int eof = (fseek(file, 0, SEEK_END) == 0) && (*length == (size_t) ftell(file));
+    if (!eof) {
+        rc = -EIO;
     }
     if (fclose(file) != 0) {
         rc = -errno;
@@ -51,4 +50,3 @@ int cmt_util_write_whole_file(const char *name, size_t length, const void *data)
     }
     return rc;
 }
-

@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "rollup.h"
+#include "data.h"
+#include "util.h"
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "rollup.h"
-#include "util.h"
-#include "data.h"
 
 void test_rollup_init_and_fini(void) {
     cmt_rollup_t rollup;
@@ -153,8 +153,8 @@ void test_rollup_outputs_reports_and_exceptions(void) {
                NULL, &index) == -EINVAL);
     assert(cmt_rollup_emit_voucher(&rollup, sizeof address - 1, address, sizeof value, value, strlen(voucher_data),
                voucher_data, &index) == -EINVAL);
-    assert(cmt_rollup_emit_voucher(&rollup, sizeof address, address, sizeof value, value, UINT32_MAX,
-               voucher_data, &index) == -ENOBUFS);
+    assert(cmt_rollup_emit_voucher(&rollup, sizeof address, address, sizeof value, value, UINT32_MAX, voucher_data,
+               &index) == -ENOBUFS);
 
     // notice
     char notice_data[] = "notice-0";

@@ -317,4 +317,3 @@ int cmt_io_yield(cmt_io_driver_t *_me, struct cmt_io_yield *rr) {
     }
     return rc;
 }
-

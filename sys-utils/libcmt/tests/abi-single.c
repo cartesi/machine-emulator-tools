@@ -22,16 +22,12 @@
 /** Declare a cmt_buf_t with stack backed memory.
  * @param [in] N - size in bytes
  * @note don't port */
-#define CMT_BUF_DECL(S, L)                                                                                             \
-    cmt_buf_t S[1] = {{.begin = (uint8_t[L]){0},                                                                       \
-        .end = (S)->begin + (L)}} // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
+#define CMT_BUF_DECL(S, L) cmt_buf_t S[1] = {{.begin = (uint8_t[L]){0}, .end = (S)->begin + (L)}}
 
 /** Declare a cmt_buf_t with parameters backed memory.
  * @param [in] L - size in bytes
  * @note don't port */
-#define CMT_BUF_DECL3(S, L, P)                                                                                         \
-    cmt_buf_t S[1] = {                                                                                                 \
-        {.begin = (P), .end = (S)->begin + (L)}} // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
+#define CMT_BUF_DECL3(S, L, P) cmt_buf_t S[1] = {{.begin = (P), .end = (S)->begin + (L)}}
 
 // funsel(address)
 #define FUNSEL CMT_ABI_FUNSEL(0xe6, 0x36, 0xe3, 0x33)
@@ -211,12 +207,12 @@ static void decode_uint_edom(void) {
     }
 
     {
-        uint8_t x [CMT_WORD_LENGTH+1] = {0};
+        uint8_t x[CMT_WORD_LENGTH + 1] = {0};
         assert(cmt_abi_decode_uint_nr(be, sizeof(x), x) == -EDOM);
     }
 
     {
-        uint8_t x [CMT_WORD_LENGTH+1] = {0};
+        uint8_t x[CMT_WORD_LENGTH + 1] = {0};
         assert(cmt_abi_decode_uint_nn(be, sizeof(x), x) == -EDOM);
     }
 }
@@ -265,7 +261,7 @@ static void put_uint_enobufs(void) {
 }
 
 static void put_uint_edom(void) {
-    uint64_t x[CMT_WORD_LENGTH+1] = {0};
+    uint64_t x[CMT_WORD_LENGTH + 1] = {0};
     CMT_BUF_DECL(b, CMT_WORD_LENGTH);
     cmt_buf_t it[1] = {*b};
 
@@ -309,7 +305,7 @@ static void put_address(void) {
 
 static void put_address_enobufs(void) {
     uint8_t x[CMT_ADDRESS_LENGTH] = {0};
-    CMT_BUF_DECL(b, CMT_WORD_LENGTH-1);
+    CMT_BUF_DECL(b, CMT_WORD_LENGTH - 1);
     cmt_buf_t it[1] = {*b};
 
     assert(cmt_abi_put_address(it, x) == -ENOBUFS);
@@ -395,7 +391,7 @@ static void get_uint_enobufs(void) {
 }
 
 static void get_uint_edom(void) {
-    uint64_t x[CMT_WORD_LENGTH+1] = {0};
+    uint64_t x[CMT_WORD_LENGTH + 1] = {0};
     CMT_BUF_DECL(b, CMT_WORD_LENGTH);
     cmt_buf_t it[1] = {*b};
 
@@ -437,7 +433,7 @@ static void get_bool(void) {
 
 static void get_bool_enobufs(void) {
     bool x = false;
-    uint8_t be[CMT_WORD_LENGTH-1] = {
+    uint8_t be[CMT_WORD_LENGTH - 1] = {
         // clang-format off
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -472,7 +468,7 @@ static void get_address(void) {
 
 static void get_address_enobufs(void) {
     uint8_t x[CMT_ADDRESS_LENGTH];
-    uint8_t be[CMT_WORD_LENGTH-1] = {
+    uint8_t be[CMT_WORD_LENGTH - 1] = {
         // clang-format off
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x23, 0x45, 0x67,
         0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45,
@@ -515,7 +511,7 @@ static void get_bytes_enobufs(void) {
         // clang-format on
     };
 
-    {   // when offset of dynamic reagion failed
+    { // when offset of dynamic reagion failed
         CMT_BUF_DECL3(b, 1 * CMT_WORD_LENGTH - 1, be);
         cmt_buf_t it[1] = {*b};
         cmt_buf_t of[1] = {0};
@@ -524,7 +520,7 @@ static void get_bytes_enobufs(void) {
         assert(cmt_abi_peek_bytes_d(it, of, bytes) == -ENOBUFS);
     }
 
-    {   // dynamic reagion is too small to peek bytes
+    { // dynamic reagion is too small to peek bytes
         CMT_BUF_DECL3(b, 3 * CMT_WORD_LENGTH - 1, be);
         cmt_buf_t it[1] = {*b};
         cmt_buf_t of[1] = {0};
@@ -534,7 +530,7 @@ static void get_bytes_enobufs(void) {
         assert(cmt_abi_peek_bytes_d(it, of, bytes) == -ENOBUFS);
     }
 
-    {   // dynamic reagion is too small to copy bytes
+    { // dynamic reagion is too small to copy bytes
         CMT_BUF_DECL3(b, 3 * CMT_WORD_LENGTH - 1, be);
         cmt_buf_t it[1] = {*b};
         cmt_buf_t of[1] = {0};

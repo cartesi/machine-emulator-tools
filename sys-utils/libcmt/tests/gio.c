@@ -1,14 +1,13 @@
-#include <string.h>
-#include <stdlib.h>
+#include "data.h"
+#include "rollup.h"
+#include "util.h"
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
-#include "rollup.h"
-#include "data.h"
-#include "util.h"
+#include <stdlib.h>
+#include <string.h>
 
-int main(void)
-{
+int main(void) {
     uint8_t buffer[1024];
     size_t buffer_length = 0;
     cmt_rollup_t rollup;

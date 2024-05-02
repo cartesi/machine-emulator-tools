@@ -103,16 +103,15 @@ static void split_by_comma_until_the_end(void) {
     cmt_buf_init(&x, sizeof _ - 1, _);
     cmt_buf_init(&xs, sizeof _ - 1, _);
     assert(cmt_buf_split_by_comma(&x, &xs) == true);
-    assert(strncmp((char *)x.begin, "a", 1UL) == 0);
+    assert(strncmp((char *) x.begin, "a", 1UL) == 0);
     assert(cmt_buf_split_by_comma(&x, &xs) == true);
-    assert(strncmp((char *)x.begin, "b", 1UL) == 0);
+    assert(strncmp((char *) x.begin, "b", 1UL) == 0);
     assert(cmt_buf_split_by_comma(&x, &xs) == true);
-    assert(strncmp((char *)x.begin, "c", 1UL) == 0);
+    assert(strncmp((char *) x.begin, "c", 1UL) == 0);
     assert(cmt_buf_split_by_comma(&x, &xs) == false);
 }
 
-static void xxd(void)
-{
+static void xxd(void) {
     uint8_t _[] = "";
     cmt_buf_xxd(_, _ + sizeof _, 0);
     cmt_buf_xxd(_, _ + sizeof _, 1);

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #include "merkle.h"
+#include "util.h"
 
 #include <errno.h>
 #include <stdbool.h>
@@ -131,17 +132,10 @@ int cmt_merkle_load(cmt_merkle_t *me, const char *filepath) {
     if (!me) {
         return -EINVAL;
     }
-    FILE *fin = fopen(filepath, "rb");
-    if (!fin) {
-        return -errno;
-    }
-    size_t read = fread(me, 1, sizeof(*me), fin);
-    int rc = 0;
-    if (read < sizeof(*me)) {
-        rc = -ENOBUFS;
-    }
-    if (fclose(fin) != 0 && rc == 0) {
-        return -errno;
+    size_t length = 0;
+    int rc = cmt_util_read_whole_file(filepath, sizeof *me, me, &length);
+    if (length != sizeof *me) {
+        return -EINVAL;
     }
     return rc;
 }
@@ -150,19 +144,7 @@ int cmt_merkle_save(cmt_merkle_t *me, const char *filepath) {
     if (!me) {
         return -EINVAL;
     }
-    FILE *fout = fopen(filepath, "wb");
-    if (!fout) {
-        return -errno;
-    }
-    size_t written = fwrite(me, 1, sizeof(*me), fout);
-    int rc = 0;
-    if (written < sizeof(*me)) {
-        rc = -EIO;
-    }
-    if (fclose(fout) != 0 && rc == 0) {
-        return -errno;
-    }
-    return rc;
+    return cmt_util_write_whole_file(filepath, sizeof *me, me);
 }
 
 uint64_t cmt_merkle_get_leaf_count(cmt_merkle_t *me) {

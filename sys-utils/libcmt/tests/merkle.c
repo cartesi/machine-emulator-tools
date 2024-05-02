@@ -132,7 +132,7 @@ void test_cmt_merkle_save_load(void) {
     char invalid[] = "/tmp/tmp.XXXXXX/invalid.bin";
 
     // create a unique file and an invalid file from it.
-    mkstemp(valid);
+    (void) !mkstemp(valid);
     memcpy(invalid, valid, strlen(valid));
 
     // Initialize merkle1 and add some data
@@ -151,9 +151,9 @@ void test_cmt_merkle_save_load(void) {
     assert(memcmp(&merkle1, &merkle2, sizeof(merkle1)) == 0);
 
     // fail to load smaller file
-    (void)truncate(valid, sizeof(merkle1) - 1);
+    (void) !truncate(valid, sizeof(merkle1) - 1);
     assert(cmt_merkle_load(&merkle2, valid) != 0);
-    (void)remove(valid);
+    (void) !remove(valid);
 
     // fail to save/load invalid filepath
     assert(cmt_merkle_save(&merkle1, invalid) != 0);
@@ -168,9 +168,7 @@ void test_cmt_merkle_save_load(void) {
 
 void test_cmt_merkle_full(void) {
     const uint64_t max_count =
-        (CMT_MERKLE_TREE_HEIGHT < 8 * sizeof(uint64_t))?
-        (UINT64_C(1) << CMT_MERKLE_TREE_HEIGHT):
-        UINT64_MAX;
+        (CMT_MERKLE_TREE_HEIGHT < 8 * sizeof(uint64_t)) ? (UINT64_C(1) << CMT_MERKLE_TREE_HEIGHT) : UINT64_MAX;
     cmt_merkle_t merkle = {
         .leaf_count = max_count - 1,
     };
