@@ -60,9 +60,8 @@ $(TOOLS_ROOTFS) fs: $(TOOLS_DEB)
 	  --output type=tar,dest=rootfs.tar \
 	  --file fs/Dockerfile \
 	  . && \
-	bsdtar -cf rootfs.gnutar --format=gnutar @rootfs.tar && \
-	xgenext2fs -fzB 4096 -b 25600 -i 4096 -a rootfs.gnutar -L rootfs $(TOOLS_ROOTFS) && \
-	rm -f rootfs.gnutar rootfs.tar
+	xgenext2fs -fzB 4096 -b 25600 -i 4096 -a rootfs.tar -L rootfs $(TOOLS_ROOTFS) && \
+	rm -f rootfs.tar
 
 $(TOOLS_LIBCMT) libcmt:
 	@docker buildx build --load \

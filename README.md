@@ -10,8 +10,7 @@ Users looking to create cartesi-machine applications can use the provided Debian
 
 - Docker >= 18.x
 - GNU Make >= 3.81
-- bsdtar >= 3.7.2
-- xgenext2fs >= 1.5.3
+- xgenext2fs >= 1.5.6
 
 ### Docker buildx setup
 
