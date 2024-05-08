@@ -27,7 +27,7 @@ TOOLCHAIN_PREFIX ?= riscv64-linux-gnu-
 TARGET_CC := $(TOOLCHAIN_PREFIX)gcc
 TARGET_AR := $(TOOLCHAIN_PREFIX)ar
 COMMON_CFLAGS := -Wvla -O2 -g -Wall -pedantic -Wextra -Isrc \
-                 -fno-strict-aliasing -fno-strict-overflow
+                 -fno-strict-aliasing -fno-strict-overflow -fPIC
 TARGET_CFLAGS := $(COMMON_CFLAGS) -ftrivial-auto-var-init=zero -Wstrict-aliasing=3
 CFLAGS := $(COMMON_CFLAGS)
 CC := gcc
@@ -68,6 +68,7 @@ libcmt_SRC := \
 libcmt_OBJDIR    := build/lib
 libcmt_OBJ       := $(patsubst %.c,$(libcmt_OBJDIR)/%.o,$(libcmt_SRC))
 libcmt_LIB       := $(libcmt_OBJDIR)/libcmt.a
+libcmt_SO        := $(libcmt_OBJDIR)/libcmt.so
 
 $(libcmt_OBJ): $(libcmt_OBJDIR)/%.o: %.c
 	@mkdir -p $(@D)
@@ -76,10 +77,13 @@ $(libcmt_OBJ): $(libcmt_OBJDIR)/%.o: %.c
 $(libcmt_LIB): $(libcmt_OBJ)
 	$(TARGET_AR) rcs $@ $^
 
-libcmt: $(libcmt_LIB)
-install: $(libcmt_LIB)
+$(libcmt_SO): $(libcmt_OBJ)
+	$(TARGET_CC) -shared -o $@ $^
+
+libcmt: $(libcmt_LIB) $(libcmt_SO)
+install: $(libcmt_LIB) $(libcmt_SO)
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
-	cp -f $< $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
+	cp -f $^ $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
 	cp -f src/*.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig
@@ -103,6 +107,7 @@ mock_SRC := \
 mock_OBJDIR := build/mock
 mock_OBJ    := $(patsubst %.c,$(mock_OBJDIR)/%.o,$(mock_SRC))
 mock_LIB    := $(mock_OBJDIR)/libcmt.a
+mock_SO     := $(mock_OBJDIR)/libcmt.so
 
 $(mock_OBJ): $(mock_OBJDIR)/%.o: %.c
 	@mkdir -p $(@D)
@@ -111,11 +116,14 @@ $(mock_OBJ): $(mock_OBJDIR)/%.o: %.c
 $(mock_LIB): $(mock_OBJ)
 	$(AR) rcs $@ $^
 
-mock: $(mock_LIB)
+$(mock_SO): $(mock_OBJ)
+	$(CC) -shared -o $@ $^
 
-install-mock: $(mock_LIB)
+mock: $(mock_LIB) $(mock_SO)
+
+install-mock: $(mock_LIB) $(mock_SO)
 	mkdir -p $(DESTDIR)$(PREFIX)/lib
-	cp -f $< $(DESTDIR)$(PREFIX)/lib
+	cp -f $^ $(DESTDIR)$(PREFIX)/lib
 	mkdir -p $(DESTDIR)$(PREFIX)/include/libcmt/
 	cp -f src/*.h $(DESTDIR)$(PREFIX)/include/libcmt/
 	mkdir -p $(DESTDIR)$(PREFIX)/lib/pkgconfig
