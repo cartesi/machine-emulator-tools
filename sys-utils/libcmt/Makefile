@@ -116,6 +116,7 @@ mock: $(mock_LIB)
 install-mock: $(mock_LIB)
 	mkdir -p $(DESTDIR)$(PREFIX)/lib
 	cp -f $< $(DESTDIR)$(PREFIX)/lib
+	mkdir -p $(DESTDIR)$(PREFIX)/include/libcmt/
 	cp -f src/*.h $(DESTDIR)$(PREFIX)/include/libcmt/
 	mkdir -p $(DESTDIR)$(PREFIX)/lib/pkgconfig
 	sed -e 's|@ARG_PREFIX@|$(PREFIX)|g' src/libcmt_mock.pc > $(DESTDIR)$(PREFIX)/lib/pkgconfig/libcmt.pc
