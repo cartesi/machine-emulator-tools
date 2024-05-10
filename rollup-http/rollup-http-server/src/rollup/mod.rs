@@ -122,7 +122,7 @@ impl cmt_abi_u256_t {
             cmt_abi_encode_uint_nn(
                 binary.len(),
                 binary.as_mut_ptr() as *const u8,
-                value.data.as_mut_ptr()
+                value.data.as_mut_ptr(),
             )
         };
         if rc != 0 {
@@ -152,7 +152,7 @@ impl cmt_abi_address_t {
 pub struct GIORequest {
     #[validate(range(min = 0x10))] // avoid overlapping with our HTIF_YIELD_MANUAL_REASON_*
     pub domain: u16,
-    pub payload: String,
+    pub id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -185,12 +185,12 @@ impl From<cmt_rollup_advance_t> for AdvanceMetadata {
         prev_randao.push_str(&hex::encode(&other.prev_randao.data));
         AdvanceMetadata {
             chain_id: other.chain_id,
-            app_contract: app_contract,
-            msg_sender: msg_sender,
+            app_contract,
+            msg_sender,
             block_timestamp: other.block_timestamp,
             block_number: other.block_number,
             input_index: other.index,
-            prev_randao: prev_randao,
+            prev_randao,
         }
     }
 }
@@ -354,7 +354,8 @@ pub fn rollup_read_inspect_state_request(
         payload: cmt_abi_bytes_t {
             length: 0,
             data: std::ptr::null::<::std::os::raw::c_uchar>() as *mut c_void,
-        }});
+        },
+    });
 
     let res = unsafe { cmt_rollup_read_inspect_state(fd.0, inspect_request.as_mut()) };
 
@@ -502,8 +503,7 @@ pub fn gio_request(
     fd: &RollupFd,
     gio: &GIORequest,
 ) -> Result<GIOResponse, Box<dyn std::error::Error>> {
-    println!("going to do gio_request");
-    let binary_payload = match hex::decode(&gio.payload[2..]) {
+    let binary_payload = match hex::decode(&gio.id[2..]) {
         Ok(payload) => payload,
         Err(_err) => {
             return Err(Box::new(RollupError::new(&format!(

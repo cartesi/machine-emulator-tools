@@ -137,3 +137,14 @@ jobs:
         run: |
           cd rollup-http/rollup-http-server
           MOCK_BUILD=true cargo test -- --show-output --test-threads=1
+
+      - name: Test rollup-http-server api schema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wait-for-it python3 python3-pip
+          pip3 install schemathesis
+          cd rollup-http/rollup-http-server
+          wget https://raw.githubusercontent.com/cartesi/openapi-interfaces/main/rollup.yaml
+          MOCK_BUILD=true cargo run -- "echo 1" &
+          wait-for-it localhost:5004 --timeout=30
+          st run rollup.yaml --checks all --validate-schema true --hypothesis-phases explicit --base-url http://localhost:5004
