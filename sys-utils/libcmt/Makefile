@@ -81,11 +81,12 @@ $(libcmt_SO): $(libcmt_OBJ)
 	$(TARGET_CC) -shared -o $@ $^
 
 libcmt: $(libcmt_LIB) $(libcmt_SO)
-install: $(libcmt_LIB) $(libcmt_SO)
+install: $(libcmt_LIB) $(libcmt_SO) build/ffi.h
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
-	cp -f $^ $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
+	cp -f $(libcmt_LIB) $(libcmt_SO) $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
 	cp -f src/*.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
+	cp -f build/ffi.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig
 	sed -e 's|@ARG_PREFIX@|$(TARGET_PREFIX)|g' src/libcmt.pc > $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig/libcmt.pc
 
@@ -121,11 +122,12 @@ $(mock_SO): $(mock_OBJ)
 
 mock: $(mock_LIB) $(mock_SO)
 
-install-mock: $(mock_LIB) $(mock_SO)
+install-mock: $(mock_LIB) $(mock_SO) build/ffi.h
 	mkdir -p $(DESTDIR)$(PREFIX)/lib
-	cp -f $^ $(DESTDIR)$(PREFIX)/lib
+	cp -f $(mock_LIB) $(mock_SO) $(DESTDIR)$(PREFIX)/lib
 	mkdir -p $(DESTDIR)$(PREFIX)/include/libcmt/
 	cp -f src/*.h $(DESTDIR)$(PREFIX)/include/libcmt/
+	cp -f build/ffi.h $(DESTDIR)$(PREFIX)/include/libcmt/
 	mkdir -p $(DESTDIR)$(PREFIX)/lib/pkgconfig
 	sed -e 's|@ARG_PREFIX@|$(PREFIX)|g' src/libcmt_mock.pc > $(DESTDIR)$(PREFIX)/lib/pkgconfig/libcmt.pc
 
@@ -181,6 +183,8 @@ $(tools_OBJDIR)/funsel: tools/funsel.c $(mock_LIB)
 
 tools: $(tools_BINS)
 
+build/ffi.h: src/buf.h src/abi.h src/keccak.h src/merkle.h src/io.h src/rollup.h
+	cat $^ | sh tools/prepare-ffi.sh > $@
 #-------------------------------------------------------------------------------
 LINTER_IGNORE_SOURCES=src/io.c
 LINTER_IGNORE_HEADERS=

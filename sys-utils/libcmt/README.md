@@ -59,7 +59,7 @@ The (verifiable) outputs root hash:
 advance.outputs_root_hash.bin
 ```
 
-inputs must follow this syntax, a comma separated list of reason number followed by a filepath:
+Inputs must follow this syntax, a comma separated list of reason number followed by a file path:
 ```
 CMT_INPUTS="<reason-number> ':' <filepath> ( ',' <reason-number> ':' <filepath> ) *"
 ```
@@ -76,7 +76,7 @@ CMT_DEBUG=yes ./application
 ## generating inputs
 
 Inputs and Outputs are expected to be EVM-ABI encoded. Encoding and decoding
-can be acheived multiple ways, including writing tools with this library. A
+can be achieved multiple ways, including writing tools with this library. A
 simple way to generate testing data is to use the @p cast tool from
 [foundry](http://book.getfoundry.sh/reference/cast/cast.html) and `xxd`.
 
@@ -132,7 +132,80 @@ cast calldata-decode "Notice(bytes)" 0x`xxd -p -c0 "$1"` | (
 # binds
 
 This library is intented to be used with programming languages other than C.
-They acheive this by different means.
+They achieve this by different means.
+
+## Python
+
+Python has multiple Foreign Function Interface (FFI) options for interoperability with C.
+This example uses CFFI and the `libcmt` mock. Which is assumed to be installed at `./libcmt-0.1.0`.
+
+This document uses the [main mode](https://cffi.readthedocs.io/en/latest/overview.html#main-mode-of-usage) of CFFI and works in two steps: `build`, then `use`.
+
+### Build
+
+The `build` step has the objective of creating a python module for libcmt.
+To achieve this we'll use `libcmt/ffi.h` and the script below.
+Paths may need adjustments.
+
+```
+import os
+from cffi import FFI
+
+ffi = FFI()
+with open(os.path.join(os.path.dirname(__file__), "../libcmt-0.1.0/usr/include/libcmt/ffi.h")) as f:
+    ffi.cdef(f.read())
+ffi.set_source("pycmt",
+"""
+#include "libcmt/rollup.h"
+""",
+     include_dirs=["libcmt-0.1.0/usr/include"],
+     library_dirs=["libcmt-0.1.0/usr/lib"],
+     libraries=['cmt'])
+
+if __name__ == "__main__":
+    ffi.compile(verbose=True)
+```
+
+### Use
+
+With the module built, we can import it with python and use its functions.
+This example uses the raw bindings and just serves to illustrate the process.
+Better yet would be to wrap these functions into a more "pythonic" API.
+
+`LD_LIBRARY_PATH=libcmt-0.1.0/lib/ python`
+
+```
+#!/usr/bin/env python
+
+# run this file only after building pycmt!
+import os
+from pycmt.lib import ffi, lib
+
+r = ffi.new("cmt_rollup_t[1]")
+assert(lib.cmt_rollup_init(r) == 0)
+
+address = ffi.new("uint8_t[20]", b"1000000000000")
+value   = ffi.new("uint8_t[32]", b"0000000000001")
+data    = b"hello world"
+index   = ffi.new("uint64_t *")
+print(os.strerror(-lib.cmt_rollup_emit_voucher(r,
+                            20, address,
+                            32, value,
+                            len(data), data, index)))
+
+ffi.gc(r, lib.cmt_rollup_fini)
+```
+
+Common errors such as the one below indicate that python couldn't find libcmt,
+make sure `LD_LIBRARY_PATH` points to the correct directory, or better yet, link
+against the static library.
+
+```
+>>> import pycmt
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+ImportError: libcmt.so: cannot open shared object file: No such file or directory
+```
 
 ## Go
 
