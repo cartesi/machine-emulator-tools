@@ -20,10 +20,13 @@ use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdvanceMetadata {
+    pub chain_id: u64,
+    pub app_contract: String,
     pub msg_sender: String,
-    pub input_index: u64,
     pub block_number: u64,
     pub block_timestamp: u64,
+    pub prev_randao: String,
+    pub input_index: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -67,7 +70,7 @@ pub struct IndexResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GIORequest {
     pub domain: u16,
-    pub payload: String,
+    pub id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

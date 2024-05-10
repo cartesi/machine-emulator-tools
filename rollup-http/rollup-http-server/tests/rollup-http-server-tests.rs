@@ -348,7 +348,7 @@ async fn test_gio_request(
     println!("Sending gio request");
     let test_gio_request = GIORequest {
         domain: 0x100,
-        payload: "0x".to_string() + &hex::encode("gio test payload 01"),
+        id: "0x".to_string() + &hex::encode("gio test payload 01"),
     };
     rollup_http_client::client::send_gio_request(&context.address, test_gio_request.clone()).await;
     context.server_handle.stop(true).await;
