@@ -31,7 +31,7 @@ LINUX_HEADERS_URLPATH := https://github.com/cartesi/image-kernel/releases/downlo
 
 all: fs
 
-build: control
+build: control package.json
 	@docker buildx build --load \
 		--build-arg TOOLS_DEB=$(TOOLS_DEB) \
 		--build-arg IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION) \
@@ -49,8 +49,10 @@ copy:
 
 $(TOOLS_DEB) deb: build
 
-control: Makefile control.template
-	@sed 's|ARG_VERSION|$(VERSION)|g' control.template > control
+control: Makefile control.in
+	@sed 's|ARG_VERSION|$(VERSION)|g' control.in > control
+package.json: Makefile package.json.in
+	@sed 's|ARG_VERSION|$(VERSION)|g' package.json.in > package.json
 
 $(TOOLS_ROOTFS) fs: $(TOOLS_DEB)
 	@docker buildx build --platform=linux/riscv64 \

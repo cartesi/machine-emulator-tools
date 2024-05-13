@@ -47,6 +47,9 @@ jobs:
       - name: Create debian package control file
         run: make control
 
+      - name: Create version file
+        run: make package.json
+
       - name: Buildx setup
         uses: docker/setup-buildx-action@v2
 

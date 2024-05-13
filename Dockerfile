@@ -153,11 +153,13 @@ ARG STAGING_BASE=${BUILD_BASE}/_install
 ARG STAGING_DEBIAN=${STAGING_BASE}/DEBIAN
 ARG STAGING_SBIN=${STAGING_BASE}/usr/sbin
 ARG STAGING_BIN=${STAGING_BASE}/usr/bin
+ARG STAGING_SHARE=${STAGING_BASE}/usr/share/machine-emulator-tools
 
 RUN mkdir -p ${STAGING_DEBIAN} ${STAGING_SBIN} ${STAGING_BIN} ${STAGING_BASE}/etc && \
     echo "cartesi-machine" > ${staging_base}/etc/hostname
 
 COPY control ${STAGING_DEBIAN}/control
+COPY package.json ${STAGING_SHARE}/package.json
 COPY postinst ${STAGING_DEBIAN}/postinst
 
 COPY --from=builder ${BUILD_BASE}/tools/sys-utils/cartesi-init/cartesi-init ${STAGING_SBIN}
