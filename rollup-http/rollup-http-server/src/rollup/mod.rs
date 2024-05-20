@@ -127,23 +127,36 @@ pub struct GIOResponse {
     pub response: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct AdvanceMetadata {
+    pub chain_id: u64,
+    #[validate(regex = "ETH_ADDR_REGEXP")]
+    pub app_contract: String,
+    #[validate(regex = "ETH_ADDR_REGEXP")]
     pub msg_sender: String,
-    pub input_index: u64,
     pub block_number: u64,
     pub block_timestamp: u64,
+    #[validate(regex = "ETH_U256_REGEXP")]
+    pub prev_randao: String,
+    pub input_index: u64,
 }
 
 impl From<cmt_rollup_advance_t> for AdvanceMetadata {
     fn from(other: cmt_rollup_advance_t) -> Self {
-        let mut address = "0x".to_string();
-        address.push_str(&hex::encode(&other.msg_sender));
+        let mut msg_sender = "0x".to_string();
+        msg_sender.push_str(&hex::encode(&other.msg_sender));
+        let mut app_contract = "0x".to_string();
+        app_contract.push_str(&hex::encode(&other.app_contract));
+        let mut prev_randao = "0x".to_string();
+        prev_randao.push_str(&hex::encode(&other.prev_randao));
         AdvanceMetadata {
-            input_index: other.index,
+            chain_id: other.chain_id,
+            app_contract: app_contract,
+            msg_sender: msg_sender,
             block_timestamp: other.block_timestamp,
             block_number: other.block_number,
-            msg_sender: address,
+            input_index: other.index,
+            prev_randao: prev_randao,
         }
     }
 }
@@ -245,6 +258,7 @@ pub fn rollup_read_advance_state_request(
         app_contract: Default::default(),
         block_number: 0,
         block_timestamp: 0,
+        prev_randao: Default::default(),
         index: 0,
         payload_length: 0,
         payload: std::ptr::null::<::std::os::raw::c_uchar>() as *mut c_void,

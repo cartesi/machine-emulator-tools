@@ -103,14 +103,15 @@ static void print_help(void) {
           "chain_id": <number>,
           "app_contract": <address>,
           "msg_sender": <address>,
-          "epoch_index": <number>,
-          "input_index": <number>,
           "block_number": <number>,
           "block_timestamp": <number>
+          "prev_randao": <hex-uint256>,
+          "index": <number>,
           "payload": <hex-data>
         },
       where
-        <address> contains a 20-byte EVM address in hex, and
+        <address> contains a 20-byte EVM address in hex,
+        <hex-uint256> contains a big-endian 32-byte unsigned integer in hex, and
         <hex-data> contains arbitrary data in hex
 
       when field "request_type" contains "inspect_state",
@@ -292,12 +293,13 @@ static int write_advance_state(rollup &r, const cmt_rollup_finish_t *f) {
         {"data",
             {
                 {"chain_id", advance.chain_id},
-                {"payload", hex(reinterpret_cast<const uint8_t *>(advance.payload), advance.payload_length)},
                 {"app_contract", hex(advance.app_contract, sizeof(advance.app_contract))},
                 {"msg_sender", hex(advance.msg_sender, sizeof(advance.msg_sender))},
                 {"block_number", advance.block_number},
                 {"block_timestamp", advance.block_timestamp},
+                {"prev_randao", hex(advance.prev_randao, sizeof(advance.prev_randao))},
                 {"index", advance.index},
+                {"payload", hex(reinterpret_cast<const uint8_t *>(advance.payload), advance.payload_length)},
             }}};
     std::cout << j.dump(2) << '\n';
     return 0;
