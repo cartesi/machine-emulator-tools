@@ -39,14 +39,14 @@ fn main() {
     };
 
     let header_path = if mock_build {
-        "../../sys-utils/libcmt/src/rollup.h".into()
+        "../../sys-utils/libcmt/include/libcmt/rollup.h".into()
     } else {
         pkg_config::get_variable("libcmt", "includedir").expect("Could not find include directory")
             + "/libcmt/rollup.h"
     };
 
     let include_path = if mock_build {
-        "-I../../sys-utils/libcmt/src".into()
+        "-I../../sys-utils/libcmt/include/libcmt".into()
     } else {
         "-I".to_string()
             + &pkg_config::get_variable("libcmt", "includedir")

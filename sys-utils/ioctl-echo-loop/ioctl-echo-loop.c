@@ -90,29 +90,31 @@ static int finish_request(cmt_rollup_t *me, cmt_rollup_finish_t *finish, bool ac
     return cmt_rollup_finish(me, finish);
 }
 
-static int write_notices(cmt_rollup_t *me, unsigned count, uint32_t length, const void *data) {
+static int write_notices(cmt_rollup_t *me, unsigned count, cmt_abi_bytes_t *payload) {
     for (unsigned i = 0; i < count; i++) {
-        int rc = cmt_rollup_emit_notice(me, length, data, NULL);
+        int rc = cmt_rollup_emit_notice(me, payload, NULL);
         if (rc)
             return rc;
     }
     return 0;
 }
 
-static int write_vouchers(cmt_rollup_t *me, unsigned count, uint8_t destination[CMT_ADDRESS_LENGTH], uint32_t length,
-    const void *data) {
-    uint8_t value[] = {0xde, 0xad, 0xbe, 0xef};
+static int write_vouchers(cmt_rollup_t *me, unsigned count, cmt_abi_address_t *destination, cmt_abi_bytes_t *payload) {
+    cmt_abi_u256_t value = {{
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xde, 0xad, 0xbe, 0xef,
+    }};
     for (unsigned i = 0; i < count; i++) {
-        int rc = cmt_rollup_emit_voucher(me, CMT_ADDRESS_LENGTH, destination, sizeof(value), value, length, data, NULL);
+        int rc = cmt_rollup_emit_voucher(me, destination, &value, payload, NULL);
         if (rc)
             return rc;
     }
     return 0;
 }
 
-static int write_reports(cmt_rollup_t *me, unsigned count, uint32_t length, const void *data) {
+static int write_reports(cmt_rollup_t *me, unsigned count, cmt_abi_bytes_t *payload) {
     for (unsigned i = 0; i < count; i++) {
-        int rc = cmt_rollup_emit_report(me, length, data);
+        int rc = cmt_rollup_emit_report(me, payload);
         if (rc)
             return rc;
     }
@@ -126,13 +128,13 @@ static int handle_advance_state_request(cmt_rollup_t *me, struct parsed_args *ar
         return rc;
     *index = advance.index;
     fprintf(stderr, "advance with index %d\n", (int) advance.index);
-    if (write_vouchers(me, args->voucher_count, advance.msg_sender, advance.payload_length, advance.payload) != 0) {
+    if (write_vouchers(me, args->voucher_count, &advance.msg_sender, &advance.payload) != 0) {
         return -1;
     }
-    if (write_notices(me, args->notice_count, advance.payload_length, advance.payload) != 0) {
+    if (write_notices(me, args->notice_count, &advance.payload) != 0) {
         return -1;
     }
-    if (write_reports(me, args->report_count, advance.payload_length, advance.payload) != 0) {
+    if (write_reports(me, args->report_count, &advance.payload) != 0) {
         return -1;
     }
     return 0;
@@ -144,7 +146,7 @@ static int handle_inspect_state_request(cmt_rollup_t *me, struct parsed_args *ar
     if (rc)
         return rc;
 
-    if (write_reports(me, args->report_count, inspect.payload_length, inspect.payload) != 0) {
+    if (write_reports(me, args->report_count, &inspect.payload) != 0) {
         return -1;
     }
     return 0;
@@ -193,8 +195,12 @@ int main(int argc, char *argv[]) {
         reject_inspect = (finish.next_request_type == HTIF_YIELD_REASON_INSPECT) && args.reject_inspects;
         throw_exception = (finish.next_request_type == HTIF_YIELD_REASON_ADVANCE) && (args.exception == advance_index);
         if (throw_exception) {
-            const char message[] = "exception";
-            cmt_rollup_emit_exception(&rollup, sizeof message - 1, message);
+            char message[] = "exception";
+            const cmt_abi_bytes_t payload = {
+                .data = message,
+                .length = sizeof message - 1,
+            };
+            cmt_rollup_emit_exception(&rollup, &payload);
         }
         if (finish_request(&rollup, &finish, !(reject_advance || reject_inspect)) != 0) {
             break;

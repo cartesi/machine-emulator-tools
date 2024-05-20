@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "merkle.h"
-#include "util.h"
+#include "libcmt/merkle.h"
+#include "libcmt/util.h"
 
 #include <errno.h>
 #include <stdbool.h>

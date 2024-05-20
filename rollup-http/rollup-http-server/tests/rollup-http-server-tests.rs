@@ -120,24 +120,26 @@ async fn test_finish_request(
     context_future: impl Future<Output = Context>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     /*
-     * cast calldata "EvmAdvance(uint256,address,address,uint256,uint256,uint256,bytes)" \
+     * cast calldata "EvmAdvance(uint256,address,address,uint256,uint256,uint256,uint256,bytes)" \
      *     0x0000000000000000000000000000000000000001 \
      *     0x0000000000000000000000000000000000000002 \
      *     0x0000000000000000000000000000000000000003 \
      *     0x0000000000000000000000000000000000000004 \
      *     0x0000000000000000000000000000000000000005 \
      *     0x0000000000000000000000000000000000000006 \
-     *     0x`echo "advance-0" | xxd -p -c0`
+     *     0x0000000000000000000000000000000000000007 \
+     *     0x`echo -e "advance-0" | xxd -p -c0`
      */
     let advance_payload_field = "advance-0\n"; // must match `cast` invocation!
-    let advance_payload_data = "cc7dee1f\
+    let advance_payload_data = "415bf363\
                                 0000000000000000000000000000000000000000000000000000000000000001\
                                 0000000000000000000000000000000000000000000000000000000000000002\
                                 0000000000000000000000000000000000000000000000000000000000000003\
                                 0000000000000000000000000000000000000000000000000000000000000004\
                                 0000000000000000000000000000000000000000000000000000000000000005\
                                 0000000000000000000000000000000000000000000000000000000000000006\
-                                00000000000000000000000000000000000000000000000000000000000000e0\
+                                0000000000000000000000000000000000000000000000000000000000000007\
+                                0000000000000000000000000000000000000000000000000000000000000100\
                                 000000000000000000000000000000000000000000000000000000000000000a\
                                 616476616e63652d300a00000000000000000000000000000000000000000000";
 
@@ -378,10 +380,7 @@ async fn test_exception_throw(
     //Read text file with results
     let exception =
         std::fs::read("none.exception-0.bin").expect("error reading test exception file");
-    assert_eq!(
-        String::from_utf8(exception).unwrap(),
-        contents,
-    );
+    assert_eq!(String::from_utf8(exception).unwrap(), contents,);
     println!("Removing exception text file");
     std::fs::remove_file("none.exception-0.bin")?;
     Ok(())

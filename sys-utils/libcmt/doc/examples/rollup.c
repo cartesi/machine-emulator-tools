@@ -24,13 +24,13 @@ int main(void) {
                     break;
                 }
 
-                rc = cmt_rollup_emit_voucher(&rollup, sizeof advance.sender, advance.sender, 0, NULL, advance.length, advance.data, NULL);
+                rc = cmt_rollup_emit_voucher(&rollup, &advance.msg_sender, NULL, &advance.payload, NULL);
                 if (rc < 0) {
                     fprintf(stderr, "%s:%d Error on voucher %s (%d)\n", __FILE__, __LINE__, strerror(-rc), (-rc));
                     break;
                 }
 
-                rc = cmt_rollup_emit_notice(&rollup, advance.length, advance.data, NULL);
+                rc = cmt_rollup_emit_notice(&rollup, &advance.payload, NULL);
                 if (rc < 0) {
                     fprintf(stderr, "%s:%d Error on voucher %s (%d)\n", __FILE__, __LINE__, strerror(-rc), (-rc));
                     break;

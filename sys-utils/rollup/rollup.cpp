@@ -103,14 +103,15 @@ static void print_help(void) {
           "chain_id": <number>,
           "app_contract": <address>,
           "msg_sender": <address>,
-          "epoch_index": <number>,
-          "input_index": <number>,
           "block_number": <number>,
           "block_timestamp": <number>
+          "prev_randao": <hex-uint256>,
+          "index": <number>,
           "payload": <hex-data>
         },
       where
-        <address> contains a 20-byte EVM address in hex, and
+        <address> contains a 20-byte EVM address in hex,
+        <hex-uint256> contains a big-endian 32-byte unsigned integer in hex, and
         <hex-data> contains arbitrary data in hex
 
       when field "request_type" contains "inspect_state",
@@ -217,13 +218,20 @@ static std::string hex(const uint8_t *data, uint64_t length) {
 static int write_voucher(void) try {
     rollup r;
     auto ji = nlohmann::json::parse(read_input());
-    auto payload = unhex(ji["payload"].get<std::string>());
-    auto destination = unhex20(ji["destination"].get<std::string>());
-    auto value = unhex32(ji["value"].get<std::string>());
+    auto payload_bytes = unhex(ji["payload"].get<std::string>());
+    auto destination_bytes = unhex20(ji["destination"].get<std::string>());
+    auto value_bytes = unhex32(ji["value"].get<std::string>());
     uint64_t index = 0;
-    int ret = cmt_rollup_emit_voucher(r, destination.length(), reinterpret_cast<unsigned char *>(destination.data()),
-        value.length(), reinterpret_cast<unsigned char *>(value.data()), payload.size(),
-        reinterpret_cast<unsigned char *>(payload.data()), &index);
+    cmt_abi_address_t destination;
+    cmt_abi_u256_t value;
+    cmt_abi_bytes_t payload;
+    payload.data = reinterpret_cast<unsigned char *>(payload_bytes.data());
+    payload.length = payload_bytes.size();
+
+    memcpy(destination.data, reinterpret_cast<unsigned char *>(destination_bytes.data()), destination_bytes.size());
+    memcpy(value.data, reinterpret_cast<unsigned char *>(value_bytes.data()), value_bytes.size());
+
+    int ret = cmt_rollup_emit_voucher(r, &destination, &value, &payload, &index);
     if (ret)
         return ret;
 
@@ -240,9 +248,12 @@ static int write_voucher(void) try {
 static int write_notice(void) try {
     rollup r;
     auto ji = nlohmann::json::parse(read_input());
-    auto payload = unhex(ji["payload"].get<std::string>());
+    auto payload_bytes = unhex(ji["payload"].get<std::string>());
+    cmt_abi_bytes_t payload;
+    payload.data = reinterpret_cast<unsigned char *>(payload_bytes.data());
+    payload.length = payload_bytes.size();
     uint64_t index = 0;
-    int ret = cmt_rollup_emit_notice(r, payload.size(), reinterpret_cast<uint8_t *>(payload.data()), &index);
+    int ret = cmt_rollup_emit_notice(r, &payload, &index);
     if (ret)
         return ret;
 
@@ -260,8 +271,11 @@ static int write_notice(void) try {
 static int write_report(void) try {
     rollup r;
     auto ji = nlohmann::json::parse(read_input());
-    auto payload = unhex(ji["payload"].get<std::string>());
-    return cmt_rollup_emit_report(r, payload.size(), reinterpret_cast<uint8_t *>(payload.data()));
+    auto payload_bytes = unhex(ji["payload"].get<std::string>());
+    cmt_abi_bytes_t payload;
+    payload.data = reinterpret_cast<unsigned char *>(payload_bytes.data());
+    payload.length = payload_bytes.size();
+    return cmt_rollup_emit_report(r, &payload);
 } catch (std::exception &x) {
     std::cerr << x.what() << '\n';
     return 1;
@@ -271,8 +285,11 @@ static int write_report(void) try {
 static int throw_exception(void) try {
     rollup r;
     auto ji = nlohmann::json::parse(read_input());
-    auto payload = unhex(ji["payload"].get<std::string>());
-    return cmt_rollup_emit_exception(r, payload.size(), reinterpret_cast<uint8_t *>(payload.data()));
+    auto payload_bytes = unhex(ji["payload"].get<std::string>());
+    cmt_abi_bytes_t payload;
+    payload.data = reinterpret_cast<unsigned char *>(payload_bytes.data());
+    payload.length = payload_bytes.size();
+    return cmt_rollup_emit_exception(r, &payload);
 } catch (std::exception &x) {
     std::cerr << x.what() << '\n';
     return 1;
@@ -292,12 +309,13 @@ static int write_advance_state(rollup &r, const cmt_rollup_finish_t *f) {
         {"data",
             {
                 {"chain_id", advance.chain_id},
-                {"payload", hex(reinterpret_cast<const uint8_t *>(advance.payload), advance.payload_length)},
-                {"app_contract", hex(advance.app_contract, sizeof(advance.app_contract))},
-                {"msg_sender", hex(advance.msg_sender, sizeof(advance.msg_sender))},
+                {"app_contract", hex(advance.app_contract.data, std::size(advance.app_contract.data))},
+                {"msg_sender", hex(advance.msg_sender.data, std::size(advance.msg_sender.data))},
                 {"block_number", advance.block_number},
                 {"block_timestamp", advance.block_timestamp},
+                {"prev_randao", hex(advance.prev_randao.data, std::size(advance.prev_randao.data))},
                 {"index", advance.index},
+                {"payload", hex(reinterpret_cast<const uint8_t *>(advance.payload.data), advance.payload.length)},
             }}};
     std::cout << j.dump(2) << '\n';
     return 0;
@@ -316,7 +334,7 @@ static int write_inspect_state(rollup &r, const cmt_rollup_finish_t *f) {
     nlohmann::json j = {{"request_type", "inspect_state"},
         {"data",
             {
-                {"payload", hex(reinterpret_cast<const uint8_t *>(inspect.payload), inspect.payload_length)},
+                {"payload", hex(reinterpret_cast<const uint8_t *>(inspect.payload.data), inspect.payload.length)},
             }}};
     std::cout << j.dump(2) << '\n';
     return 0;

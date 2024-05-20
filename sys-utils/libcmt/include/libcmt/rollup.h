@@ -44,19 +44,18 @@ typedef struct cmt_rollup {
 /** Public struct with the advance state contents */
 typedef struct cmt_rollup_advance {
     uint64_t chain_id;                        /**< network */
-    uint8_t app_contract[CMT_ADDRESS_LENGTH]; /**< application contract address */
-    uint8_t msg_sender[CMT_ADDRESS_LENGTH];   /**< input sender address */
+    cmt_abi_address_t app_contract;           /**< application contract address */
+    cmt_abi_address_t msg_sender;             /**< input sender address */
     uint64_t block_number;                    /**< block number of this input */
     uint64_t block_timestamp;                 /**< block timestamp of this input UNIX epoch format) */
+    cmt_abi_u256_t prev_randao;               /**< The latest RANDAO mix of the post beacon state of the previous block */
     uint64_t index;                           /**< input index (in relation to all inputs ever sent to the DApp) */
-    uint32_t payload_length;                  /**< length in bytes of the payload field */
-    void *payload;                            /**< payload for this input */
+    cmt_abi_bytes_t payload;                  /**< payload for this input */
 } cmt_rollup_advance_t;
 
 /** Public struct with the inspect state contents */
 typedef struct cmt_rollup_inspect {
-    uint32_t payload_length; /**< length in bytes of the payload field */
-    void *payload;           /**< payload for this query */
+    cmt_abi_bytes_t payload; /**< payload for this input */
 } cmt_rollup_inspect_t;
 
 /** Public struct with the finish state contents */
@@ -100,11 +99,8 @@ void cmt_rollup_fini(cmt_rollup_t *me);
  * Equivalent to the `Voucher(address,uint256,bytes)` solidity call.
  *
  * @param [in,out] me             initialized @ref cmt_rollup_t instance
- * @param [in]     address_length destination length in bytes
  * @param [in]     address        destination data
- * @param [in]     value_length   value length in bytes
  * @param [in]     value          value data
- * @param [in]     data_length    data length in bytes
  * @param [in]     data           message contents
  * @param [out]    index          index of emitted voucher, if successful
  *
@@ -113,13 +109,11 @@ void cmt_rollup_fini(cmt_rollup_t *me);
  * |--:|-----------------------------|
  * |  0| success                     |
  * |< 0| failure with a -errno value | */
-int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint32_t address_length, const void *address_data, uint32_t value_length,
-    const void *value_data, uint32_t length, const void *data, uint64_t *index);
+int cmt_rollup_emit_voucher(cmt_rollup_t *me, const cmt_abi_address_t *address, const cmt_abi_u256_t *value, const cmt_abi_bytes_t *data, uint64_t *index);
 
 /** Emit a notice
  *
  * @param [in,out] me          initialized cmt_rollup_t instance
- * @param [in]     data_length data length in bytes
  * @param [in]     data        message contents
  * @param [out]    index       index of emitted notice, if successful
  *
@@ -128,7 +122,7 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint32_t address_length, const voi
  * |--:|-----------------------------|
  * |  0| success                     |
  * |< 0| failure with a -errno value | */
-int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t data_length, const void *data, uint64_t *index);
+int cmt_rollup_emit_notice(cmt_rollup_t *me, const cmt_abi_bytes_t *payload, uint64_t *index);
 
 /** Emit a report
  * @param [in,out] me      initialized cmt_rollup_t instance
@@ -140,7 +134,7 @@ int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t data_length, const void *d
  * |--:|-----------------------------|
  * |  0| success                     |
  * |< 0| failure with a -errno value | */
-int cmt_rollup_emit_report(cmt_rollup_t *me, uint32_t data_length, const void *data);
+int cmt_rollup_emit_report(cmt_rollup_t *me, const cmt_abi_bytes_t *payload);
 
 /** Emit a exception
  * @param [in,out] me          initialized cmt_rollup_t instance
@@ -152,7 +146,7 @@ int cmt_rollup_emit_report(cmt_rollup_t *me, uint32_t data_length, const void *d
  * |--:|-----------------------------|
  * |  0| success                     |
  * |< 0| failure with a -errno value | */
-int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t data_length, const void *data);
+int cmt_rollup_emit_exception(cmt_rollup_t *me, const cmt_abi_bytes_t *payload);
 
 /** Report progress
  *
