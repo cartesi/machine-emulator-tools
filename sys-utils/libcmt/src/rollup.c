@@ -28,8 +28,8 @@
 // Notice(bytes)
 #define NOTICE CMT_ABI_FUNSEL(0xc2, 0x58, 0xd6, 0xe5)
 
-// EvmAdvance(uint256,address,address,uint256,uint256,uint256,bytes)
-#define EVM_ADVANCE CMT_ABI_FUNSEL(0xcc, 0x7d, 0xee, 0x1f)
+// EvmAdvance(uint256,address,address,uint256,uint256,uint256,uint256,bytes)
+#define EVM_ADVANCE CMT_ABI_FUNSEL(0x41, 0x5b, 0xf3, 0x63)
 
 #define DBG(X) debug(X, #X, __FILE__, __LINE__)
 static int debug(int rc, const char *expr, const char *file, int line) {
@@ -249,6 +249,7 @@ int cmt_rollup_read_advance_state(cmt_rollup_t *me, cmt_rollup_advance_t *advanc
     ||  DBG(cmt_abi_get_address(rd, advance->msg_sender))
     ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->block_number), &advance->block_number))
     ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->block_timestamp), &advance->block_timestamp))
+    ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->prev_randao), advance->prev_randao))
     ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->index), &advance->index))
     ||  DBG(cmt_abi_get_bytes_s(rd, of))
     ||  DBG(cmt_abi_get_bytes_d(anchor, of, &payload_length, &advance->payload))) {

@@ -48,6 +48,7 @@ typedef struct cmt_rollup_advance {
     uint8_t msg_sender[CMT_ADDRESS_LENGTH];   /**< input sender address */
     uint64_t block_number;                    /**< block number of this input */
     uint64_t block_timestamp;                 /**< block timestamp of this input UNIX epoch format) */
+    uint8_t prev_randao[CMT_WORD_LENGTH];     /**< The latest RANDAO mix of the post beacon state of the previous block */
     uint64_t index;                           /**< input index (in relation to all inputs ever sent to the DApp) */
     uint32_t payload_length;                  /**< length in bytes of the payload field */
     void *payload;                            /**< payload for this input */

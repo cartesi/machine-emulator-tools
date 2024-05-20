@@ -64,6 +64,12 @@ static void check_first_input(cmt_rollup_t *rollup) {
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x03,
     };
+    uint8_t expected_prev_randao[CMT_WORD_LENGTH] = {
+        0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    };
     char expected_payload[] = "advance-0";
     // clang-format on
 
@@ -73,7 +79,8 @@ static void check_first_input(cmt_rollup_t *rollup) {
     assert(memcmp(advance.msg_sender, expected_msg_sender, CMT_ADDRESS_LENGTH) == 0);
     assert(advance.block_number == 4);
     assert(advance.block_timestamp == 5);
-    assert(advance.index == 6);
+    assert(memcmp(advance.prev_randao, expected_prev_randao, CMT_WORD_LENGTH) == 0);
+    assert(advance.index == 7);
     assert(advance.payload_length == strlen(expected_payload));
     assert(memcmp(advance.payload, expected_payload, strlen(expected_payload)) == 0);
 }
