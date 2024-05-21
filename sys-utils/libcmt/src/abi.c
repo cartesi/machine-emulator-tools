@@ -26,6 +26,14 @@ uint32_t cmt_abi_funsel(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     return CMT_ABI_FUNSEL(a, b, c, d);
 }
 
+int cmt_abi_mark_frame(const cmt_buf_t *me, cmt_buf_t *frame) {
+    if (!me || !frame) {
+        return -EINVAL;
+    }
+    *frame = *me;
+    return 0;
+}
+
 int cmt_abi_put_funsel(cmt_buf_t *me, uint32_t funsel) {
     cmt_buf_t x[1];
     int rc = cmt_buf_split(me, sizeof(funsel), x, me);
@@ -130,18 +138,25 @@ int cmt_abi_put_uint_be(cmt_buf_t *me, size_t data_length, const void *data) {
     }
     return cmt_abi_encode_uint_nn(data_length, data, x->begin);
 }
+int cmt_abi_put_uint256(cmt_buf_t *me, const cmt_abi_u256_t *value) {
+    cmt_buf_t x[1];
+    if (cmt_buf_split(me, CMT_WORD_LENGTH, x, me)) {
+        return -ENOBUFS;
+    }
+    return cmt_abi_encode_uint_nn(sizeof(*value), value->data, x->begin);
+}
 
 int cmt_abi_put_bool(cmt_buf_t *me, bool value) {
     uint8_t boolean = !!value;
     return cmt_abi_put_uint(me, sizeof(boolean), &boolean);
 }
 
-int cmt_abi_put_address(cmt_buf_t *me, const uint8_t address[20]) {
+int cmt_abi_put_address(cmt_buf_t *me, const cmt_abi_address_t *address) {
     cmt_buf_t x[1];
     if (cmt_buf_split(me, CMT_WORD_LENGTH, x, me)) {
         return -ENOBUFS;
     }
-    return cmt_abi_encode_uint_nn(CMT_ADDRESS_LENGTH, address, x->begin);
+    return cmt_abi_encode_uint_nn(sizeof(*address), address->data, x->begin);
 }
 
 int cmt_abi_put_bytes_s(cmt_buf_t *me, cmt_buf_t *offset) {
@@ -179,14 +194,14 @@ int cmt_abi_reserve_bytes_d(cmt_buf_t *me, cmt_buf_t *of, size_t n, cmt_buf_t *o
     return 0;
 }
 
-int cmt_abi_put_bytes_d(cmt_buf_t *me, cmt_buf_t *offset, size_t n, const void *data, const void *start) {
+int cmt_abi_put_bytes_d(cmt_buf_t *me, cmt_buf_t *offset, const cmt_buf_t *frame, const cmt_abi_bytes_t *payload) {
     cmt_buf_t res[1];
-    int rc = cmt_abi_reserve_bytes_d(me, offset, n, res, start);
+    int rc = cmt_abi_reserve_bytes_d(me, offset, payload->length, res, frame->begin);
     if (rc) {
         return rc;
     }
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
-    memcpy(res->begin, data, n);
+    memcpy(res->begin, payload->data, payload->length);
     return 0;
 }
 
@@ -248,15 +263,14 @@ int cmt_abi_get_bool(cmt_buf_t *me, bool *value) {
     return 0;
 }
 
-int cmt_abi_get_address(cmt_buf_t *me, uint8_t address[CMT_ADDRESS_LENGTH]) {
+int cmt_abi_get_address(cmt_buf_t *me, cmt_abi_address_t *address) {
     cmt_buf_t x[1];
 
     int rc = cmt_buf_split(me, CMT_WORD_LENGTH, x, me);
     if (rc) {
         return rc;
     }
-
-    return cmt_abi_decode_uint_nn(x->begin, CMT_ADDRESS_LENGTH, address);
+    return cmt_abi_decode_uint_nn(x->begin, sizeof(*address), address->data);
 }
 
 int cmt_abi_get_bytes_s(cmt_buf_t *me, cmt_buf_t of[1]) {

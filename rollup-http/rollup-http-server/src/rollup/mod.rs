@@ -148,7 +148,7 @@ impl From<cmt_rollup_advance_t> for AdvanceMetadata {
         let mut app_contract = "0x".to_string();
         app_contract.push_str(&hex::encode(&other.app_contract));
         let mut prev_randao = "0x".to_string();
-        prev_randao.push_str(&hex::encode(&other.prev_randao));
+        prev_randao.push_str(&hex::encode(&other.prev_randao.data));
         AdvanceMetadata {
             chain_id: other.chain_id,
             app_contract: app_contract,
@@ -258,7 +258,9 @@ pub fn rollup_read_advance_state_request(
         app_contract: Default::default(),
         block_number: 0,
         block_timestamp: 0,
-        prev_randao: Default::default(),
+        prev_randao: { cmt_u256_t {
+            data: Default::default(),
+        }},
         index: 0,
         payload_length: 0,
         payload: std::ptr::null::<::std::os::raw::c_uchar>() as *mut c_void,

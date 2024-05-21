@@ -64,25 +64,25 @@ static void check_first_input(cmt_rollup_t *rollup) {
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x03,
     };
-    uint8_t expected_prev_randao[CMT_WORD_LENGTH] = {
+    cmt_abi_u256_t expected_prev_randao = {{
         0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    };
+    }};
     char expected_payload[] = "advance-0";
     // clang-format on
 
     // verify the parsed data
     assert(advance.chain_id == 1);
-    assert(memcmp(advance.app_contract, expected_app_contract, CMT_ADDRESS_LENGTH) == 0);
-    assert(memcmp(advance.msg_sender, expected_msg_sender, CMT_ADDRESS_LENGTH) == 0);
+    assert(memcmp(advance.app_contract.data, expected_app_contract, CMT_ADDRESS_LENGTH) == 0);
+    assert(memcmp(advance.msg_sender.data, expected_msg_sender, CMT_ADDRESS_LENGTH) == 0);
     assert(advance.block_number == 4);
     assert(advance.block_timestamp == 5);
-    assert(memcmp(advance.prev_randao, expected_prev_randao, CMT_WORD_LENGTH) == 0);
+    assert(memcmp(&advance.prev_randao.data, expected_prev_randao.data, CMT_WORD_LENGTH) == 0);
     assert(advance.index == 7);
-    assert(advance.payload_length == strlen(expected_payload));
-    assert(memcmp(advance.payload, expected_payload, strlen(expected_payload)) == 0);
+    assert(advance.payload.length == strlen(expected_payload));
+    assert(memcmp(advance.payload.data, expected_payload, strlen(expected_payload)) == 0);
 }
 
 static void check_second_input(cmt_rollup_t *rollup) {
@@ -132,73 +132,78 @@ void test_rollup_outputs_reports_and_exceptions(void) {
     size_t read_size = 0;
 
     // clang-format off
-    uint8_t address[CMT_ADDRESS_LENGTH] = {
+    cmt_abi_address_t address = {{
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x01
-    };
+    }};
     // clang-format on
 
     assert(cmt_rollup_init(&rollup) == 0);
 
     // voucher
-    uint8_t value[] = {0xde, 0xad, 0xbe, 0xef};
+    cmt_abi_u256_t value = {{
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0xde, 0xad, 0xbe, 0xef
+    }};
     char voucher_data[] = "voucher-0";
-    assert(cmt_rollup_emit_voucher(&rollup, sizeof address, address, sizeof value, value, strlen(voucher_data),
-               voucher_data, &index) == 0);
+    assert(cmt_rollup_emit_voucher(&rollup, &address, &value, &(cmt_abi_bytes_t){strlen(voucher_data), voucher_data}, &index) == 0);
     assert(index == 0);
     assert(cmt_util_read_whole_file("none.output-0.bin", sizeof buffer, buffer, &read_size) == 0);
     assert(sizeof valid_voucher_0 == read_size);
     assert(memcmp(valid_voucher_0, buffer, sizeof valid_voucher_0) == 0);
 
     // voucher (invalid)
-    assert(cmt_rollup_emit_voucher(NULL, sizeof address, address, sizeof value, value, strlen(voucher_data),
-               voucher_data, &index) == -EINVAL);
-    assert(cmt_rollup_emit_voucher(&rollup, sizeof address - 1, address, sizeof value, value, strlen(voucher_data),
-               NULL, &index) == -EINVAL);
-    assert(cmt_rollup_emit_voucher(&rollup, sizeof address - 1, address, sizeof value, value, strlen(voucher_data),
-               voucher_data, &index) == -EINVAL);
-    assert(cmt_rollup_emit_voucher(&rollup, sizeof address, address, sizeof value, value, UINT32_MAX, voucher_data,
+    assert(cmt_rollup_emit_voucher(NULL, &address, &value, &(cmt_abi_bytes_t){strlen(voucher_data), voucher_data}, &index) == -EINVAL);
+    assert(cmt_rollup_emit_voucher(&rollup, &address, &value, &(cmt_abi_bytes_t){strlen(voucher_data),
+               NULL}, &index) == -EINVAL);
+    assert(cmt_rollup_emit_voucher(&rollup, &address, &value, &(cmt_abi_bytes_t){UINT32_MAX, voucher_data},
                &index) == -ENOBUFS);
 
     // notice
     char notice_data[] = "notice-0";
-    assert(cmt_rollup_emit_notice(&rollup, strlen(notice_data), notice_data, &index) == 0);
+    assert(cmt_rollup_emit_notice(&rollup, &(cmt_abi_bytes_t){strlen(notice_data), notice_data}, &index) == 0);
     assert(cmt_util_read_whole_file("none.output-1.bin", sizeof buffer, buffer, &read_size) == 0);
     assert(sizeof valid_notice_0 == read_size);
     assert(memcmp(valid_notice_0, buffer, sizeof valid_notice_0) == 0);
     assert(index == 1);
 
     // notice (invalid)
-    assert(cmt_rollup_emit_notice(NULL, strlen(notice_data), notice_data, &index) == -EINVAL);
-    assert(cmt_rollup_emit_notice(&rollup, strlen(notice_data), NULL, &index) == -EINVAL);
-    assert(cmt_rollup_emit_notice(&rollup, UINT32_MAX, notice_data, &index) == -ENOBUFS);
+    assert(cmt_rollup_emit_notice(NULL, &(cmt_abi_bytes_t){strlen(notice_data), notice_data}, &index) == -EINVAL);
+    assert(cmt_rollup_emit_notice(&rollup, &(cmt_abi_bytes_t){strlen(notice_data), NULL}, &index) == -EINVAL);
+    assert(cmt_rollup_emit_notice(&rollup, &(cmt_abi_bytes_t){UINT32_MAX, notice_data}, &index) == -ENOBUFS);
 
     // report
     char report_data[] = "report-0";
-    assert(cmt_rollup_emit_report(&rollup, strlen(report_data), report_data) == 0);
+    assert(cmt_rollup_emit_report(&rollup, &(cmt_abi_bytes_t){strlen(report_data), report_data}) == 0);
     assert(cmt_util_read_whole_file("none.report-0.bin", sizeof buffer, buffer, &read_size) == 0);
     assert(sizeof valid_report_0 == read_size);
     assert(memcmp(valid_report_0, buffer, sizeof valid_report_0) == 0);
 
     // report (invalid)
-    assert(cmt_rollup_emit_report(NULL, strlen(report_data), report_data) == -EINVAL);
-    assert(cmt_rollup_emit_report(&rollup, strlen(report_data), NULL) == -EINVAL);
-    assert(cmt_rollup_emit_report(&rollup, UINT32_MAX, report_data) == -ENOBUFS);
+    assert(cmt_rollup_emit_report(NULL, &(cmt_abi_bytes_t){strlen(report_data), report_data}) == -EINVAL);
+    assert(cmt_rollup_emit_report(&rollup, &(cmt_abi_bytes_t){strlen(report_data), NULL}) == -EINVAL);
+    assert(cmt_rollup_emit_report(&rollup, &(cmt_abi_bytes_t){UINT32_MAX, report_data}) == -ENOBUFS);
 
     // exception
     char exception_data[] = "exception-0";
-    assert(cmt_rollup_emit_exception(&rollup, strlen(exception_data), exception_data) == 0);
+    assert(cmt_rollup_emit_exception(&rollup, &(cmt_abi_bytes_t){strlen(exception_data), exception_data}) == 0);
     assert(cmt_util_read_whole_file("none.exception-0.bin", sizeof buffer, buffer, &read_size) == 0);
     assert(sizeof valid_exception_0 == read_size);
     assert(memcmp(valid_exception_0, buffer, sizeof valid_exception_0) == 0);
 
     // exception (invalid)
-    assert(cmt_rollup_emit_exception(NULL, strlen(exception_data), exception_data) == -EINVAL);
-    assert(cmt_rollup_emit_exception(&rollup, strlen(exception_data), NULL) == -EINVAL);
-    assert(cmt_rollup_emit_exception(&rollup, UINT32_MAX, exception_data) == -ENOBUFS);
+    assert(cmt_rollup_emit_exception(NULL, &(cmt_abi_bytes_t){strlen(exception_data), exception_data}) == -EINVAL);
+    assert(cmt_rollup_emit_exception(&rollup, &(cmt_abi_bytes_t){strlen(exception_data), NULL}) == -EINVAL);
+    assert(cmt_rollup_emit_exception(&rollup, &(cmt_abi_bytes_t){UINT32_MAX, exception_data}) == -ENOBUFS);
 
     cmt_rollup_fini(&rollup);
     printf("test_rollup_outputs_reports_and_exceptions passed!\n");

@@ -62,18 +62,19 @@ static int test_request(void) {
     cmt_buf_t bb[1] = {{mem, mem + sizeof mem}};
     cmt_buf_t wr[1] = {*bb};
     cmt_buf_t of[1];
+    cmt_buf_t frame[1];
 
-    uint8_t address[20] = {0};
+    cmt_abi_address_t address = {0};
     uint8_t bytes[] = {0xde, 0xad, 0xbe, 0xef};
 
     cmt_abi_put_funsel(wr, REQUEST);
-    uint8_t *frame = wr->begin; // dynamic frame begins after funsel
-    cmt_abi_put_address(wr, address);
+    cmt_abi_mark_frame(wr, frame);
+    cmt_abi_put_address(wr, &address);
     cmt_abi_put_uint(wr, sizeof(int), &(int[]){1});
     cmt_abi_put_uint(wr, sizeof(int), &(int[]){2});
     cmt_abi_put_uint(wr, sizeof(int), &(int[]){3});
     cmt_abi_put_bytes_s(wr, of);
-    cmt_abi_put_bytes_d(wr, of, sizeof bytes, bytes, frame);
+    cmt_abi_put_bytes_d(wr, of, frame, &(cmt_abi_bytes_t){sizeof bytes, bytes});
 
     return sizeof request != (wr->begin - bb->begin) || memeq(request, bb->begin, sizeof request, __FILE__, __LINE__);
 }
@@ -98,15 +99,16 @@ static int test_reply(void) {
     cmt_buf_t bb[1] = {{mem, mem + sizeof mem}};
     cmt_buf_t wr[1] = {*bb};
     cmt_buf_t of[1];
+    cmt_buf_t frame[1];
 
-    uint8_t address[20] = {0};
+    cmt_abi_address_t address = {0};
     uint8_t bytes[] = {0xde, 0xad, 0xbe, 0xef};
 
     cmt_abi_put_funsel(wr, REPLY);
-    uint8_t *frame = wr->begin; // dynamic frame begins after funsel
-    cmt_abi_put_address(wr, address);
+    cmt_abi_mark_frame(wr, frame);
+    cmt_abi_put_address(wr, &address);
     cmt_abi_put_bytes_s(wr, of);
-    cmt_abi_put_bytes_d(wr, of, sizeof bytes, bytes, frame);
+    cmt_abi_put_bytes_d(wr, of, frame, &(cmt_abi_bytes_t){sizeof bytes, bytes});
 
     return sizeof reply != (wr->begin - bb->begin) || memeq(reply, bb->begin, sizeof reply, __FILE__, __LINE__);
 }

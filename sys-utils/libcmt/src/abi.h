@@ -129,13 +129,40 @@ enum {
     (((uint32_t) (A) << 000) | ((uint32_t) (B) << 010) | ((uint32_t) (C) << 020) | ((uint32_t) (D) << 030))
 #endif
 
-// put section ---------------------------------------------------------------
+/** EVM address */
+typedef struct cmt_abi_address {
+    uint8_t data[CMT_ADDRESS_LENGTH];
+} cmt_abi_address_t;
+
+/** EVM u256 in big endian format */
+typedef struct cmt_abi_u256 {
+    uint8_t data[CMT_WORD_LENGTH];
+} cmt_abi_u256_t;
+
+typedef struct cmt_abi_bytes {
+    size_t length;
+    void *data;
+} cmt_abi_bytes_t;
 
 /** Create a function selector from an array of bytes
  * @param [in] funsel function selector bytes
  * @return
  * - function selector converted to big endian (as expected by EVM) */
 uint32_t cmt_abi_funsel(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
+
+/** Create a frame for the dynamic section. Read the EVM ABI for the details
+ * @param [in] me     reader or writer buffer
+ * @param [out] frame start of the parameters frame
+ *
+ * @return
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value |
+ */
+int cmt_abi_mark_frame(const cmt_buf_t *me, cmt_buf_t *frame);
+
+// put section ---------------------------------------------------------------
 
 /** Encode a function selector into the buffer @p me
  *
@@ -152,7 +179,8 @@ uint32_t cmt_abi_funsel(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
  * It is always represented in big endian. */
 int cmt_abi_put_funsel(cmt_buf_t *me, uint32_t funsel);
 
-/** Encode a unsigned integer of up to 32bytes of data into the buffer
+/** Encode a native endianness unsigned integer of up to 32bytes of data into
+ * the buffer
  *
  * @param [in,out] me   a initialized buffer working as iterator
  * @param [in]     n    size of @p data in bytes
@@ -172,11 +200,11 @@ int cmt_abi_put_funsel(cmt_buf_t *me, uint32_t funsel);
  * uint64_t x = UINT64_C(0xdeadbeef);
  * cmt_abi_put_uint(&it, sizeof x, &x);
  * ...
- * @endcode
- * @note This function takes care of endianness conversions */
+ * @endcode */
 int cmt_abi_put_uint(cmt_buf_t *me, size_t data_length, const void *data);
 
-/** Encode a big-endian value of up to 32bytes of data into the buffer
+/** Encode a big endian unsigned integer of up to 32bytes of data into the
+ * buffer
  *
  * @param [in,out] me     a initialized buffer working as iterator
  * @param [in]     length size of @p data in bytes
@@ -211,6 +239,30 @@ int cmt_abi_put_uint(cmt_buf_t *me, size_t data_length, const void *data);
  * @note This function takes care of endianness conversions */
 int cmt_abi_put_uint_be(cmt_buf_t *me, size_t data_length, const void *data);
 
+/** Encode a @ref cmt_abi_u256_t into the buffer
+ *
+ * @param [in,out] me     a initialized buffer working as iterator
+ * @param [in]     data   pointer to a @ref cmt_abi_u256_t
+ *
+ * @return
+ * |        |                                                   |
+ * |-------:|---------------------------------------------------|
+ * |       0| success                                           |
+ * |-ENOBUFS| no space left in @p me                            |
+ *
+ * @code
+ * ...
+ * cmt_buf_t wr = ...;
+ * cmt_abi_u256_t small = {{
+ *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ *     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+ * }};
+ * cmt_abi_put_uint256(&wr, &small);
+ * @endcode */
+int cmt_abi_put_uint256(cmt_buf_t *me, const cmt_abi_u256_t *value);
+
 /** Encode a bool into the buffer
  *
  * @param [in,out] me    a initialized buffer working as iterator
@@ -234,14 +286,14 @@ int cmt_abi_put_bool(cmt_buf_t *me, bool value);
 /** Encode @p address (exactly @ref CMT_ADDRESS_LENGTH bytes) into the buffer
  *
  * @param [in,out] me      initialized buffer
- * @param [in]     address exactly @ref CMT_ADDRESS_LENGTH bytes
+ * @param [in]     address a value of type @ref cmt_abi_address_t
  *
  * @return
  * |        |                        |
  * |-------:|------------------------|
  * |       0| success                |
  * |-ENOBUFS| no space left in @p me | */
-int cmt_abi_put_address(cmt_buf_t *me, const uint8_t address[CMT_ADDRESS_LENGTH]);
+int cmt_abi_put_address(cmt_buf_t *me, const cmt_abi_address_t *address);
 
 /** Encode the static part of @b bytes into the message,
  * used in conjunction with @ref cmt_abi_put_bytes_d
@@ -270,7 +322,8 @@ int cmt_abi_put_bytes_s(cmt_buf_t *me, cmt_buf_t *offset);
  * |-------:|------------------------|
  * |       0| success                |
  * |-ENOBUFS| no space left in @p me | */
-int cmt_abi_put_bytes_d(cmt_buf_t *me, cmt_buf_t *offset, size_t n, const void *data, const void *start);
+//int cmt_abi_put_bytes_d(cmt_buf_t *me, cmt_buf_t *offset, size_t n, const void *data, const void *start);
+int cmt_abi_put_bytes_d(cmt_buf_t *me, cmt_buf_t *offset, const cmt_buf_t *frame, const cmt_abi_bytes_t *payload);
 
 /** Reserve @b n bytes of data from the buffer into @b res to be filled by the
  * caller
@@ -327,7 +380,19 @@ uint32_t cmt_abi_peek_funsel(cmt_buf_t *me);
  * |-EBADMSG| funsel mismatch       | */
 int cmt_abi_check_funsel(cmt_buf_t *me, uint32_t expected);
 
-/** Decode a unsigned integer of up to 32bytes from the buffer
+/** Decode a @ref cmt_abi_u256_t from the buffer
+ *
+ * @param [in,out] me     initialized buffer
+ * @param [out]    data   value of type @ref cmt_abi_u256_t
+ *
+ * @return
+ * |        |                                                   |
+ * |-------:|---------------------------------------------------|
+ * |       0| success                                           |
+ * |-ENOBUFS| no space left in @p me                            | */
+int cmt_abi_get_uint256(cmt_buf_t *me, cmt_abi_u256_t *value);
+
+/** Decode a unsigned integer of up to 32bytes, in native endianness, from the buffer
  *
  * @param [in,out] me     initialized buffer
  * @param [in]     n      size of @p data in bytes
@@ -380,14 +445,25 @@ int cmt_abi_get_bool(cmt_buf_t *me, bool *value);
 /** Consume and decode @b address from the buffer
  *
  * @param [in,out] me      initialized buffer
- * @param [out]    address exactly 20 bytes
+ * @param [out]    address value of type @ref cmt_abi_address_t
  *
  * @return
  * |        |                        |
  * |-------:|------------------------|
  * |       0| success                |
  * |-ENOBUFS| no space left in @p me | */
-int cmt_abi_get_address(cmt_buf_t *me, uint8_t address[CMT_ADDRESS_LENGTH]);
+int cmt_abi_get_address(cmt_buf_t *me, cmt_abi_address_t *value);
+
+/** Create a frame of reference for the dynamic section
+ *
+ * @param [in,out] me    initialized buffer
+ * @param [out]    frame used when encoding dynamic values
+ * @return
+ * |        |                        |
+ * |-------:|------------------------|
+ * |       0| success                |
+ * |-ENOBUFS| no space left in @p me | */
+int cmt_abi_start_frame(cmt_buf_t *me, void *frame);
 
 /** Consume and decode the offset @p of
  *

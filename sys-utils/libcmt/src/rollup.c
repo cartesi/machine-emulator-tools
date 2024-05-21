@@ -66,29 +66,27 @@ void cmt_rollup_fini(cmt_rollup_t *me) {
     cmt_merkle_fini(me->merkle);
 }
 
-int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint32_t address_length, const void *address_data, uint32_t value_length,
-    const void *value_data, uint32_t length, const void *data, uint64_t *index) {
+int cmt_rollup_emit_voucher(cmt_rollup_t *me, const cmt_abi_address_t *address,
+    const cmt_abi_u256_t *value, const cmt_abi_bytes_t *payload, uint64_t *index) {
     if (!me) {
         return -EINVAL;
     }
-    if (!data && length) {
+    if (!payload || (!payload->data && payload->length)) {
         return -EINVAL;
     }
 
     cmt_buf_t tx[1] = {cmt_io_get_tx(me->io)};
     cmt_buf_t wr[1] = {*tx};
     cmt_buf_t of[1];
-    void *params_base = tx->begin + 4; // after funsel
-
-    if (address_length != CMT_ADDRESS_LENGTH)
-        return -EINVAL;
+    cmt_buf_t frame[1];
 
     // clang-format off
     if (DBG(cmt_abi_put_funsel(wr, VOUCHER))
-    ||  DBG(cmt_abi_put_address(wr, address_data))
-    ||  DBG(cmt_abi_put_uint_be(wr, value_length, value_data))
+    ||  DBG(cmt_abi_mark_frame(wr, frame))
+    ||  DBG(cmt_abi_put_address(wr, address))
+    ||  DBG(cmt_abi_put_uint256(wr, value))
     ||  DBG(cmt_abi_put_bytes_s(wr, of))
-    ||  DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base))) {
+    ||  DBG(cmt_abi_put_bytes_d(wr, of, frame, payload))) {
         return -ENOBUFS;
     }
     // clang-format on
@@ -119,23 +117,24 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me, uint32_t address_length, const voi
     return 0;
 }
 
-int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data, uint64_t *index) {
+int cmt_rollup_emit_notice(cmt_rollup_t *me, const cmt_abi_bytes_t *payload, uint64_t *index) {
     if (!me) {
         return -EINVAL;
     }
-    if (!data && length) {
+    if (!payload || (!payload->data && payload->length)) {
         return -EINVAL;
     }
 
     cmt_buf_t tx[1] = {cmt_io_get_tx(me->io)};
     cmt_buf_t wr[1] = {*tx};
     cmt_buf_t of[1];
-    void *params_base = tx->begin + 4; // after funsel
+    cmt_buf_t frame[1];
 
     // clang-format off
     if (DBG(cmt_abi_put_funsel(wr, NOTICE))
+    ||  DBG(cmt_abi_mark_frame(wr, frame))
     ||  DBG(cmt_abi_put_bytes_s(wr, of))
-    ||  DBG(cmt_abi_put_bytes_d(wr, of, length, data, params_base))) {
+    ||  DBG(cmt_abi_put_bytes_d(wr, of, frame, payload))) {
         return -ENOBUFS;
     }
     // clang-format on
@@ -166,55 +165,55 @@ int cmt_rollup_emit_notice(cmt_rollup_t *me, uint32_t length, const void *data, 
     return 0;
 }
 
-int cmt_rollup_emit_report(cmt_rollup_t *me, uint32_t length, const void *data) {
+int cmt_rollup_emit_report(cmt_rollup_t *me, const cmt_abi_bytes_t *payload) {
     if (!me) {
         return -EINVAL;
     }
-    if (!data && length) {
+    if (!payload || (!payload->data && payload->length)) {
         return -EINVAL;
     }
 
     cmt_buf_t tx[1] = {cmt_io_get_tx(me->io)};
     cmt_buf_t wr[1] = {*tx};
-    if (cmt_buf_split(tx, length, wr, tx)) {
+    if (cmt_buf_split(tx, payload->length, wr, tx)) {
         return -ENOBUFS;
     }
 
-    if (data) {
-        memcpy(wr->begin, data, length);
+    if (payload->data) {
+        memcpy(wr->begin, payload->data, payload->length);
     }
     struct cmt_io_yield req[1] = {{
         .dev = HTIF_DEVICE_YIELD,
         .cmd = HTIF_YIELD_CMD_AUTOMATIC,
         .reason = HTIF_YIELD_AUTOMATIC_REASON_TX_REPORT,
-        .data = length,
+        .data = payload->length,
     }};
     return DBG(cmt_io_yield(me->io, req));
 }
 
-int cmt_rollup_emit_exception(cmt_rollup_t *me, uint32_t length, const void *data) {
+int cmt_rollup_emit_exception(cmt_rollup_t *me, const cmt_abi_bytes_t *payload) {
     if (!me) {
         return -EINVAL;
     }
-    if (!data && length) {
+    if (!payload || (!payload->data && payload->length)) {
         return -EINVAL;
     }
 
     cmt_buf_t tx[1] = {cmt_io_get_tx(me->io)};
     cmt_buf_t wr[1] = {*tx};
     cmt_buf_t _[1];
-    if (cmt_buf_split(tx, length, wr, _)) {
+    if (cmt_buf_split(tx, payload->length, wr, _)) {
         return -ENOBUFS;
     }
 
-    if (data) {
-        memcpy(wr->begin, data, length);
+    if (payload->data) {
+        memcpy(wr->begin, payload->data, payload->length);
     }
     struct cmt_io_yield req[1] = {{
         .dev = HTIF_DEVICE_YIELD,
         .cmd = HTIF_YIELD_CMD_MANUAL,
         .reason = HTIF_YIELD_MANUAL_REASON_TX_EXCEPTION,
-        .data = length,
+        .data = payload->length,
     }};
     return DBG(cmt_io_yield(me->io, req));
 }
@@ -237,27 +236,25 @@ int cmt_rollup_read_advance_state(cmt_rollup_t *me, cmt_rollup_advance_t *advanc
     if (cmt_rollup_get_rx(me, rd)) {
         return -ENOBUFS;
     }
-    cmt_buf_t anchor[1] = {{rd->begin + 4, rd->end}};
+    cmt_buf_t frame[1];
     cmt_buf_t of[1];
-
-    size_t payload_length = 0;
 
     // clang-format off
     if (DBG(cmt_abi_check_funsel(rd, EVM_ADVANCE))
+    ||  DBG(cmt_abi_mark_frame(rd, frame))
     ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->chain_id), &advance->chain_id))
-    ||  DBG(cmt_abi_get_address(rd, advance->app_contract))
-    ||  DBG(cmt_abi_get_address(rd, advance->msg_sender))
+    ||  DBG(cmt_abi_get_address(rd, &advance->app_contract))
+    ||  DBG(cmt_abi_get_address(rd, &advance->msg_sender))
     ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->block_number), &advance->block_number))
     ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->block_timestamp), &advance->block_timestamp))
-    ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->prev_randao), advance->prev_randao))
+    ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->prev_randao), advance->prev_randao.data))
     ||  DBG(cmt_abi_get_uint(rd, sizeof(advance->index), &advance->index))
     ||  DBG(cmt_abi_get_bytes_s(rd, of))
-    ||  DBG(cmt_abi_get_bytes_d(anchor, of, &payload_length, &advance->payload))) {
+    ||  DBG(cmt_abi_get_bytes_d(frame, of, &advance->payload.length, &advance->payload.data))) {
         return -ENOBUFS;
     }
     // clang-format on
 
-    advance->payload_length = payload_length;
     return 0;
 }
 
