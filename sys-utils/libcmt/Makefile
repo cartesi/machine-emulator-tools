@@ -26,7 +26,7 @@ TARGET_PREFIX ?= $(PREFIX)
 TOOLCHAIN_PREFIX ?= riscv64-linux-gnu-
 TARGET_CC := $(TOOLCHAIN_PREFIX)gcc
 TARGET_AR := $(TOOLCHAIN_PREFIX)ar
-COMMON_CFLAGS := -Wvla -O2 -g -Wall -pedantic -Wextra -Isrc \
+COMMON_CFLAGS := -Wvla -O2 -g -Wall -pedantic -Wextra -Iinclude \
                  -fno-strict-aliasing -fno-strict-overflow -fPIC
 TARGET_CFLAGS := $(COMMON_CFLAGS) -ftrivial-auto-var-init=zero -Wstrict-aliasing=3
 CFLAGS := $(COMMON_CFLAGS)
@@ -85,7 +85,7 @@ install: $(libcmt_LIB) $(libcmt_SO) build/ffi.h
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
 	cp -f $(libcmt_LIB) $(libcmt_SO) $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
-	cp -f src/*.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
+	cp -f include/libcmt/*.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
 	cp -f build/ffi.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig
 	sed -e 's|@ARG_PREFIX@|$(TARGET_PREFIX)|g' src/libcmt.pc > $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig/libcmt.pc
@@ -126,7 +126,7 @@ install-mock: $(mock_LIB) $(mock_SO) build/ffi.h
 	mkdir -p $(DESTDIR)$(PREFIX)/lib
 	cp -f $(mock_LIB) $(mock_SO) $(DESTDIR)$(PREFIX)/lib
 	mkdir -p $(DESTDIR)$(PREFIX)/include/libcmt/
-	cp -f src/*.h $(DESTDIR)$(PREFIX)/include/libcmt/
+	cp -f include/libcmt/*.h $(DESTDIR)$(PREFIX)/include/libcmt/
 	cp -f build/ffi.h $(DESTDIR)$(PREFIX)/include/libcmt/
 	mkdir -p $(DESTDIR)$(PREFIX)/lib/pkgconfig
 	sed -e 's|@ARG_PREFIX@|$(PREFIX)|g' src/libcmt_mock.pc > $(DESTDIR)$(PREFIX)/lib/pkgconfig/libcmt.pc
@@ -183,7 +183,8 @@ $(tools_OBJDIR)/funsel: tools/funsel.c $(mock_LIB)
 
 tools: $(tools_BINS)
 
-build/ffi.h: src/buf.h src/abi.h src/keccak.h src/merkle.h src/io.h src/rollup.h
+HDRS := $(patsubst %,include/libcmt/%, buf.h abi.h keccak.h merkle.h io.h rollup.h)
+build/ffi.h: $(HDRS)
 	cat $^ | sh tools/prepare-ffi.sh > $@
 #-------------------------------------------------------------------------------
 LINTER_IGNORE_SOURCES=src/io.c
