@@ -79,7 +79,7 @@ static void check_first_input(cmt_rollup_t *rollup) {
     assert(memcmp(advance.msg_sender.data, expected_msg_sender, CMT_ADDRESS_LENGTH) == 0);
     assert(advance.block_number == 4);
     assert(advance.block_timestamp == 5);
-    assert(memcmp(&advance.prev_randao.data, expected_prev_randao.data, CMT_WORD_LENGTH) == 0);
+    assert(memcmp(&advance.prev_randao.data, expected_prev_randao.data, CMT_ABI_U256_LENGTH) == 0);
     assert(advance.index == 7);
     assert(advance.payload.length == strlen(expected_payload));
     assert(memcmp(advance.payload.data, expected_payload, strlen(expected_payload)) == 0);

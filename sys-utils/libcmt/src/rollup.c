@@ -315,7 +315,7 @@ int cmt_rollup_finish(cmt_rollup_t *me, cmt_rollup_finish_t *finish) {
     }
 
     cmt_merkle_get_root_hash(me->merkle, cmt_io_get_tx(me->io).begin);
-    me->fromhost_data = CMT_WORD_LENGTH;
+    me->fromhost_data = CMT_ABI_U256_LENGTH;
     int reason = accepted(me->io, &me->fromhost_data);
     if (reason < 0) {
         return reason;

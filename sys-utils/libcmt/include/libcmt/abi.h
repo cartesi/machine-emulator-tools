@@ -115,7 +115,7 @@
 #include <stdbool.h>
 
 enum {
-    CMT_WORD_LENGTH = 32,    /**< length of a evm word in bytes */
+    CMT_ABI_U256_LENGTH = 32,    /**< length of a evm word in bytes */
     CMT_ADDRESS_LENGTH = 20, /**< length of a evm address in bytes */
 };
 
@@ -136,7 +136,7 @@ typedef struct cmt_abi_address {
 
 /** EVM u256 in big endian format */
 typedef struct cmt_abi_u256 {
-    uint8_t data[CMT_WORD_LENGTH];
+    uint8_t data[CMT_ABI_U256_LENGTH];
 } cmt_abi_u256_t;
 
 typedef struct cmt_abi_bytes {
@@ -522,7 +522,7 @@ int cmt_abi_peek_bytes_d(const cmt_buf_t *start, cmt_buf_t of[1], cmt_buf_t *byt
  * |-------:|---------------------------------------------------|
  * |       0| success                                           |
  * |   -EDOM| integer not representable in @p data_length bytes | */
-int cmt_abi_encode_uint(size_t n, const void *data, uint8_t out[CMT_WORD_LENGTH]);
+int cmt_abi_encode_uint(size_t n, const void *data, uint8_t out[CMT_ABI_U256_LENGTH]);
 
 /** Encode @p n bytes of @p data into @p out (up to 32) in reverse order.
  *
@@ -537,7 +537,7 @@ int cmt_abi_encode_uint(size_t n, const void *data, uint8_t out[CMT_WORD_LENGTH]
  * |   -EDOM| integer not representable in @p data_length bytes |
  *
  * @note use @ref cmt_abi_encode_uint instead */
-int cmt_abi_encode_uint_nr(size_t n, const uint8_t *data, uint8_t out[CMT_WORD_LENGTH]);
+int cmt_abi_encode_uint_nr(size_t n, const uint8_t *data, uint8_t out[CMT_ABI_U256_LENGTH]);
 
 /** Encode @p n bytes of @p data into @p out (up to 32) in normal order.
  *
@@ -552,7 +552,7 @@ int cmt_abi_encode_uint_nr(size_t n, const uint8_t *data, uint8_t out[CMT_WORD_L
  * |   -EDOM| integer not representable in @p data_length bytes |
  *
  * @note use @ref cmt_abi_encode_uint instead */
-int cmt_abi_encode_uint_nn(size_t n, const uint8_t *data, uint8_t out[CMT_WORD_LENGTH]);
+int cmt_abi_encode_uint_nn(size_t n, const uint8_t *data, uint8_t out[CMT_ABI_U256_LENGTH]);
 
 /** Decode @p n bytes of @p data into @p out (up to 32).
  *
@@ -565,7 +565,7 @@ int cmt_abi_encode_uint_nn(size_t n, const uint8_t *data, uint8_t out[CMT_WORD_L
  * |-------:|---------------------------------------------------|
  * |       0| success                                           |
  * |   -EDOM| integer not representable in @p data_length bytes | */
-int cmt_abi_decode_uint(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_t *out);
+int cmt_abi_decode_uint(const uint8_t data[CMT_ABI_U256_LENGTH], size_t n, uint8_t *out);
 
 /** Decode @p n bytes of @p data into @p out (up to 32) in reverse order.
  *
@@ -580,7 +580,7 @@ int cmt_abi_decode_uint(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_t *
  * |   -EDOM| integer not representable in @p data_length bytes |
  *
  * @note if in doubt, use @ref cmt_abi_decode_uint */
-int cmt_abi_decode_uint_nr(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_t *out);
+int cmt_abi_decode_uint_nr(const uint8_t data[CMT_ABI_U256_LENGTH], size_t n, uint8_t *out);
 
 /** Decode @p n bytes of @p data into @p out (up to 32) in normal order.
  *
@@ -595,7 +595,7 @@ int cmt_abi_decode_uint_nr(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_
  * |   -EDOM| integer not representable in @p data_length bytes |
  *
  * @note if in doubt, use @ref cmt_abi_decode_uint */
-int cmt_abi_decode_uint_nn(const uint8_t data[CMT_WORD_LENGTH], size_t n, uint8_t *out);
+int cmt_abi_decode_uint_nn(const uint8_t data[CMT_ABI_U256_LENGTH], size_t n, uint8_t *out);
 
 #endif /* CMT_ABI_H */
 /** @} */
