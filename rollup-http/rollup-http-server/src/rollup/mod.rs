@@ -114,6 +114,36 @@ impl From<&mut RollupFinish> for cmt_rollup_finish_t {
     }
 }
 
+impl cmt_abi_u256_t {
+    fn from_hex(hex: &str) -> Result<cmt_abi_u256_t, hex::FromHexError> {
+        let mut value: cmt_abi_u256_t = unsafe { std::mem::zeroed() };
+        let mut binary = hex::decode(hex)?;
+        unsafe {
+            if cmt_abi_encode_uint_nn(binary.len(),
+                    binary.as_mut_ptr() as *const u8,
+                    value.data.as_mut_ptr()) != 0 {
+                return Err(hex::FromHexError::InvalidStringLength);
+            }
+        }
+        return Ok(value);
+    }
+}
+
+impl cmt_abi_address_t {
+    fn from_hex(hex: &str) -> Result<cmt_abi_address_t, hex::FromHexError> {
+        let mut value: cmt_abi_address_t = unsafe { std::mem::zeroed() };
+        let mut binary = hex::decode(hex)?;
+        unsafe {
+            if cmt_abi_encode_uint_nn(binary.len(),
+                    binary.as_mut_ptr() as *const u8,
+                    value.data.as_mut_ptr()) != 0 {
+                return Err(hex::FromHexError::InvalidStringLength);
+            }
+        }
+        return Ok(value);
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct GIORequest {
     #[validate(range(min = 0x10))] // avoid overlapping with our HTIF_YIELD_MANUAL_REASON_*
@@ -144,9 +174,9 @@ pub struct AdvanceMetadata {
 impl From<cmt_rollup_advance_t> for AdvanceMetadata {
     fn from(other: cmt_rollup_advance_t) -> Self {
         let mut msg_sender = "0x".to_string();
-        msg_sender.push_str(&hex::encode(&other.msg_sender));
+        msg_sender.push_str(&hex::encode(&other.msg_sender.data));
         let mut app_contract = "0x".to_string();
-        app_contract.push_str(&hex::encode(&other.app_contract));
+        app_contract.push_str(&hex::encode(&other.app_contract.data));
         let mut prev_randao = "0x".to_string();
         prev_randao.push_str(&hex::encode(&other.prev_randao.data));
         AdvanceMetadata {
@@ -254,16 +284,22 @@ pub fn rollup_read_advance_state_request(
 ) -> Result<AdvanceRequest, Box<dyn std::error::Error>> {
     let mut advance_request = Box::new(cmt_rollup_advance_t {
         chain_id: 0,
-        msg_sender: Default::default(),
-        app_contract: Default::default(),
+        msg_sender: { cmt_abi_address_t {
+            data: Default::default(),
+        }},
+        app_contract: { cmt_abi_address_t {
+            data: Default::default(),
+        }},
         block_number: 0,
         block_timestamp: 0,
-        prev_randao: { cmt_u256_t {
+        prev_randao: { cmt_abi_u256_t {
             data: Default::default(),
         }},
         index: 0,
-        payload_length: 0,
-        payload: std::ptr::null::<::std::os::raw::c_uchar>() as *mut c_void,
+        payload: { cmt_abi_bytes_t {
+            length: 0,
+            data: std::ptr::null::<::std::os::raw::c_uchar>() as *mut c_void,
+        }},
     });
 
     let res = unsafe { cmt_rollup_read_advance_state(fd.0, advance_request.as_mut()) };
@@ -275,19 +311,19 @@ pub fn rollup_read_advance_state_request(
         ))));
     }
 
-    if advance_request.payload_length == 0 {
+    if advance_request.payload.length == 0 {
         log::info!("read zero size payload from advance state request");
     }
 
-    let mut payload: Vec<u8> = Vec::with_capacity(advance_request.payload_length as usize);
-    if advance_request.payload_length > 0 {
+    let mut payload: Vec<u8> = Vec::with_capacity(advance_request.payload.length as usize);
+    if advance_request.payload.length > 0 {
         unsafe {
             std::ptr::copy(
-                advance_request.payload,
+                advance_request.payload.data,
                 payload.as_mut_ptr() as *mut c_void,
-                advance_request.payload_length as usize,
+                advance_request.payload.length as usize,
             );
-            payload.set_len(advance_request.payload_length as usize);
+            payload.set_len(advance_request.payload.length as usize);
         }
     }
 
@@ -349,7 +385,7 @@ pub fn rollup_write_notice(
 ) -> Result<u64, Box<dyn std::error::Error>> {
     print_notice(notice);
 
-    let binary_payload = match hex::decode(&notice.payload[2..]) {
+    let mut binary_payload = match hex::decode(&notice.payload[2..]) {
         Ok(payload) => payload,
         Err(_err) => {
             return Err(Box::new(RollupError::new(&format!(
@@ -358,21 +394,16 @@ pub fn rollup_write_notice(
         }
     };
 
-    let mut buffer: Vec<u8> = Vec::with_capacity(binary_payload.len());
-    let length = binary_payload.len() as u64;
     let mut notice_index: std::os::raw::c_ulong = 0;
+    let payload = cmt_abi_bytes_t {
+        data: binary_payload.as_mut_ptr() as *mut c_void,
+        length: binary_payload.len()
+    };
 
     let res = unsafe {
-        std::ptr::copy(
-            binary_payload.as_ptr(),
-            buffer.as_mut_ptr(),
-            binary_payload.len(),
-        );
-
         cmt_rollup_emit_notice(
             fd.0,
-            length as u32,
-            buffer.as_mut_ptr() as *mut c_void,
+            &payload,
             &mut notice_index,
         )
     };
@@ -395,7 +426,7 @@ pub fn rollup_write_voucher(
 ) -> Result<u64, Box<dyn std::error::Error>> {
     print_voucher(voucher);
 
-    let binary_payload = match hex::decode(&voucher.payload[2..]) {
+    let mut binary_payload = match hex::decode(&voucher.payload[2..]) {
         Ok(payload) => payload,
         Err(_err) => {
             return Err(Box::new(RollupError::new(&format!(
@@ -403,53 +434,20 @@ pub fn rollup_write_voucher(
             ))));
         }
     };
-    let mut payload_buffer: Vec<u8> = Vec::with_capacity(binary_payload.len());
-    let payload_data = payload_buffer.as_mut_ptr();
-    let payload_length = binary_payload.len();
-
-    let binary_value = match hex::decode(&voucher.value[2..]) {
-        Ok(data) => data,
-        Err(_err) => {
-            return Err(Box::new(RollupError::new(&format!(
-                "Error decoding voucher value, it must be in Ethereum hex binary format"
-            ))));
-        }
-    };
-    let mut value_buffer: Vec<u8> = Vec::with_capacity(binary_value.len());
-    let value_data = value_buffer.as_mut_ptr();
-    let value_length = binary_value.len();
-
-    let address_c = match hex::decode(&voucher.destination[2..]) {
-        Ok(res) => res,
-        Err(e) => {
-            return Err(Box::new(RollupError::new(&format!(
-                "address not valid: {}",
-                e
-            ))));
-        }
+    let value = cmt_abi_u256_t::from_hex(&voucher.value[2..])?;
+    let address = cmt_abi_address_t::from_hex(&voucher.destination[2..])?;
+    let payload = cmt_abi_bytes_t {
+        data: binary_payload.as_mut_ptr() as *mut c_void,
+        length: binary_payload.len(),
     };
 
     let mut voucher_index: std::os::raw::c_ulong = 0;
     let res = unsafe {
-        std::ptr::copy(
-            binary_payload.as_ptr(),
-            payload_buffer.as_mut_ptr(),
-            binary_payload.len(),
-        );
-        std::ptr::copy(
-            binary_value.as_ptr(),
-            value_buffer.as_mut_ptr(),
-            binary_value.len(),
-        );
-
         cmt_rollup_emit_voucher(
             fd.0,
-            address_c.len() as u32,
-            address_c.as_ptr() as *const c_void,
-            value_length as u32,
-            value_data as *mut c_void,
-            payload_length as u32,
-            payload_data as *mut c_void,
+            &address,
+            &value,
+            &payload,
             &mut voucher_index,
         )
     };
@@ -472,7 +470,7 @@ pub fn rollup_write_report(
 ) -> Result<(), Box<dyn std::error::Error>> {
     print_report(report);
 
-    let binary_payload = match hex::decode(&report.payload[2..]) {
+    let mut binary_payload = match hex::decode(&report.payload[2..]) {
         Ok(payload) => payload,
         Err(_err) => {
             return Err(Box::new(RollupError::new(&format!(
@@ -481,18 +479,13 @@ pub fn rollup_write_report(
         }
     };
 
-    let mut buffer: Vec<u8> = Vec::with_capacity(binary_payload.len());
-
-    let data = buffer.as_mut_ptr() as *mut c_void;
-    let length = binary_payload.len();
+    let payload = cmt_abi_bytes_t {
+        data: binary_payload.as_mut_ptr() as *mut c_void,
+        length: binary_payload.len(),
+    };
 
     let res = unsafe {
-        std::ptr::copy(
-            binary_payload.as_ptr(),
-            buffer.as_mut_ptr(),
-            binary_payload.len(),
-        );
-        cmt_rollup_emit_report(fd.0, length as u32, data)
+        cmt_rollup_emit_report(fd.0, &payload)
     };
 
     if res != 0 {
@@ -578,7 +571,7 @@ pub fn rollup_throw_exception(
 ) -> Result<(), Box<dyn std::error::Error>> {
     print_exception(exception);
 
-    let binary_payload = match hex::decode(&exception.payload[2..]) {
+    let mut binary_payload = match hex::decode(&exception.payload[2..]) {
         Ok(payload) => payload,
         Err(_err) => {
             return Err(Box::new(RollupError::new(&format!(
@@ -587,17 +580,13 @@ pub fn rollup_throw_exception(
         }
     };
 
-    let mut buffer: Vec<u8> = Vec::with_capacity(binary_payload.len());
-    let length = binary_payload.len();
-    let data = buffer.as_mut_ptr() as *mut c_void;
+    let payload = cmt_abi_bytes_t {
+        data: binary_payload.as_mut_ptr() as *mut c_void,
+        length: binary_payload.len(),
+    };
 
     let res = unsafe {
-        std::ptr::copy(
-            binary_payload.as_ptr(),
-            buffer.as_mut_ptr(),
-            binary_payload.len(),
-        );
-        cmt_rollup_emit_exception(fd.0, length as u32, data)
+        cmt_rollup_emit_exception(fd.0, &payload)
     };
     if res != 0 {
         return Err(Box::new(RollupError::new(&format!(
