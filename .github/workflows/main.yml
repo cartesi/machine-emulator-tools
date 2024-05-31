@@ -51,11 +51,11 @@ jobs:
         run: make package.json
 
       - name: Buildx setup
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Build [${{ env.TOOLS_DEB }}]
         id: docker_build
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           builder: ${{ steps.buildx.outputs.name }}
@@ -78,7 +78,7 @@ jobs:
 
       - name: Build [${{ env.TOOLS_LIBCMT }}]
         id: docker_build_libcmt
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           builder: ${{ steps.buildx.outputs.name }}
