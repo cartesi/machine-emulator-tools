@@ -13,13 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-LIBCMT_VERSION ?=0.0.0
-
-INSTALL_FILE= install -m0644
-INSTALL_EXEC= install -m0755
-
-# paths
 PREFIX = /usr
 TARGET_PREFIX ?= $(PREFIX)
 
@@ -65,7 +58,7 @@ libcmt_SRC := \
 	src/util.c \
 	src/io.c
 
-libcmt_OBJDIR    := build/lib
+libcmt_OBJDIR    := build/riscv64
 libcmt_OBJ       := $(patsubst %.c,$(libcmt_OBJDIR)/%.o,$(libcmt_SRC))
 libcmt_LIB       := $(libcmt_OBJDIR)/libcmt.a
 libcmt_SO        := $(libcmt_OBJDIR)/libcmt.so
@@ -81,19 +74,62 @@ $(libcmt_SO): $(libcmt_OBJ)
 	$(TARGET_CC) -shared -o $@ $^
 
 libcmt: $(libcmt_LIB) $(libcmt_SO)
+install-run: $(libcmt_SO)
+	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
+	cp -f $(libcmt_SO) $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
+
 install: $(libcmt_LIB) $(libcmt_SO) build/ffi.h
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
-	cp -f $(libcmt_LIB) $(libcmt_SO) $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
+	cp -f $(libcmt_SO) $(libcmt_LIB) $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
 	cp -f include/libcmt/*.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
 	cp -f build/ffi.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig
-	sed -e 's|@ARG_PREFIX@|$(TARGET_PREFIX)|g' src/libcmt.pc > $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig/libcmt.pc
+	sed -e 's|@PREFIX@|$(TARGET_PREFIX)|g' \
+	    tools/libcmt.pc.in > $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig/libcmt.pc
 
-debian-package: install
-	mkdir -p $(TARGET_DESTDIR)/DEBIAN
-	sed 's|ARG_VERSION|$(LIBCMT_VERSION)|g;' tools/template/cross-control.template > $(TARGET_DESTDIR)/DEBIAN/control
-	dpkg-deb -Zxz --root-owner-group --build $(TARGET_DESTDIR) $(LIBCMT_DEB_FILENAME)
+# requires either install-run or install
+debian-package:
+	mkdir -p $(dir $(DEB_FILENAME))
+	dpkg-deb -Zxz --root-owner-group --build $(TARGET_DESTDIR) $(DEB_FILENAME)
+
+$(TARGET_DESTDIR)/DEBIAN/control: tools/control.in
+	mkdir -p $(@D)
+	sed -e 's|@PACKAGE@|$(ARG_PACKAGE)|' \
+	    -e 's|@VERSION@|$(ARG_VERSION)|' \
+	    -e 's|@ARCHITECTURE@|$(ARG_ARCHITECTURE)|' \
+	    -e 's|@SECTION@|$(ARG_SECTION)|' \
+	    -e 's|@PROVIDES@|$(ARG_PROVIDES)|' \
+	    -e 's|@DESCRIPTION@|$(ARG_DESCRIPTION)|' \
+	    $< > $@
+
+# debian package variants
+libcmt-v$(ARG_VERSION).deb:
+	$(MAKE) $(TARGET_DESTDIR)/DEBIAN/control \
+	        ARG_PACKAGE=libcmt \
+	        ARG_ARCHITECTURE=riscv64 \
+	        ARG_PROVIDES=libcmt \
+	        ARG_SECTION=libs \
+	        ARG_DESCRIPTION="Cartesi Machine Tools"
+	$(MAKE) debian-package DEB_FILENAME=build/deb/$@
+
+libcmt-dev-v$(ARG_VERSION).deb:
+	$(MAKE) $(TARGET_DESTDIR)/DEBIAN/control \
+	        ARG_PACKAGE=libcmt-dev \
+	        ARG_ARCHITECTURE=any \
+	        ARG_PROVIDES=libcmt-dev \
+	        ARG_SECTION=devel \
+	        ARG_DESCRIPTION="Cartesi Machine Tools - (development files)"
+	$(MAKE) debian-package DEB_FILENAME=build/deb/$@
+
+libcmt-dev-riscv64-cross-v$(ARG_VERSION).deb:
+	$(MAKE) $(TARGET_DESTDIR)/DEBIAN/control \
+	        ARG_PACKAGE=libcmt \
+	        ARG_ARCHITECTURE=riscv64 \
+	        ARG_PROVIDES=libcmt-dev-riscv64-cross \
+	        ARG_SECTION=devel \
+	        ARG_DESCRIPTION="Cartesi Machine Tools - (development files) (riscv64)"
+	$(MAKE) debian-package DEB_FILENAME=build/deb/$@
 
 #-------------------------------------------------------------------------------
 mock_SRC := \
@@ -259,4 +295,5 @@ distclean: clean
 
 OBJ := $(mock_OBJ) $(libcmt_OBJ) $(examples_OBJ) $(tools_OBJ)
 
+.PHONY: install
 -include $(OBJ:%.o=%.d)

@@ -23,7 +23,6 @@ VERSION := $(MAJOR).$(MINOR).$(PATCH)$(LABEL)
 TOOLS_DEB    := machine-emulator-tools-v$(VERSION).deb
 TOOLS_IMAGE  := cartesi/machine-emulator-tools:$(VERSION)
 TOOLS_ROOTFS := rootfs-tools-v$(VERSION).ext2
-TOOLS_LIBCMT := libcmt-v$(VERSION)-dev.deb
 
 IMAGE_KERNEL_VERSION ?= v0.20.0
 LINUX_VERSION ?= 6.5.13-ctsi-1
@@ -63,25 +62,26 @@ $(TOOLS_ROOTFS) fs: $(TOOLS_DEB)
 	xgenext2fs -fzB 4096 -b 25600 -i 4096 -a rootfs.tar -L rootfs $(TOOLS_ROOTFS) && \
 	rm -f rootfs.tar
 
-$(TOOLS_LIBCMT) libcmt:
+libcmt:
 	@docker buildx build --load \
 		--target libcmt-debian-packager \
-		--build-arg TOOLS_LIBCMT=$(TOOLS_LIBCMT) \
+		--build-arg VERSION=$(VERSION) \
 		-t $(TOOLS_IMAGE)-libcmt \
 		-f Dockerfile \
 		.
 	$(MAKE) copy-libcmt
 
 copy-libcmt:
+	@mkdir libcmt
 	@ID=`docker create $(TOOLS_IMAGE)-libcmt` && \
-	   docker cp $$ID:/opt/cartesi/$(TOOLS_LIBCMT) . && \
+	   docker cp $$ID:/opt/cartesi/tools/sys-utils/libcmt/build/deb/ libcmt && \
 	   docker rm $$ID
 
 env:
+	@echo VERSION=$(VERSION)
 	@echo TOOLS_DEB=$(TOOLS_DEB)
 	@echo TOOLS_ROOTFS=$(TOOLS_ROOTFS)
 	@echo TOOLS_IMAGE=$(TOOLS_IMAGE)
-	@echo TOOLS_LIBCMT=$(TOOLS_LIBCMT)
 	@echo IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION)
 	@echo LINUX_VERSION=$(LINUX_VERSION)
 	@echo LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH)
@@ -128,7 +128,7 @@ clean-image:
 	@(docker rmi $(TOOLS_IMAGE) > /dev/null 2>&1 || true)
 
 clean:
-	@rm -f $(TOOLS_DEB) control rootfs* libcmt-*
+	@rm -f $(TOOLS_DEB) control rootfs* libcmt*
 	@$(MAKE) -C sys-utils clean
 
 distclean: clean clean-image
@@ -146,4 +146,4 @@ help:
 	@echo '  env             - print useful Makefile variables as a KEY=VALUE list'
 	@echo '  clean           - remove the generated artifacts'
 
-.PHONY: build fs deb env setup setup-required help distclean
+.PHONY: build fs deb libcmt env setup setup-required help distclean

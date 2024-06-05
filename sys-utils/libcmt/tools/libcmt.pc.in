@@ -1,4 +1,4 @@
-prefix=@ARG_PREFIX@
+prefix=@PREFIX@
 exec_prefix=${prefix}
 includedir=${prefix}/include
 libdir=${exec_prefix}/lib
