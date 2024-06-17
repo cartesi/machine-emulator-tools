@@ -54,6 +54,7 @@
 #ifndef CMT_IO_H
 #define CMT_IO_H
 #include "buf.h"
+#include "sock.h"
 #include <stdint.h>
 
 /** Device */
@@ -109,10 +110,18 @@ typedef struct {
     int gio_seq;
 } cmt_io_driver_mock_t;
 
+typedef struct {
+    cmt_buf_t tx[1];
+    cmt_buf_t rx[1];
+    cmt_conn_t sock;
+    int fds[2];      // to close files when we are done
+} cmt_io_driver_host_t;
+
 /** Implementation specific cmio state. */
 typedef union cmt_io_driver {
     cmt_io_driver_ioctl_t ioctl;
     cmt_io_driver_mock_t mock;
+    cmt_io_driver_host_t host;
 } cmt_io_driver_t;
 
 /** yield struct cmt_io_yield */
