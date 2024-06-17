@@ -25,8 +25,7 @@ TARGET_CFLAGS := $(COMMON_CFLAGS) -ftrivial-auto-var-init=zero -Wstrict-aliasing
 CFLAGS := $(COMMON_CFLAGS)
 CC := gcc
 
-all: libcmt host
-host: mock tools
+all: libcmt host mock tools
 #-------------------------------------------------------------------------------
 examples_SRC := \
 	doc/examples/abi_encode_000.c \
@@ -166,6 +165,47 @@ install-mock: $(mock_LIB) $(mock_SO) build/ffi.h
 	cp -f build/ffi.h $(DESTDIR)$(PREFIX)/include/libcmt/
 	mkdir -p $(DESTDIR)$(PREFIX)/lib/pkgconfig
 	sed -e 's|@ARG_PREFIX@|$(PREFIX)|g' src/libcmt_mock.pc > $(DESTDIR)$(PREFIX)/lib/pkgconfig/libcmt.pc
+
+#-------------------------------------------------------------------------------
+host_SRC := \
+	src/abi.c \
+	src/buf.c \
+	src/keccak.c \
+	src/merkle.c \
+	src/rollup.c \
+	src/util.c \
+	src/sock.c \
+	src/io-host.c
+
+host_OBJDIR := build/host
+host_OBJ    := $(patsubst %.c,$(host_OBJDIR)/%.o,$(host_SRC))
+host_LIB    := $(host_OBJDIR)/libcmt.a
+host_SO     := $(host_OBJDIR)/libcmt.so
+
+$(host_OBJ): $(host_OBJDIR)/%.o: %.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -MT $@ -MMD -MP -MF $(@:.o=.d) -c -o $@ $<
+
+$(host_LIB): $(host_OBJ)
+	$(AR) rcs $@ $^
+
+$(host_SO): $(host_OBJ)
+	$(CC) -shared -o $@ $^
+
+host: $(host_LIB) $(host_SO) $(host_OBJDIR)/libcmt-host-sample
+
+install-host: $(host_LIB) $(host_SO) build/ffi.h
+	mkdir -p $(DESTDIR)$(PREFIX)/lib
+	cp -f $(host_LIB) $(host_SO) $(DESTDIR)$(PREFIX)/lib
+	mkdir -p $(DESTDIR)$(PREFIX)/include/libcmt/
+	cp -f include/libcmt/*.h $(DESTDIR)$(PREFIX)/include/libcmt/
+	cp -f build/ffi.h $(DESTDIR)$(PREFIX)/include/libcmt/
+	mkdir -p $(DESTDIR)$(PREFIX)/lib/pkgconfig
+	sed -e 's|@ARG_PREFIX@|$(PREFIX)|g' src/libcmt_host.pc > $(DESTDIR)$(PREFIX)/lib/pkgconfig/libcmt.pc
+
+$(host_OBJDIR)/libcmt-host-sample: src/libcmt-host-sample.c $(host_LIB)
+	$(CC) $(CFLAGS) -o $@ $^
+
 
 #-------------------------------------------------------------------------------
 unittests_BINS := \
