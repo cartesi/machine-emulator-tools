@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM ubuntu:22.04 as tools-env
+FROM ubuntu:22.04 AS tools-env
 ARG IMAGE_KERNEL_VERSION=v0.20.0
 ARG LINUX_VERSION=6.5.13-ctsi-1
 ARG LINUX_HEADERS_URLPATH=https://github.com/cartesi/image-kernel/releases/download/${IMAGE_KERNEL_VERSION}/linux-libc-dev-riscv64-cross-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
@@ -64,12 +64,12 @@ ENV RISCV_ABI="lp64d"
 ENV CFLAGS="-march=$RISCV_ARCH -mabi=$RISCV_ABI"
 ENV TOOLCHAIN_PREFIX="riscv64-linux-gnu-"
 
-FROM tools-env as builder
+FROM tools-env AS builder
 COPY --chown=developer:developer sys-utils/ ${BUILD_BASE}/tools/sys-utils/
 
 # build C/C++ tools
 # ------------------------------------------------------------------------------
-FROM builder as c-builder
+FROM builder AS c-builder
 ARG CMT_BASE=${BUILD_BASE}/tools/sys-utils/libcmt
 ARG BUILD_BASE=/opt/cartesi
 
@@ -82,7 +82,7 @@ RUN make -C ${BUILD_BASE}/tools/sys-utils/ -j$(nproc) all
 
 # build libcmt debian package
 # ------------------------------------------------------------------------------
-FROM c-builder as libcmt-debian-packager
+FROM c-builder AS libcmt-debian-packager
 ARG CMT_BASE=${BUILD_BASE}/tools/sys-utils/libcmt
 ARG VERSION=0.0.0
 USER root
@@ -107,7 +107,7 @@ RUN make -C ${CMT_BASE} \
 
 # build rust tools
 # ------------------------------------------------------------------------------
-FROM c-builder as rust-env
+FROM c-builder AS rust-env
 ENV PATH="/home/developer/.cargo/bin:${PATH}"
 ENV PKG_CONFIG_PATH_riscv64gc_unknown_linux_gnu="/usr/riscv64-linux-gnu/lib/pkgconfig"
 ENV PKG_CONFIG_riscv64gc_unknown_linux_gnu="/usr/bin/pkg-config"
@@ -125,13 +125,13 @@ RUN cd  && \
         --target riscv64gc-unknown-linux-gnu && \
     rm -rf rustup-1.27.0 1.27.0.tar.gz
 
-FROM rust-env as rust-builder
+FROM rust-env AS rust-builder
 COPY --chown=developer:developer rollup-http/rollup-init ${BUILD_BASE}/tools/rollup-http/rollup-init
 COPY --chown=developer:developer rollup-http/rollup-http-client ${BUILD_BASE}/tools/rollup-http/rollup-http-client
 COPY --chown=developer:developer rollup-http/.cargo ${BUILD_BASE}/tools/rollup-http/.cargo
 
 # build rollup-http-server dependencies
-FROM rust-builder as http-server-dep-builder
+FROM rust-builder AS http-server-dep-builder
 COPY --chown=developer:developer rollup-http/rollup-http-server/Cargo.toml rollup-http/rollup-http-server/Cargo.lock ${BUILD_BASE}/tools/rollup-http/rollup-http-server/
 RUN cd ${BUILD_BASE}/tools/rollup-http/rollup-http-server && \
     mkdir src/ && \
@@ -140,28 +140,28 @@ RUN cd ${BUILD_BASE}/tools/rollup-http/rollup-http-server && \
     cargo build --target riscv64gc-unknown-linux-gnu --release
 
 # build rollup-http-server
-FROM http-server-dep-builder as http-server-builder
+FROM http-server-dep-builder AS http-server-builder
 COPY --chown=developer:developer rollup-http/rollup-http-server/build.rs ${BUILD_BASE}/tools/rollup-http/rollup-http-server/
 COPY --chown=developer:developer rollup-http/rollup-http-server/src ${BUILD_BASE}/tools/rollup-http/rollup-http-server/src
 RUN cd ${BUILD_BASE}/tools/rollup-http/rollup-http-server && touch build.rs src/* && \
     cargo build --target riscv64gc-unknown-linux-gnu --release
 
 # build echo-dapp dependencies
-FROM rust-builder as echo-dapp-dep-builder
+FROM rust-builder AS echo-dapp-dep-builder
 COPY --chown=developer:developer rollup-http/echo-dapp/Cargo.toml rollup-http/echo-dapp/Cargo.lock ${BUILD_BASE}/tools/rollup-http/echo-dapp/
 RUN cd ${BUILD_BASE}/tools/rollup-http/echo-dapp && \
     mkdir src/ && echo "fn main() {}" > src/main.rs && \
     cargo build --target riscv64gc-unknown-linux-gnu --release
 
 # build echo-dapp
-FROM echo-dapp-dep-builder as echo-dapp-builder
+FROM echo-dapp-dep-builder AS echo-dapp-builder
 COPY --chown=developer:developer rollup-http/echo-dapp/src ${BUILD_BASE}/tools/rollup-http/echo-dapp/src
 RUN cd ${BUILD_BASE}/tools/rollup-http/echo-dapp && touch src/* && \
     cargo build --target riscv64gc-unknown-linux-gnu --release
 
 # pack tools (deb)
 # ------------------------------------------------------------------------------
-FROM tools-env as packer
+FROM tools-env AS packer
 ARG TOOLS_DEB=machine-emulator-tools.deb
 ARG STAGING_BASE=${BUILD_BASE}/_install
 ARG STAGING_DEBIAN=${STAGING_BASE}/DEBIAN

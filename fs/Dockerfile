@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM ubuntu:22.04 as cross-builder
+FROM --platform=$BUILDPLATFORM ubuntu:22.04 AS cross-builder
 ENV BUILD_BASE=/tmp/build-extra
 
 # Install dependencies
