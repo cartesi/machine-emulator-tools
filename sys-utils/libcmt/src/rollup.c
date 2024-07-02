@@ -322,7 +322,6 @@ int cmt_rollup_finish(cmt_rollup_t *me, cmt_rollup_finish_t *finish) {
     }
     finish->next_request_type = reason;
     finish->next_request_payload_length = me->fromhost_data;
-    cmt_merkle_init(me->merkle);
     return 0;
 }
 
