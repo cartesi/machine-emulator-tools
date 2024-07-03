@@ -108,7 +108,7 @@ jobs:
         run: |
           sha512sum ${{ env.TOOLS_DEB }} > ${{ env.TOOLS_DEB }}.sha512
           sha512sum ${{ env.TOOLS_ROOTFS }} > ${{ env.TOOLS_ROOTFS }}.sha512
-          for f in libcmt/deb/*; sha512sum $f > libcmt/$f.sha512; done
+          for f in libcmt/deb/*; do sha512sum $f > $f.sha512; done
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -120,7 +120,6 @@ jobs:
             ${{ env.TOOLS_ROOTFS }}
             ${{ env.TOOLS_ROOTFS }}.sha512
             libcmt/deb/*
-            libcmt/deb/*.sha512
 
   test:
     runs-on: ubuntu-latest-8-cores
