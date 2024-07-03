@@ -5,8 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.16.0] - 2024-07-26
 ### Changed
 - Updated xgenext2fs to v1.5.6
+- Updated migrated from output unification v1 to v2
+- Fixed inconsistencies in the http server api
+- Updated CI actions versions
 
 ## [0.15.0] - 2024-04-19
 ### Added
@@ -165,7 +170,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [0.2.0]
 - [0.1.0]
 
-[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.16.0
 [0.15.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.15.0
 [0.14.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.14.1
 [0.14.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.14.0

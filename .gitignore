@@ -4,6 +4,8 @@ machine-emulator-tools-*.tar.gz
 machine-emulator-tools-*.deb
 rootfs.*
 libcmt-*.*
+package.json
+*.bin
 
 # Prerequisites
 *.d
