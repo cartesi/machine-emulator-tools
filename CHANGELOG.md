@@ -5,8 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.16.1] - 2024-08-12
 ### Fixed
 - Fixed curl version on rootfs
+- Fixed openapi spec dependency version in the CI test
 
 ## [0.16.0] - 2024-07-26
 ### Changed
@@ -172,7 +175,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [0.2.0]
 - [0.1.0]
 
-[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.16.1...HEAD
+[0.16.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.16.1
 [0.16.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.16.0
 [0.15.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.15.0
 [0.14.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.14.1
