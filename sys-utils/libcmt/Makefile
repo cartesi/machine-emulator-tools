@@ -165,7 +165,7 @@ install-mock: $(mock_LIB) $(mock_SO) build/ffi.h
 	cp -f include/libcmt/*.h $(DESTDIR)$(PREFIX)/include/libcmt/
 	cp -f build/ffi.h $(DESTDIR)$(PREFIX)/include/libcmt/
 	mkdir -p $(DESTDIR)$(PREFIX)/lib/pkgconfig
-	sed -e 's|@ARG_PREFIX@|$(PREFIX)|g' src/libcmt_mock.pc > $(DESTDIR)$(PREFIX)/lib/pkgconfig/libcmt.pc
+	sed -e 's|@ARG_PREFIX@|$(PREFIX)|g' tools/libcmt.pc.in > $(DESTDIR)$(PREFIX)/lib/pkgconfig/libcmt.pc
 
 #-------------------------------------------------------------------------------
 unittests_BINS := \
