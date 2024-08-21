@@ -36,8 +36,8 @@ ADD ${TOOLS_DEB} /tmp/
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     busybox-static=1:1.30.1-7ubuntu3 \
-    coreutils=8.32-4.1ubuntu1 \
-    bash=5.1-6ubuntu1 \
+    coreutils=8.32-4.1ubuntu1.2 \
+    bash=5.1-6ubuntu1.1 \
     psmisc=23.4-2build3 \
     bc=1.07.1-3build1 \
     curl=7.81.0-1ubuntu1.17 \
