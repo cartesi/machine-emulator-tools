@@ -16,7 +16,7 @@
 
 use std::sync::Arc;
 
-use actix_web::{middleware::Logger, web::Data, App, HttpResponse, HttpServer};
+use actix_web::{middleware::Logger, web::Data, App, HttpResponse, HttpServer, http::header::CONTENT_TYPE};
 use actix_web_validator::Json;
 use async_mutex::Mutex;
 use serde::{Deserialize, Serialize};
@@ -90,7 +90,7 @@ async fn voucher(mut voucher: Json<Voucher>, data: Data<Mutex<Context>>) -> Http
             voucher.destination.len()
         );
         return HttpResponse::BadRequest()
-            .append_header((hyper::header::CONTENT_TYPE, "text/plain"))
+            .append_header((CONTENT_TYPE, "text/plain"))
             .body("address not valid");
     }
     let context = data.lock().await;
@@ -108,7 +108,7 @@ async fn voucher(mut voucher: Json<Voucher>, data: Data<Mutex<Context>>) -> Http
                 e.to_string()
             );
             HttpResponse::BadRequest()
-                .append_header((hyper::header::CONTENT_TYPE, "text/plain"))
+                .append_header((CONTENT_TYPE, "text/plain"))
                 .body(format!("unable to insert voucher, error details: '{}'", e))
         }
     };
@@ -130,7 +130,7 @@ async fn notice(mut notice: Json<Notice>, data: Data<Mutex<Context>>) -> HttpRes
         Err(e) => {
             log::error!("unable to insert notice, error details: '{}'", e);
             HttpResponse::BadRequest()
-                .append_header((hyper::header::CONTENT_TYPE, "text/plain"))
+                .append_header((CONTENT_TYPE, "text/plain"))
                 .body(format!("unable to insert notice, error details: '{}'", e))
         }
     };
@@ -150,7 +150,7 @@ async fn report(report: Json<Report>, data: Data<Mutex<Context>>) -> HttpRespons
         Err(e) => {
             log::error!("unable to insert report, error details: '{}'", e);
             HttpResponse::BadRequest()
-                .append_header((hyper::header::CONTENT_TYPE, "text/plain"))
+                .append_header((CONTENT_TYPE, "text/plain"))
                 .body(format!("unable to insert notice, error details: '{}'", e))
         }
     };
@@ -169,7 +169,7 @@ async fn gio(request: Json<GIORequest>, data: Data<Mutex<Context>>) -> HttpRespo
         Err(e) => {
             log::error!("unable to process gio request, error details: '{}'", e);
             HttpResponse::BadRequest()
-                .append_header((hyper::header::CONTENT_TYPE, "text/plain"))
+                .append_header((CONTENT_TYPE, "text/plain"))
                 .body(format!(
                     "unable to process gio request, error details: '{}'",
                     e
@@ -195,7 +195,7 @@ async fn exception(exception: Json<Exception>, data: Data<Mutex<Context>>) -> Ht
         Err(e) => {
             log::error!("unable to throw exception, error details: '{}'", e);
             HttpResponse::BadRequest()
-                .append_header((hyper::header::CONTENT_TYPE, "text/plain"))
+                .append_header((CONTENT_TYPE, "text/plain"))
                 .body(format!("unable to throw exception, error details: '{}'", e))
         }
     };
@@ -212,7 +212,7 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
         "reject" => false,
         _ => {
             return HttpResponse::BadRequest()
-                .append_header((hyper::header::CONTENT_TYPE, "text/plain"))
+                .append_header((CONTENT_TYPE, "text/plain"))
                 .body("status must be 'accept' or 'reject'");
         }
     };
@@ -244,7 +244,7 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
                     );
                     log::error!("{}", &error_message);
                     return HttpResponse::BadRequest()
-                        .append_header((hyper::header::CONTENT_TYPE, "text/plain"))
+                        .append_header((CONTENT_TYPE, "text/plain"))
                         .body(error_message);
                 }
             }
@@ -256,7 +256,7 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
             );
             log::error!("{}", &error_message);
             return HttpResponse::BadRequest()
-                .append_header((hyper::header::CONTENT_TYPE, "text/plain"))
+                .append_header((CONTENT_TYPE, "text/plain"))
                 .body(error_message);
         }
     };
@@ -271,7 +271,7 @@ async fn finish(finish: Json<FinishRequest>, data: Data<Mutex<Context>>) -> Http
         },
     };
     HttpResponse::Ok()
-        .append_header((hyper::header::CONTENT_TYPE, "application/json"))
+        .append_header((CONTENT_TYPE, "application/json"))
         .json(http_rollup_request)
 }
 

@@ -164,13 +164,13 @@ pub struct GIOResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct AdvanceMetadata {
     pub chain_id: u64,
-    #[validate(regex = "ETH_ADDR_REGEXP")]
+    #[validate(regex(path = "*ETH_ADDR_REGEXP"))]
     pub app_contract: String,
-    #[validate(regex = "ETH_ADDR_REGEXP")]
+    #[validate(regex(path = "*ETH_ADDR_REGEXP"))]
     pub msg_sender: String,
     pub block_number: u64,
     pub block_timestamp: u64,
-    #[validate(regex = "ETH_U256_REGEXP")]
+    #[validate(regex(path = "*ETH_U256_REGEXP"))]
     pub prev_randao: String,
     pub input_index: u64,
 }
@@ -238,9 +238,9 @@ pub struct Notice {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Voucher {
-    #[validate(regex = "ETH_ADDR_REGEXP")]
+    #[validate(regex(path = "*ETH_ADDR_REGEXP"))]
     pub destination: String,
-    #[validate(regex = "ETH_U256_REGEXP")]
+    #[validate(regex(path = "*ETH_U256_REGEXP"))]
     pub value: String,
     pub payload: String,
 }
