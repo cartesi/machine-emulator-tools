@@ -16,13 +16,14 @@
 
 MAJOR := 0
 MINOR := 16
-PATCH := 1
-LABEL :=
+PATCH := 2
+LABEL := -test2
 VERSION := $(MAJOR).$(MINOR).$(PATCH)$(LABEL)
 
 TOOLS_DEB    := machine-emulator-tools-v$(VERSION).deb
 TOOLS_IMAGE  := cartesi/machine-emulator-tools:$(VERSION)
 TOOLS_ROOTFS := rootfs-tools-v$(VERSION).ext2
+TOOLS_ROOTFS_IMAGE := cartesi/rootfs-tools:$(VERSION)
 
 IMAGE_KERNEL_VERSION ?= v0.20.0
 LINUX_VERSION ?= 6.5.13-ctsi-1
@@ -53,14 +54,24 @@ control: Makefile control.in
 package.json: Makefile package.json.in
 	@sed 's|ARG_VERSION|$(VERSION)|g' package.json.in > package.json
 
-$(TOOLS_ROOTFS) fs: $(TOOLS_DEB)
-	@docker buildx build --platform=linux/riscv64 \
+fs: $(TOOLS_ROOTFS)
+
+$(TOOLS_ROOTFS): $(TOOLS_DEB)
+	@docker buildx build --platform linux/riscv64 \
 	  --build-arg TOOLS_DEB=$(TOOLS_DEB) \
 	  --output type=tar,dest=rootfs.tar \
 	  --file fs/Dockerfile \
 	  . && \
 	xgenext2fs -fzB 4096 -b 25600 -i 4096 -a rootfs.tar -L rootfs $(TOOLS_ROOTFS) && \
 	rm -f rootfs.tar
+
+fs-license:
+	@docker buildx build --load --platform linux/riscv64 \
+	  --build-arg TOOLS_DEB=$(TOOLS_DEB) \
+	  -t $(TOOLS_ROOTFS_IMAGE) \
+	  --file fs/Dockerfile \
+	  .
+	TMPFILE=$$(mktemp) && (cd fs/third-party/repo-info/; ./scan-local.sh $(TOOLS_ROOTFS_IMAGE) linux/riscv64) | tee $$TMPFILE && pandoc -s -f markdown -t html5 -o $(TOOLS_ROOTFS).html $$TMPFILE && rm -f $$TMPFILE
 
 libcmt:
 	@mkdir $@
@@ -84,6 +95,7 @@ env:
 	@echo TOOLS_DEB=$(TOOLS_DEB)
 	@echo TOOLS_ROOTFS=$(TOOLS_ROOTFS)
 	@echo TOOLS_IMAGE=$(TOOLS_IMAGE)
+	@echo TOOLS_ROOTFS_IMAGE=$(TOOLS_ROOTFS_IMAGE)
 	@echo IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION)
 	@echo LINUX_VERSION=$(LINUX_VERSION)
 	@echo LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH)
@@ -142,10 +154,11 @@ help:
 	@echo 'available commands:'
 	@echo '  deb             - build machine-emulator-tools .deb package'
 	@echo '  fs              - build rootfs.ext2'
+	@echo '  fs-license      - build rootfs.ext2.html with licence information'
 	@echo '  setup           - setup riscv64 buildx'
 	@echo '  setup-required  - check if riscv64 buildx setup is required'
 	@echo '  help            - list makefile commands'
 	@echo '  env             - print useful Makefile variables as a KEY=VALUE list'
 	@echo '  clean           - remove the generated artifacts'
 
-.PHONY: build fs deb build-libcmt env setup setup-required help distclean
+.PHONY: build fs fs-license deb build-libcmt env setup setup-required help distclean

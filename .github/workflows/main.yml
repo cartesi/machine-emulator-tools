@@ -2,14 +2,13 @@ name: Build
 on: [push]
 jobs:
   build:
-    needs: [test]
     runs-on: ubuntu-latest-8-cores
     steps:
       - name: Install libarchive-tools
         run: |
           export DEBIAN_FRONTEND=noninteractive
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential autoconf automake libarchive-dev libarchive-tools
+          sudo apt-get install -y --no-install-recommends build-essential autoconf automake libarchive-dev libarchive-tools pandoc
 
       # Building from source cause the provided debian package is for Debian Bookworm
       - name: Download, build and install xgenext2fs
@@ -50,6 +49,9 @@ jobs:
       - name: Create version file
         run: make package.json
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Buildx setup
         uses: docker/setup-buildx-action@v3
 
@@ -75,6 +77,19 @@ jobs:
 
       - name: Build rootfs
         run: make fs
+
+      - name: Auto-generate rootfs license information
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: make fs-license
+
+      - name: Upload rootfs license information
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: license
+          if-no-files-found: error
+          path: |
+            ${{ env.TOOLS_ROOTFS }}.html
 
       - name: Build libcmt
         id: docker_build_libcmt
@@ -118,6 +133,7 @@ jobs:
             ${{ env.TOOLS_DEB }}
             ${{ env.TOOLS_DEB }}.sha512
             ${{ env.TOOLS_ROOTFS }}
+            ${{ env.TOOLS_ROOTFS }}.html
             ${{ env.TOOLS_ROOTFS }}.sha512
             libcmt/deb/*
 

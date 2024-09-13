@@ -1,18 +1,19 @@
 #!/bin/bash
+# Modified from the original
 set -e
 
 trap 'echo >&2 Ctrl+C captured, exiting; exit 1' SIGINT
 
 image="$1"; shift
+platform="$1"; shift
 
-docker build --pull -t repo-info:local-apk -q -f Dockerfile.local-apk . > /dev/null
-docker build --pull -t repo-info:local-dpkg -q -f Dockerfile.local-dpkg . > /dev/null
-docker build --pull -t repo-info:local-rpm -q -f Dockerfile.local-rpm . > /dev/null
+docker buildx build --platform $platform --load --pull -t repo-info:local-dpkg -f Dockerfile.local-dpkg . 1>&2
 
 name="repo-info-local-$$-$RANDOM"
 trap "docker rm -vf '$name-data' > /dev/null || :" EXIT
 
 docker create \
+    --platform $platform \
 	--name "$name-data" \
 	-v /etc \
 	-v /lib/apk \
@@ -47,7 +48,7 @@ docker inspect -f '
 
 - Image ID: `{{ .Id }}`
 - Created: `{{ .Created }}`
-- Virtual Size: '"$size"'  
+- Virtual Size: '"$size"'
   (total size of all layers on-disk)
 - Arch: `{{ .Os }}`/`{{ .Architecture }}`
 {{ if .Config.Entrypoint }}- Entrypoint: `{{ json .Config.Entrypoint }}`
@@ -55,6 +56,4 @@ docker inspect -f '
 {{ end }}- Environment:{{ range .Config.Env }}{{ "\n" }}  - `{{ . }}`{{ end }}{{ if .Config.Labels }}
 - Labels:{{ range $k, $v := .Config.Labels }}{{ "\n" }}  - `{{ $k }}={{ $v }}`{{ end }}{{ end }}' "$image"
 
-docker run --rm --volumes-from "$name-data" -v /etc/ssl repo-info:local-apk || :
-docker run --rm --volumes-from "$name-data" -v /etc/ssl repo-info:local-dpkg || :
-docker run --rm --volumes-from "$name-data" -v /etc/ssl repo-info:local-rpm || :
+docker run --platform $platform --rm --volumes-from "$name-data" -v /etc/ssl repo-info:local-dpkg || :
