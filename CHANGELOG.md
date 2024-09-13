@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Changed
 - Bump dependencies versions
+- Added rootfs.ext2:/etc/LICENSES file listing licenses of all installed packages
 
 ## [0.16.1] - 2024-08-12
 ### Fixed
