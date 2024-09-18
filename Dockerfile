@@ -175,6 +175,7 @@ RUN mkdir -p ${STAGING_DEBIAN} ${STAGING_SBIN} ${STAGING_BIN} ${STAGING_BASE}/et
 COPY control ${STAGING_DEBIAN}/control
 COPY package.json ${STAGING_SHARE}/package.json
 COPY postinst ${STAGING_DEBIAN}/postinst
+COPY copyright ${STAGING_BASE}/usr/share/doc/machine-emulator-tools/copyright
 
 COPY --from=builder ${BUILD_BASE}/tools/sys-utils/cartesi-init/cartesi-init ${STAGING_SBIN}
 COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/xhalt/xhalt ${STAGING_SBIN}
