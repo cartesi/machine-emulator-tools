@@ -139,6 +139,43 @@ checksum = "9180d76e5cc7ccbc4d60a506f2c727730b154010262df5b910eb17dbe4b8cb38"
 dependencies = [
  "actix-codec",
  "actix-http",
+ "actix-router",
+ "actix-rt",
+ "actix-server",
+ "actix-service",
+ "actix-utils",
+ "ahash",
+ "bytes",
+ "bytestring",
+ "cfg-if",
+ "derive_more",
+ "encoding_rs",
+ "futures-core",
+ "futures-util",
+ "impl-more",
+ "itoa",
+ "language-tags",
+ "log",
+ "mime",
+ "once_cell",
+ "pin-project-lite",
+ "regex-lite",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "smallvec",
+ "socket2",
+ "time",
+ "url",
+]
+
+[[package]]
+name = "actix-web"
+version = "4.9.0"
+source = "git+https://github.com/actix/actix-web?tag=web-v4.9.0#e0918fb1795c899ac38fb903694ca1aa3b58d46d"
+dependencies = [
+ "actix-codec",
+ "actix-http",
  "actix-macros",
  "actix-router",
  "actix-rt",
@@ -193,7 +230,7 @@ checksum = "0f65804955af25ad36225100983ec8d92f14795e7f8080073f8147d0b768c78e"
 dependencies = [
  "actix-http",
  "actix-router",
- "actix-web",
+ "actix-web 4.9.0 (git+https://github.com/actix/actix-web?tag=web-v4.9.0#e0918fb1795c899ac38fb903694ca1aa3b58d46d)",
  "bytes",
  "futures",
  "futures-util",
@@ -1563,10 +1600,11 @@ name = "rollup-http-server"
 version = "0.2.0"
 dependencies = [
  "actix-server",
- "actix-web",
+ "actix-web 4.9.0 (git+https://github.com/actix/actix-web?tag=web-v4.9.0)",
  "actix-web-validator",
  "async-mutex",
  "bindgen",
+ "derive_more",
  "env_logger 0.11.5",
  "ethabi",
  "getopts",
@@ -1698,7 +1736,7 @@ version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd34f36fe4c5ba9654417139a9b3a20d2e1de6012ee678ad14d240c22c78d8d6"
 dependencies = [
- "actix-web",
+ "actix-web 4.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures",
  "percent-encoding",
  "serde",
