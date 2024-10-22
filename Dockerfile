@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM ubuntu:22.04 AS tools-env
+FROM ubuntu:24.04 AS tools-env
 ARG IMAGE_KERNEL_VERSION=v0.20.0
 ARG LINUX_VERSION=6.5.13-ctsi-1
 ARG LINUX_HEADERS_URLPATH=https://github.com/cartesi/image-kernel/releases/download/${IMAGE_KERNEL_VERSION}/linux-libc-dev-riscv64-cross-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
@@ -32,37 +32,27 @@ apt-get update
 apt-get upgrade -y
 apt-get install -y --no-install-recommends \
         dpkg-dev \
-        g++-12 \
-        gcc-12 \
+        g++ \
+        gcc \
         make \
         ca-certificates \
         git \
         wget \
+        adduser \
         libclang-dev \
         pkg-config \
         dpkg-cross \
-        gcc-12-riscv64-linux-gnu \
-        g++-12-riscv64-linux-gnu
-
-for tool in cpp g++ gcc gcc-ar gcc-nm gcc-ranlib gcov gcov-dump gcov-tool; do
-    update-alternatives --install /usr/bin/riscv64-linux-gnu-$tool riscv64-linux-gnu-$tool /usr/bin/riscv64-linux-gnu-$tool-12 12
-    update-alternatives --install /usr/bin/$tool $tool /usr/bin/$tool-12 12
-done
-update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-12 12
+        gcc-riscv64-linux-gnu \
+        g++-riscv64-linux-gnu
 
 wget -O ${LINUX_HEADERS_FILEPATH} ${LINUX_HEADERS_URLPATH}
 echo "2723435e8b45d8fb7a79e9344f6dc517b3dbc08e03ac17baab311300ec475c08  ${LINUX_HEADERS_FILEPATH}" | sha256sum --check
-apt-get install -y --no-install-recommends ${LINUX_HEADERS_FILEPATH}
+apt-get install -y --no-install-recommends --allow-downgrades ${LINUX_HEADERS_FILEPATH}
 
 adduser developer -u 499 --gecos ",,," --disabled-password
 mkdir -p ${BUILD_BASE}/tools && chown -R developer:developer ${BUILD_BASE}/tools
 rm -rf /var/lib/apt/lists/* ${LINUX_HEADERS_FILEPATH}
 EOF
-
-ENV RISCV_ARCH="rv64gc"
-ENV RISCV_ABI="lp64d"
-ENV CFLAGS="-march=$RISCV_ARCH -mabi=$RISCV_ABI"
-ENV TOOLCHAIN_PREFIX="riscv64-linux-gnu-"
 
 FROM tools-env AS builder
 COPY --chown=developer:developer sys-utils/ ${BUILD_BASE}/tools/sys-utils/
