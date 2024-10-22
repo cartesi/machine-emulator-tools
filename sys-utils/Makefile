@@ -14,23 +14,14 @@
 # limitations under the License.
 #
 
-
 UTILITIES := hex xhalt yield rollup ioctl-echo-loop
-UTILITIES_WITH_TOOLCHAIN := $(addsuffix -with-toolchain,$(UTILITIES))
 
 all: $(UTILITIES)
 
 $(UTILITIES):
 	@$(MAKE) -C $@
 
-with-toolchain:
-	@$(MAKE) $(UTILITIES_WITH_TOOLCHAIN)
-
-$(UTILITIES_WITH_TOOLCHAIN):
-	@$(MAKE) -C $@ with-toolchain
-
 clean:
 	@$(foreach utility,$(UTILITIES),$(MAKE) -C $(utility) clean;)
 
-
-.PHONY: all with-toolchain $(UTILITIES) $(UTILITIES_WITH_TOOLCHAIN)
+.PHONY: all $(UTILITIES)

@@ -14,65 +14,14 @@
 # limitations under the License.
 #
 
-UNAME:=$(shell uname)
-
-TOOLCHAIN_IMAGE ?= cartesi/toolchain
-TOOLCHAIN_TAG ?= 0.16.0
-RISCV_ARCH ?= rv64gc
-RISCV_ABI ?= lp64d
-
-TOOLCHAIN_PREFIX ?= riscv64-cartesi-linux-gnu-
-
-RVCC  = $(TOOLCHAIN_PREFIX)gcc
-RVCXX = $(TOOLCHAIN_PREFIX)g++
-RVCOPY = $(TOOLCHAIN_PREFIX)objcopy
-RVDUMP = $(TOOLCHAIN_PREFIX)objdump
-CXXFLAGS := -Wall -Wextra -pedantic -O2 -std=c++20 `pkg-config --cflags libcmt`
-LDLIBS := `pkg-config --libs libcmt`
-
-CONTAINER_MAKE := /usr/bin/make
-CONTAINER_BASE := /opt/cartesi/tools
-KERNEL_HEADERS_PATH := /opt/riscv/usr/include
+CXX      = $(TOOLCHAIN_PREFIX)g++
+CXXFLAGS += -Wall -Wextra -pedantic -O2 -std=c++20 `pkg-config --cflags libcmt`
+LDFLAGS  += `pkg-config --libs libcmt`
 
 all: rollup
 
-rollup.with-toolchain with-toolchain:
-	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
-
-extra.ext2.with-toolchain:
-	$(MAKE) toolchain-exec CONTAINER_COMMAND="$(CONTAINER_MAKE) $@.toolchain"
-
-rollup: export PKG_CONFIG_PATH ?= /usr/riscv64-linux-gnu/lib/pkgconfig
 rollup: rollup.cpp
-	$(RVCXX) $(CXXFLAGS) -O2 -o rollup rollup.cpp $(LDLIBS)
-
-extra.ext2: rollup
-	mkdir -m 0755 ./extra
-	cp ./rollup ./extra/rollup
-	xgenext2fs -i 512 -b 8192 -d extra $(basename $@)
-	rm -rf ./extra
-
-toolchain-exec:
-	@docker run --hostname $@ --rm \
-		-e USER=$$(id -u -n) \
-		-e GROUP=$$(id -g -n) \
-		-e UID=$$(id -u) \
-		-e GID=$$(id -g) \
-		-v `pwd`:$(CONTAINER_BASE) \
-		-w $(CONTAINER_BASE) \
-		$(TOOLCHAIN_IMAGE):$(TOOLCHAIN_TAG) $(CONTAINER_COMMAND)
-
-toolchain-env:
-	@docker run --hostname toolchain-env -it --rm \
-		-e USER=$$(id -u -n) \
-		-e GROUP=$$(id -g -n) \
-		-e UID=$$(id -u) \
-		-e GID=$$(id -g) \
-		-v `pwd`:$(CONTAINER_BASE) \
-		-w $(CONTAINER_BASE) \
-		$(TOOLCHAIN_IMAGE):$(TOOLCHAIN_TAG)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 clean:
-	@rm -rf rollup extra.ext2 extra
-
-.PHONY: toolchain-exec toolchain-env
+	@rm -f rollup

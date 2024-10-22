@@ -59,10 +59,8 @@ mkdir -p ${BUILD_BASE}/tools && chown -R developer:developer ${BUILD_BASE}/tools
 rm -rf /var/lib/apt/lists/* ${LINUX_HEADERS_FILEPATH}
 EOF
 
-ENV RISCV_ARCH="rv64gc"
-ENV RISCV_ABI="lp64d"
-ENV CFLAGS="-march=$RISCV_ARCH -mabi=$RISCV_ABI"
 ENV TOOLCHAIN_PREFIX="riscv64-linux-gnu-"
+ENV PKG_CONFIG_PATH="/usr/riscv64-linux-gnu/lib/pkgconfig"
 
 FROM tools-env AS builder
 COPY --chown=developer:developer sys-utils/ ${BUILD_BASE}/tools/sys-utils/
@@ -76,7 +74,7 @@ ARG BUILD_BASE=/opt/cartesi
 USER developer
 RUN make -C ${CMT_BASE} -j$(nproc) libcmt
 USER root
-RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt/ -j$(nproc) install TARGET_PREFIX=/usr/riscv64-linux-gnu
+RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt/ -j$(nproc) install PREFIX=/usr/riscv64-linux-gnu
 USER developer
 RUN make -C ${BUILD_BASE}/tools/sys-utils/ -j$(nproc) all
 
@@ -89,20 +87,20 @@ USER root
 
 RUN make -C ${CMT_BASE} \
         ARG_VERSION=${VERSION} \
-        TARGET_PREFIX=/usr \
-        TARGET_DESTDIR=${BUILD_BASE}/install/run \
+        PREFIX=/usr \
+        DESTDIR=${BUILD_BASE}/install/run \
         install-run libcmt-v${VERSION}.deb
 
 RUN make -C ${CMT_BASE} \
         ARG_VERSION=${VERSION} \
-        TARGET_PREFIX=/usr \
-        TARGET_DESTDIR=${BUILD_BASE}/install/dev \
-        install libcmt-dev-v${VERSION}.deb
+        PREFIX=/usr \
+        DESTDIR=${BUILD_BASE}/install/dev \
+        install-dev libcmt-dev-v${VERSION}.deb
 
 RUN make -C ${CMT_BASE} \
         ARG_VERSION=${VERSION} \
-        TARGET_PREFIX=/usr/riscv64-linux-gnu \
-        TARGET_DESTDIR=${BUILD_BASE}/install/cross \
+        PREFIX=/usr/riscv64-linux-gnu \
+        DESTDIR=${BUILD_BASE}/install/cross \
         install libcmt-dev-riscv64-cross-v${VERSION}.deb
 
 # build rust tools
