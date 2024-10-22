@@ -19,6 +19,7 @@ TARGET_PREFIX ?= $(PREFIX)
 TOOLCHAIN_PREFIX ?= riscv64-linux-gnu-
 TARGET_CC := $(TOOLCHAIN_PREFIX)gcc
 TARGET_AR := $(TOOLCHAIN_PREFIX)ar
+TARGET_STRIP := $(TOOLCHAIN_PREFIX)strip
 COMMON_CFLAGS := -Wvla -O2 -g -Wall -pedantic -Wextra -Iinclude \
                  -fno-strict-aliasing -fno-strict-overflow -fPIC
 TARGET_CFLAGS := $(COMMON_CFLAGS) -ftrivial-auto-var-init=zero -Wstrict-aliasing=3
@@ -77,10 +78,12 @@ libcmt: $(libcmt_LIB) $(libcmt_SO)
 install-run: $(libcmt_SO)
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
 	cp -f $(libcmt_SO) $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
+	$(TARGET_STRIP) -S -x $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/libcmt.so
 
 install: $(libcmt_LIB) build/ffi.h
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
 	cp -f $(libcmt_LIB) $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
+	$(TARGET_STRIP) -S $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/libcmt.a
 	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
 	cp -f include/libcmt/*.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
 	cp -f build/ffi.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
