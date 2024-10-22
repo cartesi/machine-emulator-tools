@@ -1,5 +1,5 @@
 # Final image
-FROM --platform=linux/riscv64 ubuntu:22.04
+FROM ubuntu:22.04
 ARG TOOLS_DEB=machine-emulator-tools-v0.16.2.deb
 ADD ${TOOLS_DEB} /tmp/
 RUN apt-get update && \
