@@ -111,6 +111,22 @@ void cmt_rollup_fini(cmt_rollup_t *me);
  * |< 0| failure with a -errno value | */
 int cmt_rollup_emit_voucher(cmt_rollup_t *me, const cmt_abi_address_t *address, const cmt_abi_u256_t *value, const cmt_abi_bytes_t *data, uint64_t *index);
 
+/** Emit a delegate call voucher
+ *
+ * Equivalent to the `DelegateCallVoucher(address,bytes)` solidity call.
+ *
+ * @param [in,out] me             initialized @ref cmt_rollup_t instance
+ * @param [in]     address        destination data
+ * @param [in]     data           message contents
+ * @param [out]    index          index of emitted voucher, if successful
+ *
+ * @return
+ * |   |                             |
+ * |--:|-----------------------------|
+ * |  0| success                     |
+ * |< 0| failure with a -errno value | */
+int cmt_rollup_emit_delegate_call_voucher(cmt_rollup_t *me, const cmt_abi_address_t *address, const cmt_abi_bytes_t *data, uint64_t *index);
+
 /** Emit a notice
  *
  * @param [in,out] me          initialized cmt_rollup_t instance

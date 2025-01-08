@@ -205,6 +205,14 @@ void test_rollup_outputs_reports_and_exceptions(void) {
     assert(cmt_rollup_emit_exception(&rollup, &(cmt_abi_bytes_t){strlen(exception_data), NULL}) == -EINVAL);
     assert(cmt_rollup_emit_exception(&rollup, &(cmt_abi_bytes_t){UINT32_MAX, exception_data}) == -ENOBUFS);
 
+    // delegate voucher
+    char delegate_call_voucher_data[] = "delegate-call-voucher-0";
+    assert(cmt_rollup_emit_delegate_call_voucher(&rollup, &address, &(cmt_abi_bytes_t){strlen(delegate_call_voucher_data), delegate_call_voucher_data}, &index) == 0);
+    assert(cmt_util_read_whole_file("none.output-2.bin", sizeof buffer, buffer, &read_size) == 0);
+    assert(sizeof valid_delegate_call_voucher_0 == read_size);
+    assert(memcmp(valid_delegate_call_voucher_0, buffer, sizeof valid_delegate_call_voucher_0) == 0);
+    assert(index == 2);
+
     cmt_rollup_fini(&rollup);
     printf("test_rollup_outputs_reports_and_exceptions passed!\n");
 }

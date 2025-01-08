@@ -25,6 +25,9 @@
 // Voucher(address,uint256,bytes)
 #define VOUCHER CMT_ABI_FUNSEL(0x23, 0x7a, 0x81, 0x6f)
 
+// DelegateCallVoucher(address,bytes)
+#define DELEGATE_CALL_VOUCHER CMT_ABI_FUNSEL(0x10, 0x32, 0x1e, 0x8b)
+
 // Notice(bytes)
 #define NOTICE CMT_ABI_FUNSEL(0xc2, 0x58, 0xd6, 0xe5)
 
@@ -85,6 +88,56 @@ int cmt_rollup_emit_voucher(cmt_rollup_t *me, const cmt_abi_address_t *address,
     ||  DBG(cmt_abi_mark_frame(wr, frame))
     ||  DBG(cmt_abi_put_address(wr, address))
     ||  DBG(cmt_abi_put_uint256(wr, value))
+    ||  DBG(cmt_abi_put_bytes_s(wr, of))
+    ||  DBG(cmt_abi_put_bytes_d(wr, of, frame, payload))) {
+        return -ENOBUFS;
+    }
+    // clang-format on
+
+    size_t used_space = wr->begin - tx->begin;
+    struct cmt_io_yield req[1] = {{
+        .dev = HTIF_DEVICE_YIELD,
+        .cmd = HTIF_YIELD_CMD_AUTOMATIC,
+        .reason = HTIF_YIELD_AUTOMATIC_REASON_TX_OUTPUT,
+        .data = used_space,
+    }};
+    int rc = DBG(cmt_io_yield(me->io, req));
+    if (rc) {
+        return rc;
+    }
+
+    uint64_t count = cmt_merkle_get_leaf_count(me->merkle);
+
+    rc = cmt_merkle_push_back_data(me->merkle, used_space, tx->begin);
+    if (rc) {
+        return rc;
+    }
+
+    if (index) {
+        *index = count;
+    }
+
+    return 0;
+}
+
+int cmt_rollup_emit_delegate_call_voucher(cmt_rollup_t *me,
+    const cmt_abi_address_t *address, const cmt_abi_bytes_t *payload, uint64_t *index) {
+    if (!me) {
+        return -EINVAL;
+    }
+    if (!payload || (!payload->data && payload->length)) {
+        return -EINVAL;
+    }
+
+    cmt_buf_t tx[1] = {cmt_io_get_tx(me->io)};
+    cmt_buf_t wr[1] = {*tx};
+    cmt_buf_t of[1];
+    cmt_buf_t frame[1];
+
+    // clang-format off
+    if (DBG(cmt_abi_put_funsel(wr, DELEGATE_CALL_VOUCHER))
+    ||  DBG(cmt_abi_mark_frame(wr, frame))
+    ||  DBG(cmt_abi_put_address(wr, address))
     ||  DBG(cmt_abi_put_bytes_s(wr, of))
     ||  DBG(cmt_abi_put_bytes_d(wr, of, frame, payload))) {
         return -ENOBUFS;
