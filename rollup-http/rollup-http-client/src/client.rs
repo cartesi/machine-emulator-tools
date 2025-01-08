@@ -16,7 +16,7 @@
 
 use crate::rollup::{
     AdvanceRequest, Exception, GIORequest, IndexResponse, InspectRequest, Notice, Report,
-    RollupRequest, RollupResponse, Voucher,
+    RollupRequest, RollupResponse, Voucher, DelegateCallVoucher,
 };
 use hyper::Response;
 use serde::{Deserialize, Serialize};
@@ -53,6 +53,34 @@ pub async fn send_voucher(rollup_http_server_addr: &str, voucher: Voucher) {
         Err(e) => {
             log::error!(
                 "failed to send voucher request to rollup http server: {}",
+                e
+            );
+        }
+    }
+}
+
+pub async fn send_delegate_call_voucher(rollup_http_server_addr: &str, delegate_call_voucher: DelegateCallVoucher) {
+    log::debug!("sending delegate call voucher request to {}", rollup_http_server_addr);
+    let client = hyper::Client::new();
+    let req = hyper::Request::builder()
+        .method(hyper::Method::POST)
+        .header(hyper::header::CONTENT_TYPE, "application/json")
+        .uri(rollup_http_server_addr.to_string() + "/delegate-call-voucher")
+        .body(hyper::Body::from(serde_json::to_string(&delegate_call_voucher).unwrap()))
+        .expect("delegate call voucher request");
+    match client.request(req).await {
+        Ok(res) => {
+            let id_response = serde_json::from_slice::<IndexResponse>(
+                &hyper::body::to_bytes(res)
+                    .await
+                    .expect("error in voucher in response handling")
+                    .to_vec(),
+            );
+            log::debug!("voucher generated: {:?}", &id_response);
+        }
+        Err(e) => {
+            log::error!(
+                "failed to send delegate call voucher request to rollup http server: {}",
                 e
             );
         }

@@ -21,7 +21,8 @@ use actix_server::ServerHandle;
 use async_mutex::Mutex;
 use rand::Rng;
 use rollup_http_client::rollup::{
-    Exception, GIORequest, Notice, Report, RollupRequest, RollupResponse, Voucher,
+    DelegateCallVoucher, Exception, GIORequest, Notice, Report, RollupRequest, RollupResponse,
+    Voucher,
 };
 use rollup_http_server::config::Config;
 use rollup_http_server::rollup::RollupFd;
@@ -278,6 +279,69 @@ async fn test_write_voucher(
     context.server_handle.stop(true).await;
 
     check_voucher_or_fail(test_voucher_02, "none.output-1.bin");
+    std::fs::remove_file("none.output-1.bin")?;
+
+    Ok(())
+}
+
+fn check_delegate_call_voucher_or_fail(
+    original_delegate_call_voucher: DelegateCallVoucher,
+    output_filename: &str,
+) {
+    // we try to decode the produced voucher with a third-party lib to see if it matches
+    // the expected values
+    let data = std::fs::read(output_filename).expect("error reading voucher file");
+    let decoded_voucher = ethabi::decode(
+        &[ethabi::ParamType::Address, ethabi::ParamType::Bytes],
+        &data[4..], // skip the first 4 bytes that are the function signature
+    )
+    .ok()
+    .unwrap();
+
+    assert_eq!(
+        "0x".to_string() + &decoded_voucher[0].to_string(),
+        original_delegate_call_voucher.destination,
+    );
+    assert_eq!(
+        "0x".to_string() + &decoded_voucher[1].to_string(),
+        original_delegate_call_voucher.payload,
+    );
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_write_delegate_call_voucher(
+    context_future: impl Future<Output = Context>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let context = context_future.await;
+    println!("Writing delegate call voucher");
+    let test_delegate_call_voucher_01 = DelegateCallVoucher {
+        destination: "0x1111111111111111111111111111111111111111".to_string(),
+        payload: "0x".to_string() + &hex::encode("delegate call voucher test payload 01"),
+    };
+    let test_delegate_call_voucher_02 = DelegateCallVoucher {
+        destination: "0x2222222222222222222222222222222222222222".to_string(),
+        payload: "0x".to_string() + &hex::encode("delegate call voucher test payload 02"),
+    };
+    rollup_http_client::client::send_delegate_call_voucher(
+        &context.address,
+        test_delegate_call_voucher_01.clone(),
+    )
+    .await;
+
+    check_delegate_call_voucher_or_fail(test_delegate_call_voucher_01, "none.output-0.bin");
+    std::fs::remove_file("none.output-0.bin")?;
+
+    println!("Writing second voucher!");
+
+    rollup_http_client::client::send_delegate_call_voucher(
+        &context.address,
+        test_delegate_call_voucher_02.clone(),
+    )
+    .await;
+    context.server_handle.stop(true).await;
+
+    check_delegate_call_voucher_or_fail(test_delegate_call_voucher_02, "none.output-1.bin");
     std::fs::remove_file("none.output-1.bin")?;
 
     Ok(())

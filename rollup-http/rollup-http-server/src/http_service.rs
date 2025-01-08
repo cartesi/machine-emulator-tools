@@ -16,7 +16,9 @@
 
 use std::sync::Arc;
 
-use actix_web::{middleware::Logger, web::Data, App, HttpResponse, HttpServer, http::header::CONTENT_TYPE};
+use actix_web::{
+    http::header::CONTENT_TYPE, middleware::Logger, web::Data, App, HttpResponse, HttpServer,
+};
 use actix_web_validator::{Json, JsonConfig};
 use async_mutex::Mutex;
 use serde::{Deserialize, Serialize};
@@ -26,8 +28,8 @@ use tokio::sync::Notify;
 use crate::config::Config;
 use crate::rollup::{self, GIORequest, RollupFd};
 use crate::rollup::{
-    AdvanceRequest, Exception, FinishRequest, InspectRequest, Notice, Report, RollupRequest,
-    Voucher,
+    AdvanceRequest, DelegateCallVoucher, Exception, FinishRequest, InspectRequest, Notice, Report,
+    RollupRequest, Voucher,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -54,6 +56,7 @@ pub fn create_server(
             .app_data(json_cfg)
             .wrap(Logger::default())
             .service(voucher)
+            .service(delegate_call_voucher)
             .service(notice)
             .service(report)
             .service(gio)
@@ -100,6 +103,54 @@ async fn voucher(mut voucher: Json<Voucher>, data: Data<Mutex<Context>>) -> Http
     return match rollup::rollup_write_voucher(&*context.rollup_fd.lock().await, &mut voucher.0) {
         Ok(voucher_index) => {
             log::debug!("voucher successfully inserted {:#?}", voucher);
+            HttpResponse::Created().json(IndexResponse {
+                index: voucher_index,
+            })
+        }
+        Err(e) => {
+            log::error!(
+                "unable to insert voucher, error details: '{}'",
+                e.to_string()
+            );
+            HttpResponse::BadRequest()
+                .append_header((CONTENT_TYPE, "text/plain"))
+                .body(format!("unable to insert voucher, error details: '{}'", e))
+        }
+    };
+}
+
+/// Process voucher request from DApp, write voucher to rollup device
+#[actix_web::post("/delegate-call-voucher")]
+async fn delegate_call_voucher(
+    mut delegate_call_voucher: Json<DelegateCallVoucher>,
+    data: Data<Mutex<Context>>,
+) -> HttpResponse {
+    log::debug!("received voucher request");
+    // Check if address is valid
+    if delegate_call_voucher.destination.len()
+        != (rollup::CARTESI_ROLLUP_ADDRESS_SIZE * 2 + 2) as usize
+        || (!delegate_call_voucher.destination.starts_with("0x"))
+    {
+        log::error!(
+            "address not valid: '{}' len: {}",
+            delegate_call_voucher.destination,
+            delegate_call_voucher.destination.len()
+        );
+        return HttpResponse::BadRequest()
+            .append_header((CONTENT_TYPE, "text/plain"))
+            .body("address not valid");
+    }
+    let context = data.lock().await;
+    // Write voucher to linux rollup device
+    return match rollup::rollup_write_delegate_call_voucher(
+        &*context.rollup_fd.lock().await,
+        &mut delegate_call_voucher.0,
+    ) {
+        Ok(voucher_index) => {
+            log::debug!(
+                "delegate call voucher successfully inserted {:#?}",
+                delegate_call_voucher
+            );
             HttpResponse::Created().json(IndexResponse {
                 index: voucher_index,
             })

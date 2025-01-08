@@ -58,6 +58,12 @@ pub struct Voucher {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DelegateCallVoucher {
+    pub destination: String,
+    pub payload: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Report {
     pub payload: String,
 }

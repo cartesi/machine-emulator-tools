@@ -246,6 +246,13 @@ pub struct Voucher {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct DelegateCallVoucher {
+    #[validate(regex(path = "*ETH_ADDR_REGEXP"))]
+    pub destination: String,
+    pub payload: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Report {
     pub payload: String,
 }
@@ -455,11 +462,51 @@ pub fn rollup_write_voucher(
 
     if res != 0 {
         return Err(Box::new(RollupError::new(&format!(
-            "IOCTL_ROLLUP_WRITE_VOUCHER returned error {}",
+            "IOCTL_ROLLUP_WRITE_OUTPUT returned error {}",
             res
         ))));
     } else {
         log::debug!("voucher with id {} successfully written!", voucher_index);
+    }
+
+    Ok(voucher_index as u64)
+}
+
+pub fn rollup_write_delegate_call_voucher(
+    fd: &RollupFd,
+    delegate_call_voucher: &mut DelegateCallVoucher,
+) -> Result<u64, Box<dyn std::error::Error>> {
+    print_delegate_call_voucher(delegate_call_voucher);
+
+    let mut binary_payload = match hex::decode(&delegate_call_voucher.payload[2..]) {
+        Ok(payload) => payload,
+        Err(_err) => {
+            return Err(Box::new(RollupError::new(&format!(
+                "Error decoding voucher payload, it must be in Ethereum hex binary format"
+            ))));
+        }
+    };
+    let address = cmt_abi_address_t::from_hex(&delegate_call_voucher.destination[2..])?;
+    let payload = cmt_abi_bytes_t {
+        data: binary_payload.as_mut_ptr() as *mut c_void,
+        length: binary_payload.len(),
+    };
+
+    let mut voucher_index: std::os::raw::c_ulong = 0;
+    let res = unsafe {
+        cmt_rollup_emit_delegate_call_voucher(fd.0, &address, &payload, &mut voucher_index)
+    };
+
+    if res != 0 {
+        return Err(Box::new(RollupError::new(&format!(
+            "IOCTL_ROLLUP_WRITE_OUTPUT returned error {}",
+            res
+        ))));
+    } else {
+        log::debug!(
+            "delegate call voucher with id {} successfully written!",
+            voucher_index
+        );
     }
 
     Ok(voucher_index as u64)
@@ -710,6 +757,21 @@ pub fn print_voucher(voucher: &Voucher) {
         " length: {} payload: {} }}",
         voucher.payload.len(),
         voucher.payload
+    ));
+    log::debug!("{}", &voucher_request_printout);
+}
+
+pub fn print_delegate_call_voucher(delegate_call_voucher: &DelegateCallVoucher) {
+    let mut voucher_request_printout = String::new();
+    voucher_request_printout.push_str("voucher: {{ destination: ");
+    format_address_printout(
+        &delegate_call_voucher.destination,
+        &mut voucher_request_printout,
+    );
+    voucher_request_printout.push_str(&format!(
+        " length: {} payload: {} }}",
+        delegate_call_voucher.payload.len(),
+        delegate_call_voucher.payload
     ));
     log::debug!("{}", &voucher_request_printout);
 }
