@@ -73,6 +73,16 @@ static void print_help(void) {
         {"index": <number> }
       where field "index" is the index allocated for the voucher
 
+    delegate-call-voucher
+      emit a delegate call voucher read from stdin as a JSON object in the format
+        {"destination": <address>, "payload": <hex-data>}
+      where
+        <address> contains a 20-byte EVM address in hex,
+        <hex-data> contains arbitrary data in hex
+      if successful, prints to stdout a JSON object in the format
+        {"index": <number> }
+      where field "index" is the index allocated for the voucher
+
     notice
       emit a notice read from stdin as a JSON object in the format
         {"payload": <hex-data> }
@@ -232,6 +242,34 @@ static int write_voucher(void) try {
     memcpy(value.data, reinterpret_cast<unsigned char *>(value_bytes.data()), value_bytes.size());
 
     int ret = cmt_rollup_emit_voucher(r, &destination, &value, &payload, &index);
+    if (ret)
+        return ret;
+
+    nlohmann::json j = {{"index", index}};
+    std::cout << j.dump(2) << '\n';
+
+    return 0;
+} catch (std::exception &x) {
+    std::cerr << x.what() << '\n';
+    return 1;
+}
+
+// Read input for delegate call voucher data, issue voucher, write result to output
+static int write_delegate_call_voucher(void) try {
+    rollup r;
+    auto ji = nlohmann::json::parse(read_input());
+    auto payload_bytes = unhex(ji["payload"].get<std::string>());
+    auto destination_bytes = unhex20(ji["destination"].get<std::string>());
+    uint64_t index = 0;
+    cmt_abi_address_t destination;
+    cmt_abi_u256_t value;
+    cmt_abi_bytes_t payload;
+    payload.data = reinterpret_cast<unsigned char *>(payload_bytes.data());
+    payload.length = payload_bytes.size();
+
+    memcpy(destination.data, reinterpret_cast<unsigned char *>(destination_bytes.data()), destination_bytes.size());
+
+    int ret = cmt_rollup_emit_delegate_call_voucher(r, &destination, &payload, &index);
     if (ret)
         return ret;
 
@@ -426,6 +464,8 @@ int main(int argc, char *argv[]) {
     const char *command = argv[1];
     if (strcmp(command, "voucher") == 0) {
         return write_voucher();
+    } else if (strcmp(command, "delegate-call-voucher") == 0) {
+        return write_delegate_call_voucher();
     } else if (strcmp(command, "notice") == 0) {
         return write_notice();
     } else if (strcmp(command, "report") == 0) {
