@@ -130,12 +130,9 @@ jobs:
         with:
           prerelease: true
           files: |
-            ${{ env.TOOLS_DEB }}
-            ${{ env.TOOLS_DEB }}.sha512
             ${{ env.TOOLS_ROOTFS }}
             ${{ env.TOOLS_ROOTFS }}.html
             ${{ env.TOOLS_ROOTFS }}.sha512
-            libcmt/deb/*
 
   test:
     runs-on: ubuntu-latest-8-cores
