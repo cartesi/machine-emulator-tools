@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM ubuntu:22.04 AS tools-env
+FROM ubuntu:24.04 AS tools-env
 ARG IMAGE_KERNEL_VERSION=v0.20.0
 ARG LINUX_VERSION=6.5.13-ctsi-1
 ARG LINUX_HEADERS_URLPATH=https://github.com/cartesi/image-kernel/releases/download/${IMAGE_KERNEL_VERSION}/linux-libc-dev-riscv64-cross-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
@@ -32,8 +32,8 @@ apt-get update
 apt-get upgrade -y
 apt-get install -y --no-install-recommends \
         dpkg-dev \
-        g++-12 \
-        gcc-12 \
+        g++ \
+        gcc \
         make \
         ca-certificates \
         git \
@@ -41,18 +41,14 @@ apt-get install -y --no-install-recommends \
         libclang-dev \
         pkg-config \
         dpkg-cross \
-        gcc-12-riscv64-linux-gnu \
-        g++-12-riscv64-linux-gnu
-
-for tool in cpp g++ gcc gcc-ar gcc-nm gcc-ranlib gcov gcov-dump gcov-tool; do
-    update-alternatives --install /usr/bin/riscv64-linux-gnu-$tool riscv64-linux-gnu-$tool /usr/bin/riscv64-linux-gnu-$tool-12 12
-    update-alternatives --install /usr/bin/$tool $tool /usr/bin/$tool-12 12
-done
-update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-12 12
+        adduser \
+        rustup \
+        gcc-riscv64-linux-gnu \
+        g++-riscv64-linux-gnu
 
 wget -O ${LINUX_HEADERS_FILEPATH} ${LINUX_HEADERS_URLPATH}
 echo "2723435e8b45d8fb7a79e9344f6dc517b3dbc08e03ac17baab311300ec475c08  ${LINUX_HEADERS_FILEPATH}" | sha256sum --check
-apt-get install -y --no-install-recommends ${LINUX_HEADERS_FILEPATH}
+apt-get install -y --no-install-recommends --allow-downgrades ${LINUX_HEADERS_FILEPATH}
 
 adduser developer -u 499 --gecos ",,," --disabled-password
 mkdir -p ${BUILD_BASE}/tools && chown -R developer:developer ${BUILD_BASE}/tools
@@ -111,17 +107,7 @@ ENV PKG_CONFIG_PATH_riscv64gc_unknown_linux_gnu="/usr/riscv64-linux-gnu/lib/pkgc
 ENV PKG_CONFIG_riscv64gc_unknown_linux_gnu="/usr/bin/pkg-config"
 
 USER developer
-
-RUN cd  && \
-    wget https://github.com/rust-lang/rustup/archive/refs/tags/1.27.0.tar.gz && \
-    echo "3d331ab97d75b03a1cc2b36b2f26cd0a16d681b79677512603f2262991950ad1  1.27.0.tar.gz" | sha256sum --check && \
-    tar -xzf 1.27.0.tar.gz && \
-    bash rustup-1.27.0/rustup-init.sh \
-        -y \
-        --default-toolchain 1.77.2 \
-        --profile minimal \
-        --target riscv64gc-unknown-linux-gnu && \
-    rm -rf rustup-1.27.0 1.27.0.tar.gz
+RUN rustup default 1.77 && rustup target add riscv64gc-unknown-linux-gnu
 
 FROM rust-env AS rust-builder
 COPY --chown=developer:developer rollup-http/rollup-init ${BUILD_BASE}/tools/rollup-http/rollup-init

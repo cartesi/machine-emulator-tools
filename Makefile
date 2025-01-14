@@ -62,7 +62,7 @@ $(TOOLS_ROOTFS): $(TOOLS_DEB)
 	  --output type=tar,dest=rootfs.tar \
 	  --file fs/Dockerfile \
 	  . && \
-	xgenext2fs -fzB 4096 -b 25600 -i 4096 -a rootfs.tar -L rootfs $(TOOLS_ROOTFS) && \
+	xgenext2fs -fzB 4096 -i 4096 -r +4096 -a rootfs.tar -L rootfs $(TOOLS_ROOTFS) && \
 	rm -f rootfs.tar
 
 fs-license:
