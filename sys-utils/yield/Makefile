@@ -14,14 +14,19 @@
 # limitations under the License.
 #
 
+PREFIX  = /usr/local
 CC      = $(TOOLCHAIN_PREFIX)gcc
-CFLAGS  += -Wall -Wextra -pedantic -O2 `pkg-config --cflags libcmt`
-LDFLAGS += `pkg-config --libs libcmt`
+CFLAGS  += -Wall -Wextra -pedantic -O2 -I../libcmt/include
+LDFLAGS += -L../libcmt/build/riscv64 -l:libcmt.a
 
 all: yield
 
 yield: yield.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
+install: yield
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	install -Dm755 yield $(DESTDIR)$(PREFIX)/bin/
 
 clean:
 	@rm -f yield

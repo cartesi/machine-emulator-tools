@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+PREFIX  = /usr/local
 CC      = $(TOOLCHAIN_PREFIX)gcc
 CFLAGS  += -Wall -Wextra -pedantic -O2
 
@@ -21,6 +22,10 @@ all: xhalt
 
 xhalt: xhalt.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
+install: xhalt
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	install -Dm755 xhalt $(DESTDIR)$(PREFIX)/bin/
 
 clean:
 	@rm -f xhalt

@@ -14,14 +14,19 @@
 # limitations under the License.
 #
 
+PREFIX  = /usr/local
 CC      = $(TOOLCHAIN_PREFIX)gcc
-CFLAGS  += -Wall -Wextra -pedantic -O2 `pkg-config --cflags libcmt`
-LDFLAGS += `pkg-config --libs libcmt`
+CFLAGS  += -Wall -Wextra -pedantic -O2 -I../libcmt/include
+LDFLAGS += -L../libcmt/build/riscv64 -l:libcmt.a
 
 all: ioctl-echo-loop
 
 ioctl-echo-loop: ioctl-echo-loop.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
+install: ioctl-echo-loop
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	install -Dm755 ioctl-echo-loop $(DESTDIR)$(PREFIX)/bin/
 
 clean:
 	@rm -f ioctl-echo-loop

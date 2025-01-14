@@ -21,7 +21,7 @@ CFLAGS += -Wvla -O2 -g -Wall -pedantic -Wextra -Iinclude \
           -fno-strict-aliasing -fno-strict-overflow -fPIC
 LIBCMT_CFLAGS += -ftrivial-auto-var-init=zero -Wstrict-aliasing=3
 
-all: libcmt host
+all: libcmt
 host: mock tools
 #-------------------------------------------------------------------------------
 examples_SRC := \

@@ -14,14 +14,19 @@
 # limitations under the License.
 #
 
+PREFIX   = /usr/local
 CXX      = $(TOOLCHAIN_PREFIX)g++
-CXXFLAGS += -Wall -Wextra -pedantic -O2 -std=c++20 `pkg-config --cflags libcmt`
-LDFLAGS  += `pkg-config --libs libcmt`
+CXXFLAGS += -Wall -Wextra -pedantic -O2 -std=c++20 -I../libcmt/include
+LDFLAGS  += -L../libcmt/build/riscv64 -l:libcmt.a
 
 all: rollup
 
 rollup: rollup.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS)
+
+install: rollup
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	install -Dm755 rollup $(DESTDIR)$(PREFIX)/bin/
 
 clean:
 	@rm -f rollup

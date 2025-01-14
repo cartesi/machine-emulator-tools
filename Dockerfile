@@ -56,7 +56,6 @@ rm -rf /var/lib/apt/lists/* ${LINUX_HEADERS_FILEPATH}
 EOF
 
 ENV TOOLCHAIN_PREFIX="riscv64-linux-gnu-"
-ENV PKG_CONFIG_PATH="/usr/riscv64-linux-gnu/lib/pkgconfig"
 
 FROM tools-env AS builder
 COPY --chown=developer:developer sys-utils/ ${BUILD_BASE}/tools/sys-utils/
@@ -64,36 +63,32 @@ COPY --chown=developer:developer sys-utils/ ${BUILD_BASE}/tools/sys-utils/
 # build C/C++ tools
 # ------------------------------------------------------------------------------
 FROM builder AS c-builder
-ARG CMT_BASE=${BUILD_BASE}/tools/sys-utils/libcmt
 ARG BUILD_BASE=/opt/cartesi
 
 USER developer
-RUN make -C ${CMT_BASE} -j$(nproc) libcmt
-USER root
-RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt/ -j$(nproc) install PREFIX=/usr/riscv64-linux-gnu
-USER developer
-RUN make -C ${BUILD_BASE}/tools/sys-utils/ -j$(nproc) all
+RUN make -C ${BUILD_BASE}/tools/sys-utils -j$(nproc) all
+RUN make -C ${BUILD_BASE}/tools/sys-utils install \
+        DESTDIR=${BUILD_BASE}/tools/sys-utils_staging PREFIX=/usr
 
 # build libcmt debian package
 # ------------------------------------------------------------------------------
 FROM c-builder AS libcmt-debian-packager
-ARG CMT_BASE=${BUILD_BASE}/tools/sys-utils/libcmt
 ARG VERSION=0.0.0
 USER root
 
-RUN make -C ${CMT_BASE} \
+RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt \
         ARG_VERSION=${VERSION} \
         PREFIX=/usr \
         DESTDIR=${BUILD_BASE}/install/run \
         install-run libcmt-v${VERSION}.deb
 
-RUN make -C ${CMT_BASE} \
+RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt \
         ARG_VERSION=${VERSION} \
         PREFIX=/usr \
         DESTDIR=${BUILD_BASE}/install/dev \
         install-dev libcmt-dev-v${VERSION}.deb
 
-RUN make -C ${CMT_BASE} \
+RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt \
         ARG_VERSION=${VERSION} \
         PREFIX=/usr/riscv64-linux-gnu \
         DESTDIR=${BUILD_BASE}/install/cross \
@@ -103,8 +98,6 @@ RUN make -C ${CMT_BASE} \
 # ------------------------------------------------------------------------------
 FROM c-builder AS rust-env
 ENV PATH="/home/developer/.cargo/bin:${PATH}"
-ENV PKG_CONFIG_PATH_riscv64gc_unknown_linux_gnu="/usr/riscv64-linux-gnu/lib/pkgconfig"
-ENV PKG_CONFIG_riscv64gc_unknown_linux_gnu="/usr/bin/pkg-config"
 
 USER developer
 RUN rustup default 1.77 && rustup target add riscv64gc-unknown-linux-gnu
@@ -149,7 +142,6 @@ FROM tools-env AS packer
 ARG TOOLS_DEB=machine-emulator-tools.deb
 ARG STAGING_BASE=${BUILD_BASE}/_install
 ARG STAGING_DEBIAN=${STAGING_BASE}/DEBIAN
-ARG STAGING_SBIN=${STAGING_BASE}/usr/sbin
 ARG STAGING_BIN=${STAGING_BASE}/usr/bin
 ARG STAGING_SHARE=${STAGING_BASE}/usr/share/machine-emulator-tools
 
@@ -161,15 +153,8 @@ COPY package.json ${STAGING_SHARE}/package.json
 COPY postinst ${STAGING_DEBIAN}/postinst
 COPY copyright ${STAGING_BASE}/usr/share/doc/machine-emulator-tools/copyright
 
-COPY --from=builder ${BUILD_BASE}/tools/sys-utils/cartesi-init/cartesi-init ${STAGING_SBIN}
-COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/xhalt/xhalt ${STAGING_SBIN}
-COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/yield/yield ${STAGING_SBIN}
-COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/hex/hex ${STAGING_SBIN}
-COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/rollup/rollup ${STAGING_SBIN}
-COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/ioctl-echo-loop/ioctl-echo-loop ${STAGING_BIN}
-COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/yield/yield ${STAGING_SBIN}
-COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils/misc/* ${STAGING_BIN}
-COPY --from=rust-builder ${BUILD_BASE}/tools/rollup-http/rollup-init/rollup-init ${STAGING_SBIN}
+COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils_staging ${STAGING_BASE}
+COPY --from=rust-builder ${BUILD_BASE}/tools/rollup-http/rollup-init/rollup-init ${STAGING_BIN}
 COPY --from=http-server-builder ${BUILD_BASE}/tools/rollup-http/rollup-http-server/target/riscv64gc-unknown-linux-gnu/release/rollup-http-server ${STAGING_BIN}
 COPY --from=echo-dapp-builder ${BUILD_BASE}/tools/rollup-http/echo-dapp/target/riscv64gc-unknown-linux-gnu/release/echo-dapp ${STAGING_BIN}
 

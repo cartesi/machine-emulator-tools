@@ -25,33 +25,11 @@ fn main() {
     let lib_dir = if mock_build {
         "../../sys-utils/libcmt/build/mock".into()
     } else {
-        pkg_config::Config::new()
-            .statik(true)
-            .probe("libcmt")
-            .expect("Could not find library")
-            .link_paths
-            .iter()
-            .map(|path| path.to_string_lossy().into_owned())
-            .collect::<Vec<String>>()
-            .get(0)
-            .expect("Library path not found")
-            .clone()
+        "../../sys-utils/libcmt/build/riscv64".to_string()
     };
 
-    let header_path = if mock_build {
-        "../../sys-utils/libcmt/include/libcmt/rollup.h".into()
-    } else {
-        pkg_config::get_variable("libcmt", "includedir").expect("Could not find include directory")
-            + "/libcmt/rollup.h"
-    };
-
-    let include_path = if mock_build {
-        "-I../../sys-utils/libcmt/include/libcmt".into()
-    } else {
-        "-I".to_string()
-            + &pkg_config::get_variable("libcmt", "includedir")
-                .expect("Could not find include directory")
-    };
+    let header_path = "../../sys-utils/libcmt/include/libcmt/rollup.h";
+    let include_path = "-I../../sys-utils/libcmt/include/libcmt";
 
     // link the libcmt shared library
     println!("cargo:rustc-link-search=native={}", lib_dir);

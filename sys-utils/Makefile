@@ -14,14 +14,19 @@
 # limitations under the License.
 #
 
-UTILITIES := hex xhalt yield rollup ioctl-echo-loop
+UTILITIES := libcmt hex xhalt yield rollup ioctl-echo-loop misc cartesi-init
 
-all: $(UTILITIES)
+all:
+	@$(MAKE) libcmt
+	@$(MAKE) $(UTILITIES)
 
 $(UTILITIES):
 	@$(MAKE) -C $@
 
+install:
+	@$(foreach utility,$(UTILITIES),$(MAKE) -C $(utility) install;)
+
 clean:
 	@$(foreach utility,$(UTILITIES),$(MAKE) -C $(utility) clean;)
 
-.PHONY: all $(UTILITIES)
+.PHONY: all install clean $(UTILITIES)
