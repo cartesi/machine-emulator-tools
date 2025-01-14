@@ -27,7 +27,6 @@ RVCC  = $(TOOLCHAIN_PREFIX)gcc
 RVCXX = $(TOOLCHAIN_PREFIX)g++
 RVCOPY = $(TOOLCHAIN_PREFIX)objcopy
 RVDUMP = $(TOOLCHAIN_PREFIX)objdump
-STRIP = $(TOOLCHAIN_PREFIX)strip
 CFLAGS :=-Wall -Wextra -pedantic -O2 `pkg-config --cflags libcmt`
 LDLIBS := `pkg-config --libs libcmt`
 
@@ -46,7 +45,6 @@ extra.ext2.with-toolchain:
 yield: export PKG_CONFIG_PATH ?= /usr/riscv64-linux-gnu/lib/pkgconfig
 yield: yield.c
 	$(RVCC) $(CFLAGS) -O2 -o yield yield.c $(LDLIBS)
-	$(STRIP) yield
 
 extra.ext2: yield
 	mkdir -m 0755 ./extra

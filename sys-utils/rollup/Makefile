@@ -27,7 +27,6 @@ RVCC  = $(TOOLCHAIN_PREFIX)gcc
 RVCXX = $(TOOLCHAIN_PREFIX)g++
 RVCOPY = $(TOOLCHAIN_PREFIX)objcopy
 RVDUMP = $(TOOLCHAIN_PREFIX)objdump
-STRIP = $(TOOLCHAIN_PREFIX)strip
 CXXFLAGS := -Wall -Wextra -pedantic -O2 -std=c++20 `pkg-config --cflags libcmt`
 LDLIBS := `pkg-config --libs libcmt`
 
@@ -46,7 +45,6 @@ extra.ext2.with-toolchain:
 rollup: export PKG_CONFIG_PATH ?= /usr/riscv64-linux-gnu/lib/pkgconfig
 rollup: rollup.cpp
 	$(RVCXX) $(CXXFLAGS) -O2 -o rollup rollup.cpp $(LDLIBS)
-	$(STRIP) rollup
 
 extra.ext2: rollup
 	mkdir -m 0755 ./extra

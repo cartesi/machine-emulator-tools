@@ -27,7 +27,6 @@ RVCC  = $(TOOLCHAIN_PREFIX)gcc
 RVCXX = $(TOOLCHAIN_PREFIX)g++
 RVCOPY = $(TOOLCHAIN_PREFIX)objcopy
 RVDUMP = $(TOOLCHAIN_PREFIX)objdump
-STRIP = $(TOOLCHAIN_PREFIX)strip
 RISCV_CFLAGS :=-march=$(RISCV_ARCH) -mabi=$(RISCV_ABI)
 
 CONTAINER_MAKE := /usr/bin/make
@@ -44,7 +43,6 @@ extra.ext2.with-toolchain:
 
 hex: hex.cpp
 	$(RVCXX) -O2 -o hex hex.cpp
-	$(STRIP) hex
 
 extra.ext2: hex
 	mkdir -m 0755 ./extra
