@@ -70,30 +70,6 @@ RUN make -C ${BUILD_BASE}/tools/sys-utils -j$(nproc) all
 RUN make -C ${BUILD_BASE}/tools/sys-utils install \
         DESTDIR=${BUILD_BASE}/tools/sys-utils_staging PREFIX=/usr
 
-# build libcmt debian package
-# ------------------------------------------------------------------------------
-FROM c-builder AS libcmt-debian-packager
-ARG VERSION=0.0.0
-USER root
-
-RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt \
-        ARG_VERSION=${VERSION} \
-        PREFIX=/usr \
-        DESTDIR=${BUILD_BASE}/install/run \
-        install-run libcmt-v${VERSION}.deb
-
-RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt \
-        ARG_VERSION=${VERSION} \
-        PREFIX=/usr \
-        DESTDIR=${BUILD_BASE}/install/dev \
-        install-dev libcmt-dev-v${VERSION}.deb
-
-RUN make -C ${BUILD_BASE}/tools/sys-utils/libcmt \
-        ARG_VERSION=${VERSION} \
-        PREFIX=/usr/riscv64-linux-gnu \
-        DESTDIR=${BUILD_BASE}/install/cross \
-        install libcmt-dev-riscv64-cross-v${VERSION}.deb
-
 # build rust tools
 # ------------------------------------------------------------------------------
 FROM c-builder AS rust-env

@@ -86,49 +86,6 @@ install-dev: $(libcmt_LIB) build/ffi.h
 
 install: install-run install-dev
 
-# requires either install-run or install
-debian-package:
-	mkdir -p $(dir $(DEB_FILENAME))
-	dpkg-deb -Zxz --root-owner-group --build $(DESTDIR) $(DEB_FILENAME)
-
-$(DESTDIR)/DEBIAN/control: tools/control.in
-	mkdir -p $(@D)
-	sed -e 's|@PACKAGE@|$(ARG_PACKAGE)|' \
-	    -e 's|@VERSION@|$(ARG_VERSION)|' \
-	    -e 's|@ARCHITECTURE@|$(ARG_ARCHITECTURE)|' \
-	    -e 's|@SECTION@|$(ARG_SECTION)|' \
-	    -e 's|@PROVIDES@|$(ARG_PROVIDES)|' \
-	    -e 's|@DESCRIPTION@|$(ARG_DESCRIPTION)|' \
-	    $< > $@
-
-# debian package variants
-libcmt-v$(ARG_VERSION).deb:
-	$(MAKE) $(DESTDIR)/DEBIAN/control \
-	        ARG_PACKAGE=libcmt \
-	        ARG_ARCHITECTURE=riscv64 \
-	        ARG_PROVIDES=libcmt \
-	        ARG_SECTION=libs \
-	        ARG_DESCRIPTION="Cartesi Machine Tools"
-	$(MAKE) debian-package DEB_FILENAME=build/deb/$@
-
-libcmt-dev-v$(ARG_VERSION).deb:
-	$(MAKE) $(DESTDIR)/DEBIAN/control \
-	        ARG_PACKAGE=libcmt-dev \
-	        ARG_ARCHITECTURE=riscv64 \
-	        ARG_PROVIDES=libcmt-dev \
-	        ARG_SECTION=devel \
-	        ARG_DESCRIPTION="Cartesi Machine Tools - (development files)"
-	$(MAKE) debian-package DEB_FILENAME=build/deb/$@
-
-libcmt-dev-riscv64-cross-v$(ARG_VERSION).deb:
-	$(MAKE) $(DESTDIR)/DEBIAN/control \
-	        ARG_PACKAGE=libcmt-riscv64-cross \
-	        ARG_ARCHITECTURE=all \
-	        ARG_PROVIDES=libcmt-dev-riscv64-cross \
-	        ARG_SECTION=devel \
-	        ARG_DESCRIPTION="Cartesi Machine Tools - (development files) (riscv64)"
-	$(MAKE) debian-package DEB_FILENAME=build/deb/$@
-
 #-------------------------------------------------------------------------------
 mock_SRC := \
 	src/abi.c \

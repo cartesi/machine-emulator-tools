@@ -73,23 +73,6 @@ fs-license:
 	  .
 	TMPFILE=$$(mktemp) && (cd fs/third-party/repo-info/; ./scan-local.sh $(TOOLS_ROOTFS_IMAGE) linux/riscv64) | tee $$TMPFILE && pandoc -s -f markdown -t html5 -o $(TOOLS_ROOTFS).html $$TMPFILE && rm -f $$TMPFILE
 
-libcmt:
-	@mkdir $@
-
-build-libcmt:
-	@docker buildx build --load \
-		--target libcmt-debian-packager \
-		--build-arg VERSION=$(VERSION) \
-		-t $(TOOLS_IMAGE)-libcmt \
-		-f Dockerfile \
-		.
-	$(MAKE) copy-libcmt
-
-copy-libcmt: libcmt
-	@ID=`docker create $(TOOLS_IMAGE)-libcmt` && \
-	   docker cp $$ID:/opt/cartesi/tools/sys-utils/libcmt/build/deb/ libcmt && \
-	   docker rm $$ID
-
 env:
 	@echo VERSION=$(VERSION)
 	@echo TOOLS_DEB=$(TOOLS_DEB)
@@ -142,7 +125,7 @@ clean-image:
 	@(docker rmi $(TOOLS_IMAGE) > /dev/null 2>&1 || true)
 
 clean:
-	@rm -f $(TOOLS_DEB) control rootfs* libcmt*
+	@rm -f $(TOOLS_DEB) control rootfs*
 	@$(MAKE) -C sys-utils clean
 
 distclean: clean clean-image
@@ -161,4 +144,4 @@ help:
 	@echo '  env             - print useful Makefile variables as a KEY=VALUE list'
 	@echo '  clean           - remove the generated artifacts'
 
-.PHONY: build fs fs-license deb build-libcmt env setup setup-required help distclean
+.PHONY: build fs fs-license deb env setup setup-required help distclean

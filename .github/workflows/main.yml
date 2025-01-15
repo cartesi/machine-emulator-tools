@@ -91,24 +91,6 @@ jobs:
           path: |
             ${{ env.TOOLS_ROOTFS }}.html
 
-      - name: Build libcmt
-        id: docker_build_libcmt
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          builder: ${{ steps.buildx.outputs.name }}
-          tags: ${{ env.TOOLS_IMAGE }}-libcmt
-          push: false
-          load: true
-          build-args: |
-            VERSION=${{ env.VERSION }}
-          target: libcmt-debian-packager
-          cache-from: type=gha,scope=regular,mode=max
-          cache-to: type=gha,scope=regular
-
-      - name: Retrieve artifacts
-        run: make copy-libcmt
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -116,14 +98,12 @@ jobs:
           path: |
             ${{ env.TOOLS_DEB }}
             ${{ env.TOOLS_ROOTFS }}
-            libcmt/deb/*
 
       - name: Checksum artifacts
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           sha512sum ${{ env.TOOLS_DEB }} > ${{ env.TOOLS_DEB }}.sha512
           sha512sum ${{ env.TOOLS_ROOTFS }} > ${{ env.TOOLS_ROOTFS }}.sha512
-          for f in libcmt/deb/*; do sha512sum $f > $f.sha512; done
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
