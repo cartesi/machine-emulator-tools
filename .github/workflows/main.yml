@@ -43,9 +43,6 @@ jobs:
       - name: Export makefile variables
         run: make env >> $GITHUB_ENV
 
-      - name: Create debian package control file
-        run: make control
-
       - name: Create version file
         run: make package.json
 
@@ -55,7 +52,7 @@ jobs:
       - name: Buildx setup
         uses: docker/setup-buildx-action@v3
 
-      - name: Build [${{ env.TOOLS_DEB }}]
+      - name: Build [${{ env.TOOLS_TARGZ }}]
         id: docker_build
         uses: docker/build-push-action@v5
         with:
@@ -65,7 +62,7 @@ jobs:
           push: false
           load: true
           build-args: |
-            TOOLS_DEB=${{ env.TOOLS_DEB }}
+            TOOLS_TARGZ=${{ env.TOOLS_TARGZ }}
             IMAGE_KERNEL_VERSION=${{ env.IMAGE_KERNEL_VERSION }}
             LINUX_VERSION=${{ env.LINUX_VERSION }}
             LINUX_HEADERS_URLPATH=${{ env.LINUX_HEADERS_URLPATH }}
@@ -96,13 +93,13 @@ jobs:
         with:
           if-no-files-found: error
           path: |
-            ${{ env.TOOLS_DEB }}
+            ${{ env.TOOLS_TARGZ }}
             ${{ env.TOOLS_ROOTFS }}
 
       - name: Checksum artifacts
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          sha512sum ${{ env.TOOLS_DEB }} > ${{ env.TOOLS_DEB }}.sha512
+          sha512sum ${{ env.TOOLS_TARGZ }} > ${{ env.TOOLS_TARGZ }}.sha512
           sha512sum ${{ env.TOOLS_ROOTFS }} > ${{ env.TOOLS_ROOTFS }}.sha512
 
       - uses: softprops/action-gh-release@v1

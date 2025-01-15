@@ -20,7 +20,7 @@ PATCH := 2
 LABEL := -test2
 VERSION := $(MAJOR).$(MINOR).$(PATCH)$(LABEL)
 
-TOOLS_DEB    := machine-emulator-tools-v$(VERSION).deb
+TOOLS_TARGZ  := machine-emulator-tools-v$(VERSION).tar.gz
 TOOLS_IMAGE  := cartesi/machine-emulator-tools:$(VERSION)
 TOOLS_ROOTFS := rootfs-tools-v$(VERSION).ext2
 TOOLS_ROOTFS_IMAGE := cartesi/rootfs-tools:$(VERSION)
@@ -31,9 +31,9 @@ LINUX_HEADERS_URLPATH := https://github.com/cartesi/image-kernel/releases/downlo
 
 all: fs
 
-build: control package.json
+build: package.json
 	@docker buildx build --load \
-		--build-arg TOOLS_DEB=$(TOOLS_DEB) \
+		--build-arg TOOLS_TARGZ=$(TOOLS_TARGZ) \
 		--build-arg IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION) \
 		--build-arg LINUX_VERSION=$(LINUX_VERSION) \
 		--build-arg LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH) \
@@ -44,21 +44,19 @@ build: control package.json
 
 copy:
 	@ID=`docker create $(TOOLS_IMAGE)` && \
-	   docker cp $$ID:/opt/cartesi/$(TOOLS_DEB) . && \
+	   docker cp $$ID:/opt/cartesi/$(TOOLS_TARGZ) . && \
 	   docker rm $$ID
 
-$(TOOLS_DEB) deb: build
+$(TOOLS_TARGZ) targz: build
 
-control: Makefile control.in
-	@sed 's|ARG_VERSION|$(VERSION)|g' control.in > control
 package.json: Makefile package.json.in
 	@sed 's|ARG_VERSION|$(VERSION)|g' package.json.in > package.json
 
 fs: $(TOOLS_ROOTFS)
 
-$(TOOLS_ROOTFS): $(TOOLS_DEB)
+$(TOOLS_ROOTFS): $(TOOLS_TARGZ)
 	@docker buildx build --platform linux/riscv64 \
-	  --build-arg TOOLS_DEB=$(TOOLS_DEB) \
+	  --build-arg TOOLS_TARGZ=$(TOOLS_TARGZ) \
 	  --output type=tar,dest=rootfs.tar \
 	  --file fs/Dockerfile \
 	  . && \
@@ -67,7 +65,7 @@ $(TOOLS_ROOTFS): $(TOOLS_DEB)
 
 fs-license:
 	@docker buildx build --load --platform linux/riscv64 \
-	  --build-arg TOOLS_DEB=$(TOOLS_DEB) \
+	  --build-arg TOOLS_TARGZ=$(TOOLS_TARGZ) \
 	  -t $(TOOLS_ROOTFS_IMAGE) \
 	  --file fs/Dockerfile \
 	  .
@@ -75,7 +73,7 @@ fs-license:
 
 env:
 	@echo VERSION=$(VERSION)
-	@echo TOOLS_DEB=$(TOOLS_DEB)
+	@echo TOOLS_TARGZ=$(TOOLS_TARGZ)
 	@echo TOOLS_ROOTFS=$(TOOLS_ROOTFS)
 	@echo TOOLS_IMAGE=$(TOOLS_IMAGE)
 	@echo TOOLS_ROOTFS_IMAGE=$(TOOLS_ROOTFS_IMAGE)
@@ -125,7 +123,7 @@ clean-image:
 	@(docker rmi $(TOOLS_IMAGE) > /dev/null 2>&1 || true)
 
 clean:
-	@rm -f $(TOOLS_DEB) control rootfs*
+	@rm -f $(TOOLS_TARGZ) rootfs*
 	@$(MAKE) -C sys-utils clean
 
 distclean: clean clean-image
@@ -135,7 +133,7 @@ sys-utils:
 
 help:
 	@echo 'available commands:'
-	@echo '  deb             - build machine-emulator-tools .deb package'
+	@echo '  targz           - build machine-emulator-tools .tar.gz'
 	@echo '  fs              - build rootfs.ext2'
 	@echo '  fs-license      - build rootfs.ext2.html with licence information'
 	@echo '  setup           - setup riscv64 buildx'
@@ -144,4 +142,4 @@ help:
 	@echo '  env             - print useful Makefile variables as a KEY=VALUE list'
 	@echo '  clean           - remove the generated artifacts'
 
-.PHONY: build fs fs-license deb env setup setup-required help distclean
+.PHONY: build fs fs-license targz env setup setup-required help distclean

@@ -1,7 +1,5 @@
 *.ext2
-control
 machine-emulator-tools-*.tar.gz
-machine-emulator-tools-*.deb
 rootfs.*
 package.json
 *.bin

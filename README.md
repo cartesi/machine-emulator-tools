@@ -22,7 +22,7 @@ $ make setup
 
 ### Building
 
-Invoking make will build all tools and create the `machine-emulator-tools-$VERSION.deb` Debian package along with the `rootfs-tools-$VERSION.ext2` root filesystem artifacts.
+Invoking make will build all tools and create the `machine-emulator-tools-$VERSION.tar.gz` archive along with the `rootfs-tools-$VERSION.ext2` root filesystem artifacts.
 
 ```bash
 $ make
@@ -33,7 +33,7 @@ $ make
 The following commands are available as `make` targets:
 
 - **all**: Build Debian package and rootfs (Default)
-- **deb**: Build machine-emulator-tools.deb package
+- **targz**: Build machine-emulator-tools.tar.gz
 - **fs**: Build rootfs.ext2
 - **setup**: Setup riscv64 buildx
 - **setup-required**: Check if riscv64 buildx setup is required

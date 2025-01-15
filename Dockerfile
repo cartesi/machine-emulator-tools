@@ -115,23 +115,18 @@ RUN cd ${BUILD_BASE}/tools/rollup-http/echo-dapp && touch src/* && \
 # pack tools (deb)
 # ------------------------------------------------------------------------------
 FROM tools-env AS packer
-ARG TOOLS_DEB=machine-emulator-tools.deb
+ARG TOOLS_TARGZ=machine-emulator-tools.tar.gz
 ARG STAGING_BASE=${BUILD_BASE}/_install
-ARG STAGING_DEBIAN=${STAGING_BASE}/DEBIAN
-ARG STAGING_BIN=${STAGING_BASE}/usr/bin
-ARG STAGING_SHARE=${STAGING_BASE}/usr/share/machine-emulator-tools
 
-RUN mkdir -p ${STAGING_DEBIAN} ${STAGING_SBIN} ${STAGING_BIN} ${STAGING_BASE}/etc && \
-    echo "cartesi-machine" > ${staging_base}/etc/hostname
-
-COPY control ${STAGING_DEBIAN}/control
 COPY package.json ${STAGING_SHARE}/package.json
-COPY postinst ${STAGING_DEBIAN}/postinst
 COPY copyright ${STAGING_BASE}/usr/share/doc/machine-emulator-tools/copyright
 
-COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils_staging ${STAGING_BASE}
-COPY --from=rust-builder ${BUILD_BASE}/tools/rollup-http/rollup-init/rollup-init ${STAGING_BIN}
-COPY --from=http-server-builder ${BUILD_BASE}/tools/rollup-http/rollup-http-server/target/riscv64gc-unknown-linux-gnu/release/rollup-http-server ${STAGING_BIN}
-COPY --from=echo-dapp-builder ${BUILD_BASE}/tools/rollup-http/echo-dapp/target/riscv64gc-unknown-linux-gnu/release/echo-dapp ${STAGING_BIN}
+RUN mkdir -p ${STAGING_BASE}/usr/bin ${STAGING_BASE}/usr/bin ${STAGING_BASE}/etc && \
+    echo "cartesi-machine" > ${staging_base}/etc/hostname
 
-RUN dpkg-deb -Zxz --root-owner-group --build ${STAGING_BASE} ${BUILD_BASE}/${TOOLS_DEB}
+COPY --from=c-builder ${BUILD_BASE}/tools/sys-utils_staging ${STAGING_BASE}
+COPY --from=rust-builder ${BUILD_BASE}/tools/rollup-http/rollup-init/rollup-init ${STAGING_BASE}/usr/bin
+COPY --from=http-server-builder ${BUILD_BASE}/tools/rollup-http/rollup-http-server/target/riscv64gc-unknown-linux-gnu/release/rollup-http-server ${STAGING_BASE}/usr/bin
+COPY --from=echo-dapp-builder ${BUILD_BASE}/tools/rollup-http/echo-dapp/target/riscv64gc-unknown-linux-gnu/release/echo-dapp ${STAGING_BASE}/usr/bin
+
+RUN cd ${STAGING_BASE} && tar -czf ${BUILD_BASE}/${TOOLS_TARGZ} *
