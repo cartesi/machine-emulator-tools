@@ -63,9 +63,8 @@ jobs:
           load: true
           build-args: |
             TOOLS_TARGZ=${{ env.TOOLS_TARGZ }}
-            IMAGE_KERNEL_VERSION=${{ env.IMAGE_KERNEL_VERSION }}
-            LINUX_VERSION=${{ env.LINUX_VERSION }}
             LINUX_HEADERS_URLPATH=${{ env.LINUX_HEADERS_URLPATH }}
+            LINUX_HEADERS_SHA256=${{ env.LINUX_HEADERS_SHA256 }}
           cache-from: type=gha,scope=regular,mode=max
           cache-to: type=gha,scope=regular
 

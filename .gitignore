@@ -4,6 +4,12 @@ rootfs.*
 package.json
 *.bin
 
+sys-utils/hex/hex
+sys-utils/ioctl-echo-loop/ioctl-echo-loop
+sys-utils/rollup/rollup
+sys-utils/xhalt/xhalt
+sys-utils/yield/yield
+
 # Prerequisites
 *.d
 

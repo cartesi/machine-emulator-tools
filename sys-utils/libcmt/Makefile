@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-PREFIX = /usr/local
+PREFIX ?= /usr
 CC := $(TOOLCHAIN_PREFIX)gcc
 AR := $(TOOLCHAIN_PREFIX)ar
-CFLAGS += -Wvla -O2 -g -Wall -pedantic -Wextra -Iinclude \
+CFLAGS += -Wvla -O2 -g -Wall -Wextra -Iinclude \
           -fno-strict-aliasing -fno-strict-overflow -fPIC
 LIBCMT_CFLAGS += -ftrivial-auto-var-init=zero -Wstrict-aliasing=3
 

@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-PREFIX   = /usr/local
-CXX      = $(TOOLCHAIN_PREFIX)g++
+PREFIX   ?= /usr
+CXX      := $(TOOLCHAIN_PREFIX)g++
 CXXFLAGS += -Wall -Wextra -pedantic -O2 -std=c++20
 
 all: hex
@@ -24,8 +24,7 @@ hex: hex.cpp
 	$(CXX) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 install: hex
-	mkdir -p $(DESTDIR)$(PREFIX)/bin
-	install -Dm755 hex $(DESTDIR)$(PREFIX)/bin/
+	install -Dm755 hex $(DESTDIR)$(PREFIX)/bin/hex
 
 clean:
 	@rm -f hex

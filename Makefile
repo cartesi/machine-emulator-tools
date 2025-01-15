@@ -28,15 +28,28 @@ TOOLS_ROOTFS_IMAGE := cartesi/rootfs-tools:$(VERSION)
 IMAGE_KERNEL_VERSION ?= v0.20.0
 LINUX_VERSION ?= 6.5.13-ctsi-1
 LINUX_HEADERS_URLPATH := https://github.com/cartesi/image-kernel/releases/download/${IMAGE_KERNEL_VERSION}/linux-libc-dev-riscv64-cross-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
+LINUX_HEADERS_SHA256 := 2723435e8b45d8fb7a79e9344f6dc517b3dbc08e03ac17baab311300ec475c08
 
-all: fs
+PREFIX ?= /usr
+DESTDIR ?= .
+CARGO ?= cargo
+ARCH = $(shell uname -m)
 
-build: package.json
+ifneq ($(ARCH),riscv64)
+all: build
+else
+all: build-riscv64 ## Build all tools
+endif
+
+build-riscv64: sys-utils rollup-http package.json ## Build riscv64 tools
+
+build: targz fs ## Build targz and fs (cross compiling with Docker)
+
+targz: ## Build tools .tar.gz (cross compiling with Docker)
 	@docker buildx build --load \
 		--build-arg TOOLS_TARGZ=$(TOOLS_TARGZ) \
-		--build-arg IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION) \
-		--build-arg LINUX_VERSION=$(LINUX_VERSION) \
 		--build-arg LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH) \
+		--build-arg LINUX_HEADERS_SHA256=$(LINUX_HEADERS_SHA256) \
 		-t $(TOOLS_IMAGE) \
 		-f Dockerfile \
 		. ;
@@ -44,17 +57,15 @@ build: package.json
 
 copy:
 	@ID=`docker create $(TOOLS_IMAGE)` && \
-	   docker cp $$ID:/opt/cartesi/$(TOOLS_TARGZ) . && \
+	   docker cp $$ID:/work/$(TOOLS_TARGZ) . && \
 	   docker rm $$ID
-
-$(TOOLS_TARGZ) targz: build
 
 package.json: Makefile package.json.in
 	@sed 's|ARG_VERSION|$(VERSION)|g' package.json.in > package.json
 
-fs: $(TOOLS_ROOTFS)
+fs: $(TOOLS_ROOTFS) ## Build tools rootfs image (cross compiling with Docker)
 
-$(TOOLS_ROOTFS): $(TOOLS_TARGZ)
+$(TOOLS_ROOTFS): $(TOOLS_TARGZ) fs/Dockerfile
 	@docker buildx build --platform linux/riscv64 \
 	  --build-arg TOOLS_TARGZ=$(TOOLS_TARGZ) \
 	  --output type=tar,dest=rootfs.tar \
@@ -63,7 +74,7 @@ $(TOOLS_ROOTFS): $(TOOLS_TARGZ)
 	xgenext2fs -fzB 4096 -i 4096 -r +4096 -a rootfs.tar -L rootfs $(TOOLS_ROOTFS) && \
 	rm -f rootfs.tar
 
-fs-license:
+fs-license: ## Build tools rootfs image HTML with license information
 	@docker buildx build --load --platform linux/riscv64 \
 	  --build-arg TOOLS_TARGZ=$(TOOLS_TARGZ) \
 	  -t $(TOOLS_ROOTFS_IMAGE) \
@@ -71,7 +82,7 @@ fs-license:
 	  .
 	TMPFILE=$$(mktemp) && (cd fs/third-party/repo-info/; ./scan-local.sh $(TOOLS_ROOTFS_IMAGE) linux/riscv64) | tee $$TMPFILE && pandoc -s -f markdown -t html5 -o $(TOOLS_ROOTFS).html $$TMPFILE && rm -f $$TMPFILE
 
-env:
+env: ## Print useful Makefile information
 	@echo VERSION=$(VERSION)
 	@echo TOOLS_TARGZ=$(TOOLS_TARGZ)
 	@echo TOOLS_ROOTFS=$(TOOLS_ROOTFS)
@@ -80,66 +91,69 @@ env:
 	@echo IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION)
 	@echo LINUX_VERSION=$(LINUX_VERSION)
 	@echo LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH)
+	@echo LINUX_HEADERS_SHA256=$(LINUX_HEADERS_SHA256)
 
-test:
+test: ## Test tools using mock builds
 	make -C sys-utils/libcmt/ test
 	cd rollup-http/rollup-http-server && \
-	MOCK_BUILD=true cargo test -- --show-output --test-threads=1
+	MOCK_BUILD=true $(CARGO) test -- --show-output --test-threads=1
 
-setup:
+setup: ## Setup riscv64 buildx
 	@docker run --privileged --rm  linuxkit/binfmt:bebbae0c1100ebf7bf2ad4dfb9dfd719cf0ef132
 
-setup-required:
+setup-required: ## Check if riscv64 buildx setup is required
 	@echo 'riscv64 buildx setup required:' `docker buildx ls | grep -q riscv64 && echo no || echo yes`
 
-build-tools-env:
-	docker build --target tools-env -t $(TOOLS_IMAGE)-tools-env -f Dockerfile .
+image: ## Build tools cross compilation Docker image
+	docker build \
+		--build-arg LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH) \
+		--build-arg LINUX_HEADERS_SHA256=$(LINUX_HEADERS_SHA256) \
+		--target tools-env -t $(TOOLS_IMAGE)-tools-env -f Dockerfile .
 
-build-rust-builder-env:
-	docker build --target rust-builder -t $(TOOLS_IMAGE)-rust-builder -f Dockerfile .
-
-tools-env:
+shell: ## Spawn a cross compilation shell with tools Docker image
 	@docker run --hostname rust-builder -it --rm \
 		-e USER=$$(id -u -n) \
 		-e GROUP=$$(id -g -n) \
 		-e UID=$$(id -u) \
 		-e GID=$$(id -g) \
-		-v `pwd`:/opt/cartesi/machine-emulator-tools \
-		-w /opt/cartesi/machine-emulator-tools \
+		-u $$(id -u):$$(id -g) \
+		-v `pwd`:/work/machine-emulator-tools \
+		-w /work/machine-emulator-tools \
 		$(TOOLS_IMAGE)-tools-env /bin/bash
 
+libcmt: ## Compile libcmt
+	@$(MAKE) -C sys-utils/libcmt
 
-rust-builder-env:
-	@docker run --hostname rust-builder -it --rm \
-		-e USER=$$(id -u -n) \
-		-e GROUP=$$(id -g -n) \
-		-e UID=$$(id -u) \
-		-e GID=$$(id -g) \
-		-v `pwd`:/opt/cartesi/machine-emulator-tools \
-		-w /opt/cartesi/machine-emulator-tools \
-		$(TOOLS_IMAGE)-rust-builder /bin/bash
-
-clean-image:
-	@(docker rmi $(TOOLS_IMAGE) > /dev/null 2>&1 || true)
-
-clean:
-	@rm -f $(TOOLS_TARGZ) rootfs*
-	@$(MAKE) -C sys-utils clean
-
-distclean: clean clean-image
-
-sys-utils:
+sys-utils: libcmt ## Compile system utilities tools
 	@$(MAKE) -C sys-utils
 
-help:
-	@echo 'available commands:'
-	@echo '  targz           - build machine-emulator-tools .tar.gz'
-	@echo '  fs              - build rootfs.ext2'
-	@echo '  fs-license      - build rootfs.ext2.html with licence information'
-	@echo '  setup           - setup riscv64 buildx'
-	@echo '  setup-required  - check if riscv64 buildx setup is required'
-	@echo '  help            - list makefile commands'
-	@echo '  env             - print useful Makefile variables as a KEY=VALUE list'
-	@echo '  clean           - remove the generated artifacts'
+rollup-http: libcmt ## Compile rollup http tools
+	@$(MAKE) -C rollup-http
 
-.PHONY: build fs fs-license targz env setup setup-required help distclean
+install-share: package.json
+	install -Dm644 package.json $(DESTDIR)$(PREFIX)/share/package.json
+
+install: install-share ## Install all tools into ${DESTDIR}/${PREFIX}
+	@$(MAKE) -C sys-utils/libcmt install
+	@$(MAKE) -C sys-utils install
+	@$(MAKE) -C rollup-http install
+
+clean-image: ## Clean docker images
+	@(docker rmi $(TOOLS_IMAGE) > /dev/null 2>&1 || true)
+
+clean: ## Clean built files
+	@rm -f $(TOOLS_TARGZ) rootfs*.ext2
+	@$(MAKE) -C sys-utils/libcmt clean
+	@$(MAKE) -C sys-utils clean
+	@$(MAKE) -C rollup-http clean
+
+distclean: clean clean-image ## Clean built files and docker images
+
+help: ## Show this help
+	@sed \
+		-e '/^[a-zA-Z0-9_\-]*:.*##/!d' \
+		-e 's/:.*##\s*/:/' \
+		-e 's/^\(.\+\):\(.*\)/$(shell tput setaf 6)\1$(shell tput sgr0):\2/' \
+		$(MAKEFILE_LIST) | column -c2 -t -s :
+
+.PHONY: all build targz fs fs-license env test setup setup-required image shell libcmt sys-utils rollup-http install clean-image clean distclean help

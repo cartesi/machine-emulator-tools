@@ -1,9 +1,8 @@
-PREFIX   = /usr/local
+PREFIX ?= /usr
 
 all: ;
 
 install:
-	mkdir -p $(DESTDIR)$(PREFIX)/sbin
-	install -Dm755 cartesi-init $(DESTDIR)$(PREFIX)/sbin/
+	install -Dm755 cartesi-init $(DESTDIR)$(PREFIX)/sbin/cartesi-init
 
 clean: ;
