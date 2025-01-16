@@ -15,9 +15,9 @@
 #
 
 MAJOR := 0
-MINOR := 16
-PATCH := 2
-LABEL := -test2
+MINOR := 17
+PATCH := 0
+LABEL := -test1
 VERSION := $(MAJOR).$(MINOR).$(PATCH)$(LABEL)
 
 TOOLS_TARGZ  := machine-guest-tools-v$(VERSION).tar.gz

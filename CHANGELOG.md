@@ -5,9 +5,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Allow compiling inside riscv64 envionment without cross compilation
+- Allow to install all tools with `make install`
+- Added delegate call voucher to rollup tools and libcmt
+
 ### Changed
 - Bump dependencies versions
-- Generate rootfs.ext2.html with licenses of all installed packages
+- Generate `rootfs.ext2.html` with licenses of all installed packages
+- Bump Ubuntu to 24.04 LTS
+- Rename repository to machine-guest-tools
+- Simplified build system to make packaging easier
+- Binaries are not automatically stripped anymore, this should be done when packaging
+- Remove all references to `cartesi/toolchain` Docker image
+- Avoid using `cttyhack` in `cartesi-init` to support Alpine Linux
+- Increased JsonConfig limit in `rollup-http-server`
+- Removed pinning of package versions from all Dockerfiles
+
+### Removed
+- Removed all Debian packaging from this repository build system
 
 ## [0.16.1] - 2024-08-12
 ### Fixed
