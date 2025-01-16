@@ -1,5 +1,5 @@
 *.ext2
-machine-emulator-tools-*.tar.gz
+machine-guest-tools-*.tar.gz
 rootfs.*
 package.json
 *.bin

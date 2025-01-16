@@ -1,6 +1,6 @@
 # Final image
 FROM --platform=linux/riscv64 ubuntu:24.04
-ARG TOOLS_TARGZ=machine-emulator-tools.tar.gz
+ARG TOOLS_TARGZ=machine-guest-tools.tar.gz
 ADD ${TOOLS_TARGZ} /
 RUN apt-get update && \
     apt-get upgrade -y --no-install-recommends && \

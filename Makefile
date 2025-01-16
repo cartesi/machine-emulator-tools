@@ -20,14 +20,14 @@ PATCH := 2
 LABEL := -test2
 VERSION := $(MAJOR).$(MINOR).$(PATCH)$(LABEL)
 
-TOOLS_TARGZ  := machine-emulator-tools-v$(VERSION).tar.gz
-TOOLS_IMAGE  := cartesi/machine-emulator-tools:$(VERSION)
+TOOLS_TARGZ  := machine-guest-tools-v$(VERSION).tar.gz
+TOOLS_IMAGE  := cartesi/machine-guest-tools:$(VERSION)
 TOOLS_ROOTFS := rootfs-tools-v$(VERSION).ext2
 TOOLS_ROOTFS_IMAGE := cartesi/rootfs-tools:$(VERSION)
 
-IMAGE_KERNEL_VERSION ?= v0.20.0
+LINUX_IMAGE_VERSION ?= v0.20.0
 LINUX_VERSION ?= 6.5.13-ctsi-1
-LINUX_HEADERS_URLPATH := https://github.com/cartesi/image-kernel/releases/download/${IMAGE_KERNEL_VERSION}/linux-libc-dev-riscv64-cross-${LINUX_VERSION}-${IMAGE_KERNEL_VERSION}.deb
+LINUX_HEADERS_URLPATH := https://github.com/cartesi/machine-linux-image/releases/download/${LINUX_IMAGE_VERSION}/linux-libc-dev-riscv64-cross-${LINUX_VERSION}-${LINUX_IMAGE_VERSION}.deb
 LINUX_HEADERS_SHA256 := 2723435e8b45d8fb7a79e9344f6dc517b3dbc08e03ac17baab311300ec475c08
 
 PREFIX ?= /usr
@@ -88,7 +88,7 @@ env: ## Print useful Makefile information
 	@echo TOOLS_ROOTFS=$(TOOLS_ROOTFS)
 	@echo TOOLS_IMAGE=$(TOOLS_IMAGE)
 	@echo TOOLS_ROOTFS_IMAGE=$(TOOLS_ROOTFS_IMAGE)
-	@echo IMAGE_KERNEL_VERSION=$(IMAGE_KERNEL_VERSION)
+	@echo LINUX_IMAGE_VERSION=$(LINUX_IMAGE_VERSION)
 	@echo LINUX_VERSION=$(LINUX_VERSION)
 	@echo LINUX_HEADERS_URLPATH=$(LINUX_HEADERS_URLPATH)
 	@echo LINUX_HEADERS_SHA256=$(LINUX_HEADERS_SHA256)
@@ -117,8 +117,8 @@ shell: ## Spawn a cross compilation shell with tools Docker image
 		-e UID=$$(id -u) \
 		-e GID=$$(id -g) \
 		-u $$(id -u):$$(id -g) \
-		-v `pwd`:/work/machine-emulator-tools \
-		-w /work/machine-emulator-tools \
+		-v `pwd`:/work/machine-guest-tools \
+		-w /work/machine-guest-tools \
 		$(TOOLS_IMAGE)-tools-env /bin/bash
 
 libcmt: ## Compile libcmt

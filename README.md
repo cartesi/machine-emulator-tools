@@ -1,6 +1,6 @@
-# Cartesi Machine Emulator Tools
+# Cartesi Machine Guest Tools
 
-The Cartesi Machine Emulator Tools is a repository that contains a set of tools developed for the RISC-V Linux OS. It provides a RISC-V Debian package and a root filesystem for Ubuntu 24.04.
+The Cartesi Machine Guest Tools is a repository that contains a set of tools developed for the RISC-V Linux OS. It provides a RISC-V Debian package and a root filesystem for Ubuntu 24.04.
 
 ## Getting Started
 
@@ -37,7 +37,7 @@ In case you need to patch and develop tools, you can cross compile using Docker 
 make build
 ```
 
-This creates the `machine-emulator-tools-$VERSION.tar.gz` archive and the `rootfs-tools-$VERSION.ext2` root filesystem artifacts.
+This creates the `machine-guest-tools-$VERSION.tar.gz` archive and the `rootfs-tools-$VERSION.ext2` root filesystem artifacts.
 Both should only be use for testing and development purposes, not directly in dapps.
 
 #### Makefile targets
@@ -53,5 +53,5 @@ Please note we have a [Code of Conduct](CODE_OF_CONDUCT.md), please follow it in
 
 ## License
 
-The machine-emulator-tools repository and all contributions are licensed under
+The machine-guest-tools repository and all contributions are licensed under
 [APACHE 2.0](https://www.apache.org/licenses/LICENSE-2.0). Please review our [LICENSE](LICENSE) file.

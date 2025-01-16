@@ -1,4 +1,4 @@
-machine-emulator-tools-*.ext2
+machine-guest-tools-*.ext2
 rootfs*
 .clang-format
 .github
