@@ -13,19 +13,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-PREFIX = /usr
-TARGET_PREFIX ?= $(PREFIX)
 
-TOOLCHAIN_PREFIX ?= riscv64-linux-gnu-
-TARGET_CC := $(TOOLCHAIN_PREFIX)gcc
-TARGET_AR := $(TOOLCHAIN_PREFIX)ar
-COMMON_CFLAGS := -Wvla -O2 -g -Wall -pedantic -Wextra -Iinclude \
-                 -fno-strict-aliasing -fno-strict-overflow -fPIC
-TARGET_CFLAGS := $(COMMON_CFLAGS) -ftrivial-auto-var-init=zero -Wstrict-aliasing=3
-CFLAGS := $(COMMON_CFLAGS)
-CC := gcc
+PREFIX ?= /usr
+CC := $(TOOLCHAIN_PREFIX)gcc
+AR := $(TOOLCHAIN_PREFIX)ar
+CFLAGS += -Wvla -O2 -g -Wall -Wextra -Iinclude \
+          -fno-strict-aliasing -fno-strict-overflow -fPIC
+LIBCMT_CFLAGS += -ftrivial-auto-var-init=zero -Wstrict-aliasing=3
 
-all: libcmt host
+all: libcmt
 host: mock tools
 #-------------------------------------------------------------------------------
 examples_SRC := \
@@ -65,71 +61,30 @@ libcmt_SO        := $(libcmt_OBJDIR)/libcmt.so
 
 $(libcmt_OBJ): $(libcmt_OBJDIR)/%.o: %.c
 	@mkdir -p $(@D)
-	$(TARGET_CC) $(TARGET_CFLAGS) -MT $@ -MMD -MP -MF $(@:.o=.d) -c -o $@ $<
+	$(CC) $(CFLAGS) $(LIBCMT_CFLAGS) -MT $@ -MMD -MP -MF $(@:.o=.d) -c -o $@ $<
 
 $(libcmt_LIB): $(libcmt_OBJ)
-	$(TARGET_AR) rcs $@ $^
+	$(AR) rcs $@ $^
 
 $(libcmt_SO): $(libcmt_OBJ)
-	$(TARGET_CC) -shared -o $@ $^
+	$(CC) -shared -o $@ $^
 
 libcmt: $(libcmt_LIB) $(libcmt_SO)
 install-run: $(libcmt_SO)
-	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
-	cp -f $(libcmt_SO) $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
+	mkdir -p $(DESTDIR)$(PREFIX)/lib
+	cp -f $(libcmt_SO) $(DESTDIR)$(PREFIX)/lib
 
-install: $(libcmt_LIB) build/ffi.h
-	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
-	cp -f $(libcmt_LIB) $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib
-	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
-	cp -f include/libcmt/*.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
-	cp -f build/ffi.h $(TARGET_DESTDIR)$(TARGET_PREFIX)/include/libcmt/
-	mkdir -p $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig
-	sed -e 's|@PREFIX@|$(TARGET_PREFIX)|g' \
-	    tools/libcmt.pc.in > $(TARGET_DESTDIR)$(TARGET_PREFIX)/lib/pkgconfig/libcmt.pc
+install-dev: $(libcmt_LIB) build/ffi.h
+	mkdir -p $(DESTDIR)$(PREFIX)/lib
+	cp -f $(libcmt_LIB) $(DESTDIR)$(PREFIX)/lib
+	mkdir -p $(DESTDIR)$(PREFIX)/include/libcmt/
+	cp -f include/libcmt/*.h $(DESTDIR)$(PREFIX)/include/libcmt/
+	cp -f build/ffi.h $(DESTDIR)$(PREFIX)/include/libcmt/
+	mkdir -p $(DESTDIR)$(PREFIX)/lib/pkgconfig
+	sed -e 's|@PREFIX@|$(PREFIX)|g' \
+	    tools/libcmt.pc.in > $(DESTDIR)$(PREFIX)/lib/pkgconfig/libcmt.pc
 
-# requires either install-run or install
-debian-package:
-	mkdir -p $(dir $(DEB_FILENAME))
-	dpkg-deb -Zxz --root-owner-group --build $(TARGET_DESTDIR) $(DEB_FILENAME)
-
-$(TARGET_DESTDIR)/DEBIAN/control: tools/control.in
-	mkdir -p $(@D)
-	sed -e 's|@PACKAGE@|$(ARG_PACKAGE)|' \
-	    -e 's|@VERSION@|$(ARG_VERSION)|' \
-	    -e 's|@ARCHITECTURE@|$(ARG_ARCHITECTURE)|' \
-	    -e 's|@SECTION@|$(ARG_SECTION)|' \
-	    -e 's|@PROVIDES@|$(ARG_PROVIDES)|' \
-	    -e 's|@DESCRIPTION@|$(ARG_DESCRIPTION)|' \
-	    $< > $@
-
-# debian package variants
-libcmt-v$(ARG_VERSION).deb:
-	$(MAKE) $(TARGET_DESTDIR)/DEBIAN/control \
-	        ARG_PACKAGE=libcmt \
-	        ARG_ARCHITECTURE=riscv64 \
-	        ARG_PROVIDES=libcmt \
-	        ARG_SECTION=libs \
-	        ARG_DESCRIPTION="Cartesi Machine Tools"
-	$(MAKE) debian-package DEB_FILENAME=build/deb/$@
-
-libcmt-dev-v$(ARG_VERSION).deb:
-	$(MAKE) $(TARGET_DESTDIR)/DEBIAN/control \
-	        ARG_PACKAGE=libcmt-dev \
-	        ARG_ARCHITECTURE=riscv64 \
-	        ARG_PROVIDES=libcmt-dev \
-	        ARG_SECTION=devel \
-	        ARG_DESCRIPTION="Cartesi Machine Tools - (development files)"
-	$(MAKE) debian-package DEB_FILENAME=build/deb/$@
-
-libcmt-dev-riscv64-cross-v$(ARG_VERSION).deb:
-	$(MAKE) $(TARGET_DESTDIR)/DEBIAN/control \
-	        ARG_PACKAGE=libcmt-riscv64-cross \
-	        ARG_ARCHITECTURE=all \
-	        ARG_PROVIDES=libcmt-dev-riscv64-cross \
-	        ARG_SECTION=devel \
-	        ARG_DESCRIPTION="Cartesi Machine Tools - (development files) (riscv64)"
-	$(MAKE) debian-package DEB_FILENAME=build/deb/$@
+install: install-run install-dev
 
 #-------------------------------------------------------------------------------
 mock_SRC := \
@@ -271,7 +226,7 @@ help:
 	@echo "  doc          - Build the documentation and API references as html."
 	@echo "  clean        - remove the binaries and objects."
 	@echo "  install      - Install the library and C headers; on the host system."
-	@echo "                 Use TARGET_DESTDIR and TARGET_PREFIX to customize the installation."
+	@echo "                 Use DESTDIR and PREFIX to customize the installation."
 	@echo "  install-mock - Install the mocked version of the library and C headers; on the host system."
 	@echo "                 Use DESTDIR and PREFIX to customize the installation."
 
@@ -295,5 +250,5 @@ distclean: clean
 
 OBJ := $(mock_OBJ) $(libcmt_OBJ) $(examples_OBJ) $(tools_OBJ)
 
-.PHONY: install
+.PHONY: install install-run install-dev
 -include $(OBJ:%.o=%.d)
