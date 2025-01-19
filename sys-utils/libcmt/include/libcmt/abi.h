@@ -30,7 +30,7 @@
  * distinguish between different formats. To compute it, take the four first
  * bytes of the `keccak` digest of the solidity function declaration. It should
  * respect a canonical format and such as having no the variable names, check
- * docs for details. For reference, for a hypotetical "FunctionName" function,
+ * docs for details. For reference, for a hypothetical "FunctionName" function,
  * it should look something like this:
  * `keccak("FunctionName(type1,type2,...,typeN)");`
  *
