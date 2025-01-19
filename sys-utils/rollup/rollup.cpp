@@ -38,7 +38,7 @@ public:
     rollup(bool load_merkle = true) {
         if (cmt_rollup_init(&m_rollup))
             throw std::system_error(errno, std::generic_category(),
-                "Unable to initialize. Try runnning again with CMT_DEBUG=yes'");
+                "Unable to initialize. Try running again with CMT_DEBUG=yes'");
         if (load_merkle)
             cmt_rollup_load_merkle(&m_rollup, "/tmp/merkle.dat");
     }
