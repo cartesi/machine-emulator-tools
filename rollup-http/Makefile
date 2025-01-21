@@ -17,6 +17,7 @@ all:
 install: rollup-http-server echo-dapp
 	install -Dm755 rollup-http-server/$(RUST_TARGET_DIR)/rollup-http-server $(DESTDIR)$(PREFIX)/bin/rollup-http-server
 	install -Dm755 echo-dapp/$(RUST_TARGET_DIR)/echo-dapp $(DESTDIR)$(PREFIX)/bin/echo-dapp
+	install -Dm755 rollup-init/rollup-init $(DESTDIR)$(PREFIX)/bin/rollup-init
 
 clean:
 	rm -rf rollup-http-server/target echo-dapp/target

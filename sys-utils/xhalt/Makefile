@@ -24,7 +24,7 @@ xhalt: xhalt.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 install: xhalt
-	install -Dm755 xhalt $(DESTDIR)$(PREFIX)/bin/xhalt
+	install -Dm755 xhalt $(DESTDIR)$(PREFIX)/sbin/xhalt
 
 clean:
 	@rm -f xhalt
