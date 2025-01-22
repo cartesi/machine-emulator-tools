@@ -14,7 +14,7 @@ And finally, a couple of utility modules used by the high level API are also exp
 - @ref libcmt\_merkle is a sparse merkle tree implementation on top of keccak.
 - @ref libcmt\_keccak is the hashing function used extensively by Ethereum.
 
-The header files and a compiled RISC-V version of this library can be found [here](https://github.com/cartesi/machine-emulator-tools/).
+The header files and a compiled RISC-V version of this library can be found [here](https://github.com/cartesi/machine-guest-tools/).
 We also provide `.pc` (pkg-config) files to facilitate linking.
 
 # mock and testing

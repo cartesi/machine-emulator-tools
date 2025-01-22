@@ -22,7 +22,6 @@ rollup-http-client = { path = "../rollup-http-client"}
 
 
 [profile.release]
-strip = true
 lto = true          # Enable Link Time Optimization
 opt-level = "z"     # Optimize for size.
 codegen-units = 1   # Reduce number of codegen units to increase optimizations, but slower build

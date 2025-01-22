@@ -1,4 +1,4 @@
 {
-    "name": "machine-emulator-tools",
+    "name": "cartesi-machine-guest-tools",
     "version": "ARG_VERSION"
 }

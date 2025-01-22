@@ -18,13 +18,13 @@ To install Rust follow the instructions [here](https://www.rust-lang.org/tools/i
 This DApp is built during the docker build process: 
 
 ```shell
-$ cd machine-emulator-tools
+$ cd machine-guest-tools
 $ make
 ```
 
 ## Execution 
 
-Utility script `rollup-init`  is used to start simultaneously DApp application and  Rollup HTTP server (available in `linux/utils` folder of the root `machine-emulator-tools` project).
+Utility script `rollup-init`  is used to start simultaneously DApp application and  Rollup HTTP server (available in `linux/utils` folder of the root `machine-guest-tools` project).
 
 After build copy Dapp and http dispatcher application to the new directory. Create ext2 filesystem image from that directory.
 

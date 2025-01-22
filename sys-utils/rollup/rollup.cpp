@@ -262,7 +262,6 @@ static int write_delegate_call_voucher(void) try {
     auto destination_bytes = unhex20(ji["destination"].get<std::string>());
     uint64_t index = 0;
     cmt_abi_address_t destination;
-    cmt_abi_u256_t value;
     cmt_abi_bytes_t payload;
     payload.data = reinterpret_cast<unsigned char *>(payload_bytes.data());
     payload.length = payload_bytes.size();

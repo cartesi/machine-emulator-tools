@@ -13,7 +13,7 @@ To install Rust follow the instructions [here](https://www.rust-lang.org/tools/i
 This service is built within the docker build step when building all other tools: 
 
 ```shell
-cd machine-emulator-tools
+cd machine-guest-tools
 make
 ```
 
@@ -21,7 +21,7 @@ make
 First build libcmt mock on host:
 
 ```shell
-cd machine-emulator-tools/sys-utils/libcmt/
+cd machine-guest-tools/sys-utils/libcmt/
 make host
 ```
 
