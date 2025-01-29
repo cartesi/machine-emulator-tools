@@ -20,9 +20,9 @@ PATCH := 0
 LABEL := -test2
 VERSION := $(MAJOR).$(MINOR).$(PATCH)$(LABEL)
 
-TOOLS_TARGZ  := machine-guest-tools-v$(VERSION).tar.gz
+TOOLS_TARGZ  := machine-guest-tools_riscv64.tar.gz
 TOOLS_IMAGE  := cartesi/machine-guest-tools:$(VERSION)
-TOOLS_ROOTFS := rootfs-tools-v$(VERSION).ext2
+TOOLS_ROOTFS := rootfs-tools.ext2
 TOOLS_ROOTFS_IMAGE := cartesi/rootfs-tools:$(VERSION)
 
 LINUX_IMAGE_VERSION ?= v0.20.0

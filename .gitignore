@@ -1,5 +1,5 @@
 *.ext2
-machine-guest-tools-*.tar.gz
+*.tar.gz
 rootfs.*
 package.json
 *.bin
