@@ -62,5 +62,5 @@ RUN make -j$(nproc) libcmt
 RUN make -j$(nproc) sys-utils
 RUN make -j$(nproc) rollup-http
 RUN make install DESTDIR=$(pwd)/_install PREFIX=/usr
-ARG TOOLS_TARGZ=machine-guest-tools.tar.gz
+ARG TOOLS_TARGZ=machine-guest-tools_riscv64.tar.gz
 RUN cd _install && tar -czf /work/${TOOLS_TARGZ} *

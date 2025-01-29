@@ -1,6 +1,6 @@
 # Final image
-FROM --platform=linux/riscv64 ubuntu:24.04
-ARG TOOLS_TARGZ=machine-guest-tools.tar.gz
+FROM ubuntu:24.04
+ARG TOOLS_TARGZ=machine-guest-tools_riscv64.tar.gz
 ADD ${TOOLS_TARGZ} /
 RUN apt-get update && \
     apt-get upgrade -y --no-install-recommends && \

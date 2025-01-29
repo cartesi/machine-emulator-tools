@@ -37,7 +37,7 @@ In case you need to patch and develop tools, you can cross compile using Docker 
 make build
 ```
 
-This creates the `machine-guest-tools-$VERSION.tar.gz` archive and the `rootfs-tools-$VERSION.ext2` root filesystem artifacts.
+This creates the `machine-guest-tools_riscv64.tar.gz` archive and the `rootfs-tools.ext2` root filesystem artifacts.
 Both should only be use for testing and development purposes, not directly in dapps.
 
 #### Makefile targets

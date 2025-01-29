@@ -106,6 +106,8 @@ jobs:
         with:
           prerelease: true
           files: |
+            ${{ env.TOOLS_TARGZ }}
+            ${{ env.TOOLS_TARGZ }}.sha512
             ${{ env.TOOLS_ROOTFS }}
             ${{ env.TOOLS_ROOTFS }}.html
             ${{ env.TOOLS_ROOTFS }}.sha512
