@@ -43,9 +43,6 @@ jobs:
       - name: Export makefile variables
         run: make env >> $GITHUB_ENV
 
-      - name: Create debian package control file
-        run: make control
-
       - name: Create version file
         run: make package.json
 
@@ -55,7 +52,7 @@ jobs:
       - name: Buildx setup
         uses: docker/setup-buildx-action@v3
 
-      - name: Build [${{ env.TOOLS_DEB }}]
+      - name: Build [${{ env.TOOLS_TARGZ }}]
         id: docker_build
         uses: docker/build-push-action@v5
         with:
@@ -65,10 +62,9 @@ jobs:
           push: false
           load: true
           build-args: |
-            TOOLS_DEB=${{ env.TOOLS_DEB }}
-            IMAGE_KERNEL_VERSION=${{ env.IMAGE_KERNEL_VERSION }}
-            LINUX_VERSION=${{ env.LINUX_VERSION }}
+            TOOLS_TARGZ=${{ env.TOOLS_TARGZ }}
             LINUX_HEADERS_URLPATH=${{ env.LINUX_HEADERS_URLPATH }}
+            LINUX_HEADERS_SHA256=${{ env.LINUX_HEADERS_SHA256 }}
           cache-from: type=gha,scope=regular,mode=max
           cache-to: type=gha,scope=regular
 
@@ -91,51 +87,30 @@ jobs:
           path: |
             ${{ env.TOOLS_ROOTFS }}.html
 
-      - name: Build libcmt
-        id: docker_build_libcmt
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          builder: ${{ steps.buildx.outputs.name }}
-          tags: ${{ env.TOOLS_IMAGE }}-libcmt
-          push: false
-          load: true
-          build-args: |
-            VERSION=${{ env.VERSION }}
-          target: libcmt-debian-packager
-          cache-from: type=gha,scope=regular,mode=max
-          cache-to: type=gha,scope=regular
-
-      - name: Retrieve artifacts
-        run: make copy-libcmt
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           if-no-files-found: error
           path: |
-            ${{ env.TOOLS_DEB }}
+            ${{ env.TOOLS_TARGZ }}
             ${{ env.TOOLS_ROOTFS }}
-            libcmt/deb/*
 
       - name: Checksum artifacts
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          sha512sum ${{ env.TOOLS_DEB }} > ${{ env.TOOLS_DEB }}.sha512
+          sha512sum ${{ env.TOOLS_TARGZ }} > ${{ env.TOOLS_TARGZ }}.sha512
           sha512sum ${{ env.TOOLS_ROOTFS }} > ${{ env.TOOLS_ROOTFS }}.sha512
-          for f in libcmt/deb/*; do sha512sum $f > $f.sha512; done
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
         with:
           prerelease: true
           files: |
-            ${{ env.TOOLS_DEB }}
-            ${{ env.TOOLS_DEB }}.sha512
+            ${{ env.TOOLS_TARGZ }}
+            ${{ env.TOOLS_TARGZ }}.sha512
             ${{ env.TOOLS_ROOTFS }}
             ${{ env.TOOLS_ROOTFS }}.html
             ${{ env.TOOLS_ROOTFS }}.sha512
-            libcmt/deb/*
 
   test:
     runs-on: ubuntu-latest-8-cores

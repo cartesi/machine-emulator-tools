@@ -51,8 +51,7 @@ if [ -n "$ENTRYPOINT" ]; then
     # execute entrypoint
     (cd $WORKDIR &&
         USER=$USER LOGNAME=$USER HOME="$HOME" \
-        busybox setsid \
-        busybox cttyhack \
+        busybox setsid -c \
         busybox su -p $USER -c "$ENTRYPOINT")
 else
     echo "Nothing to do."

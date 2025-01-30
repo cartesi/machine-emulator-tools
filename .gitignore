@@ -1,11 +1,14 @@
 *.ext2
-control
-machine-emulator-tools-*.tar.gz
-machine-emulator-tools-*.deb
+*.tar.gz
 rootfs.*
-libcmt-*.*
 package.json
 *.bin
+
+sys-utils/hex/hex
+sys-utils/ioctl-echo-loop/ioctl-echo-loop
+sys-utils/rollup/rollup
+sys-utils/xhalt/xhalt
+sys-utils/yield/yield
 
 # Prerequisites
 *.d

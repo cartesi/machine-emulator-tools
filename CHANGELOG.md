@@ -5,9 +5,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.17.0] - 2025-01-30
+### Added
+- Allow compiling inside riscv64 envionment without cross compilation
+- Allow to install all tools with `make install`
+- Added delegate call voucher to rollup tools and libcmt
+
 ### Changed
 - Bump dependencies versions
-- Generate rootfs.ext2.html with licenses of all installed packages
+- Generate `rootfs-tools.ext2.html` with licenses of all installed packages
+- Bump Ubuntu to 24.04 LTS
+- Rename repository to machine-guest-tools
+- Simplified build system to make packaging easier
+- Binaries are not automatically stripped anymore, this should be done when packaging
+- Remove all references to `cartesi/toolchain` Docker image
+- Avoid using `cttyhack` in `cartesi-init` to support Alpine Linux
+- Increased JsonConfig limit in `rollup-http-server`
+- Removed pinning of package versions from all Dockerfiles
+
+### Removed
+- Removed all Debian packaging from this repository build system
 
 ## [0.16.1] - 2024-08-12
 ### Fixed
@@ -178,24 +196,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [0.2.0]
 - [0.1.0]
 
-[Unreleased]: https://github.com/cartesi/machine-emulator-tools/compare/v0.16.1...HEAD
-[0.16.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.16.1
-[0.16.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.16.0
-[0.15.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.15.0
-[0.14.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.14.1
-[0.14.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.14.0
-[0.13.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.13.0
-[0.12.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.12.0
-[0.11.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.11.0
-[0.10.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.10.0
-[0.9.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.9.0
-[0.8.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.8.0
-[0.7.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.7.0
-[0.6.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.6.0
-[0.5.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.5.1
-[0.5.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.5.0
-[0.4.1]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.4.1
-[0.4.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.4.0
-[0.3.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.3.0
-[0.2.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.2.0
-[0.1.0]: https://github.com/cartesi/machine-emulator-tools/releases/tag/v0.1.0
+[Unreleased]: https://github.com/cartesi/machine-guest-tools/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.17.0
+[0.16.1]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.16.1
+[0.16.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.16.0
+[0.15.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.15.0
+[0.14.1]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.14.1
+[0.14.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.14.0
+[0.13.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.13.0
+[0.12.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.12.0
+[0.11.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.11.0
+[0.10.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.10.0
+[0.9.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.9.0
+[0.8.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.8.0
+[0.7.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.7.0
+[0.6.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.6.0
+[0.5.1]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.5.1
+[0.5.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.5.0
+[0.4.1]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.4.1
+[0.4.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.4.0
+[0.3.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.3.0
+[0.2.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.2.0
+[0.1.0]: https://github.com/cartesi/machine-guest-tools/releases/tag/v0.1.0

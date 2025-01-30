@@ -14,23 +14,21 @@
 # limitations under the License.
 #
 
+UTILITIES := hex xhalt yield rollup ioctl-echo-loop misc cartesi-init
 
-UTILITIES := hex xhalt yield rollup ioctl-echo-loop
-UTILITIES_WITH_TOOLCHAIN := $(addsuffix -with-toolchain,$(UTILITIES))
+PREFIX ?= /usr
+DESTDIR ?=
 
-all: $(UTILITIES)
+all:
+	@$(MAKE) $(UTILITIES)
 
 $(UTILITIES):
 	@$(MAKE) -C $@
 
-with-toolchain:
-	@$(MAKE) $(UTILITIES_WITH_TOOLCHAIN)
-
-$(UTILITIES_WITH_TOOLCHAIN):
-	@$(MAKE) -C $@ with-toolchain
+install:
+	@$(foreach utility,$(UTILITIES),$(MAKE) -C $(utility) install;)
 
 clean:
 	@$(foreach utility,$(UTILITIES),$(MAKE) -C $(utility) clean;)
 
-
-.PHONY: all with-toolchain $(UTILITIES) $(UTILITIES_WITH_TOOLCHAIN)
+.PHONY: all $(UTILITIES) install clean

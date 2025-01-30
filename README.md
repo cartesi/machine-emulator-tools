@@ -1,10 +1,10 @@
-# Cartesi Machine Emulator Tools
+# Cartesi Machine Guest Tools
 
-The Cartesi Machine Emulator Tools is a repository that contains a set of tools developed for the RISC-V Linux OS. It provides a RISC-V Debian package and a root filesystem for Ubuntu 22.04.
+The Cartesi Machine Guest Tools is a repository that contains a set of tools developed for the RISC-V Linux OS. It provides a RISC-V Debian package and a root filesystem for Ubuntu 24.04.
 
 ## Getting Started
 
-Users looking to create cartesi-machine applications can use the provided Debian package and root filesystem directly from one of the prepackaged [releases](https://github.com/cartesi/machine-emulator-tools/releases), without needing to build this repository themselves.
+Users looking to create cartesi-machine applications can use the provided Debian package and root filesystem directly from one of the prepackaged releases, without needing to build this repository themselves.
 
 ### Requirements
 
@@ -20,26 +20,29 @@ To set up riscv64 buildx, use the following command:
 $ make setup
 ```
 
-### Building
+### Building (from riscv64 environment)
 
-Invoking make will build all tools and create the `machine-emulator-tools-$VERSION.deb` Debian package along with the `rootfs-tools-$VERSION.ext2` root filesystem artifacts.
+Assuming you are inside a riscv64 environment, you can build tools and install in the system with:
 
-```bash
-$ make
+```sh
+make
+make install PREFIX=/usr
 ```
+
+### Building (cross compiling)
+
+In case you need to patch and develop tools, you can cross compile using Docker with:
+
+```sh
+make build
+```
+
+This creates the `machine-guest-tools_riscv64.tar.gz` archive and the `rootfs-tools.ext2` root filesystem artifacts.
+Both should only be use for testing and development purposes, not directly in dapps.
 
 #### Makefile targets
 
-The following commands are available as `make` targets:
-
-- **all**: Build Debian package and rootfs (Default)
-- **deb**: Build machine-emulator-tools.deb package
-- **fs**: Build rootfs.ext2
-- **setup**: Setup riscv64 buildx
-- **setup-required**: Check if riscv64 buildx setup is required
-- **help**: List Makefile commands
-- **env**: Print useful Makefile variables as a KEY=VALUE list
-- **clean**: Remove the generated artifacts
+Check all targets available with `make help`.
 
 ## Contributing
 
@@ -50,5 +53,5 @@ Please note we have a [Code of Conduct](CODE_OF_CONDUCT.md), please follow it in
 
 ## License
 
-The machine-emulator-tools repository and all contributions are licensed under
+The machine-guest-tools repository and all contributions are licensed under
 [APACHE 2.0](https://www.apache.org/licenses/LICENSE-2.0). Please review our [LICENSE](LICENSE) file.
